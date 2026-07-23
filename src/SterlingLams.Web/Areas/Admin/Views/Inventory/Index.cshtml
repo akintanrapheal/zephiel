@@ -1,0 +1,389 @@
+@model SterlingLams.Web.Areas.Admin.ViewModels.AdminInventoryViewModel
+@{
+    ViewData["Title"] = "Inventory";
+    // Only a full administrator may edit stock here; other staff with the Inventory section view only.
+    var canEdit = ViewData["IsFullAdmin"] as bool? == true;
+}
+
+<!-- Header bar -->
+<div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+    <div>
+        <p class="text-xs text-neutral-500 mt-0.5">
+            <strong>@Model.TotalCount</strong> active products &nbsp;·&nbsp;
+            <strong>@Model.Stores.Count</strong> stores
+        </p>
+    </div>
+    <div class="flex gap-2 flex-wrap">
+        <a asp-area="Admin" asp-controller="Inventory" asp-action="Reservations"
+           class="px-4 py-2 border border-neutral-300 text-neutral-700 text-xs rounded-sm hover:bg-neutral-50 transition-colors">
+            🔒 Stock holds
+        </a>
+        <!-- Ensure all products have inventory rows -->
+        @if (canEdit)
+        {
+            <form asp-area="Admin" asp-controller="Inventory" asp-action="EnsureInventoryRecords" method="post">
+                @Html.AntiForgeryToken()
+                <button type="submit"
+                        class="px-4 py-2 border border-blue-300 text-blue-700 text-xs rounded-sm hover:bg-blue-50 transition-colors">
+                    ⊕ Create Missing Records
+                </button>
+            </form>
+        }
+        @if (canEdit)
+        {
+            <form asp-area="Admin" asp-controller="Inventory" asp-action="BackfillOpeningStock" method="post"
+                  onsubmit="return confirm('Write one-time &quot;Opening balance&quot; ledger entries for stock that has no history? This does not change any quantities — it only makes stock history reconstruct current on-hand. Safe to run once.');">
+                @Html.AntiForgeryToken()
+                <button type="submit"
+                        class="px-4 py-2 border border-neutral-300 text-neutral-600 text-xs rounded-sm hover:bg-neutral-50 transition-colors">
+                    ⚖ Backfill opening-stock ledger
+                </button>
+            </form>
+        }
+    </div>
+</div>
+
+@{
+    bool hasFilters = !string.IsNullOrEmpty(Model.SearchQuery) ||
+                      !string.IsNullOrEmpty(Model.CategoryFilter) ||
+                      !string.IsNullOrEmpty(Model.StockFilter);
+}
+
+<!-- Filter bar -->
+<form method="get" class="bg-white rounded-sm border border-neutral-100 p-4 mb-4 space-y-3">
+    <!-- Row 1: name search -->
+    <div class="flex gap-2">
+        <input type="text" name="q" value="@Model.SearchQuery"
+               placeholder="Search by product name…"
+               class="flex-1 max-w-xs border border-neutral-200 rounded-sm px-3 py-2 text-sm focus:outline-none focus:border-neutral-400" />
+        <button type="submit"
+                class="px-4 py-2 bg-neutral-900 text-white text-xs rounded-sm hover:bg-neutral-700 transition-colors">
+            Search
+        </button>
+        @if (hasFilters)
+        {
+            <a asp-area="Admin" asp-controller="Inventory" asp-action="Index"
+               class="px-4 py-2 border border-neutral-300 text-neutral-500 text-xs rounded-sm hover:border-neutral-500 transition-colors whitespace-nowrap">
+                ✕ Clear All
+            </a>
+        }
+    </div>
+
+    <!-- Row 2: category + stock status + apply -->
+    <div class="flex flex-wrap gap-3 items-end">
+
+        <!-- Category -->
+        <div class="flex flex-col gap-1">
+            <label class="text-[10px] text-neutral-400 uppercase tracking-widest">Category</label>
+            <select name="category"
+                    class="border border-neutral-200 rounded-sm px-3 py-2 text-xs focus:outline-none focus:border-neutral-400 bg-white min-w-[140px]">
+                <option value="">All Categories</option>
+                @foreach (var cat in Model.AvailableCategories)
+                {
+                    <option value="@cat.Slug" selected="@(Model.CategoryFilter == cat.Slug)">@cat.Name</option>
+                }
+            </select>
+        </div>
+
+        <!-- Stock Status -->
+        <div class="flex flex-col gap-1">
+            <label class="text-[10px] text-neutral-400 uppercase tracking-widest">Stock Status</label>
+            <select name="stock"
+                    class="border border-neutral-200 rounded-sm px-3 py-2 text-xs focus:outline-none focus:border-neutral-400 bg-white min-w-[150px]">
+                <option value="">All Stock Levels</option>
+                <option value="outofstock" selected="@(Model.StockFilter == "outofstock")">Out of Stock</option>
+                <option value="low"        selected="@(Model.StockFilter == "low")">Low Stock</option>
+                <option value="instock"    selected="@(Model.StockFilter == "instock")">In Stock</option>
+                <option value="norecord"   selected="@(Model.StockFilter == "norecord")">No Record</option>
+            </select>
+        </div>
+
+        <!-- Apply -->
+        <button type="submit"
+                class="px-6 py-2 bg-neutral-900 text-white text-xs rounded-sm hover:bg-neutral-700 transition-colors self-end">
+            Apply Filters
+        </button>
+
+        <!-- Result count -->
+        <p class="text-xs text-neutral-400 self-end ml-auto">
+            <strong class="text-neutral-700">@Model.TotalCount</strong>
+            product@(Model.TotalCount == 1 ? "" : "s")
+            @if (hasFilters) { <span>matching filters</span> }
+        </p>
+    </div>
+
+    <!-- Active chips -->
+    @if (hasFilters)
+    {
+        <div class="flex flex-wrap gap-2 pt-1 border-t border-neutral-50">
+            @if (!string.IsNullOrEmpty(Model.SearchQuery))
+            {
+                <span class="text-[11px] bg-neutral-100 text-neutral-600 px-3 py-1 rounded-full">Name: "@Model.SearchQuery"</span>
+            }
+            @if (!string.IsNullOrEmpty(Model.CategoryFilter))
+            {
+                <span class="text-[11px] bg-neutral-100 text-neutral-600 px-3 py-1 rounded-full">
+                    Category: @(Model.AvailableCategories.FirstOrDefault(c => c.Slug == Model.CategoryFilter)?.Name ?? Model.CategoryFilter)
+                </span>
+            }
+            @if (!string.IsNullOrEmpty(Model.StockFilter))
+            {
+                var stockLabel = Model.StockFilter switch
+                {
+                    "outofstock" => "Out of Stock",
+                    "low"        => "Low Stock",
+                    "instock"    => "In Stock",
+                    "norecord"   => "No Record",
+                    _            => Model.StockFilter
+                };
+                <span class="text-[11px] bg-neutral-100 text-neutral-600 px-3 py-1 rounded-full">Stock: @stockLabel</span>
+            }
+        </div>
+    }
+</form>
+
+<!-- Legend -->
+<div class="flex gap-4 mb-3 text-[11px] text-neutral-400">
+    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-red-100 inline-block"></span> Out of stock</span>
+    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-amber-100 inline-block"></span> Low stock</span>
+    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-neutral-100 inline-block"></span> No record</span>
+    <span class="text-neutral-300">— Type a quantity and click Save to update stock</span>
+</div>
+
+@if (!Model.Products.Any())
+{
+    <div class="bg-white rounded-sm border border-neutral-100 p-16 text-center">
+        <p class="text-neutral-400 text-sm mb-4">
+            @if (string.IsNullOrEmpty(Model.SearchQuery))
+            {
+                <span>No inventory records yet.</span>
+            }
+            else
+            {
+                <span>No products match "@Model.SearchQuery".</span>
+            }
+        </p>
+        <p class="text-xs text-neutral-400 mb-6">
+            After importing products, click <strong>⊕ Create Missing Records</strong> above to initialise all stock to zero.
+        </p>
+    </div>
+}
+else
+{
+    @if (canEdit)
+    {
+        <!-- Hidden save forms — one per product row (outside the table to stay valid HTML) -->
+        foreach (var row in Model.Products)
+        {
+            <form id="inv-@row.ProductId"
+                  asp-area="Admin" asp-controller="Inventory" asp-action="SetProductStock"
+                  method="post" style="display:none">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="productId" value="@row.ProductId" />
+                <input type="hidden" name="q"        value="@Model.SearchQuery" />
+                <input type="hidden" name="category" value="@Model.CategoryFilter" />
+                <input type="hidden" name="stock"    value="@Model.StockFilter" />
+                <input type="hidden" name="page"     value="@Model.CurrentPage" />
+            </form>
+        }
+    }
+
+    <!-- Bulk save bar -->
+    <div class="flex items-center justify-between mb-3">
+        @if (canEdit)
+        {
+            <p class="text-[11px] text-neutral-400">Type quantities across the page, then save them all at once — or use the per-row Save.</p>
+            <button type="button" id="save-all-stock"
+                    class="px-4 py-2 bg-neutral-900 text-white text-xs rounded-sm hover:bg-neutral-700 transition-colors">
+                Save all changes<span id="stock-change-count"></span>
+            </button>
+        }
+        else
+        {
+            <p class="text-[11px] text-neutral-400">View only — stock changes are restricted to the administrator.</p>
+        }
+    </div>
+
+    <!-- Inventory grid -->
+    <div class="bg-white rounded-sm border border-neutral-100 overflow-x-auto">
+        <table class="w-full text-sm min-w-[700px]">
+            <thead>
+                <tr class="bg-neutral-50 border-b border-neutral-100">
+                    <th class="w-12 px-3 py-3"></th>
+                    <th class="text-left px-4 py-3 text-xs text-neutral-400 font-medium">Product</th>
+                    <th class="text-left px-4 py-3 text-xs text-neutral-400 font-medium">Category</th>
+                    <th class="text-center px-4 py-3 text-xs text-neutral-400 font-medium">Total</th>
+                    @foreach (var store in Model.Stores)
+                    {
+                        <th class="text-center px-3 py-3 text-xs text-neutral-400 font-medium whitespace-nowrap">
+                            @store.Name.Replace("Glamstar ", "")
+                        </th>
+                    }
+                    <th class="text-center px-4 py-3 text-xs text-neutral-400 font-medium">Save</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-neutral-50">
+                @foreach (var row in Model.Products)
+                {
+                    var total = row.TotalStock;
+                    <tr class="hover:bg-neutral-50 transition-colors @(row.HasOutOfStock ? "bg-red-50/30" : row.HasLowStock ? "bg-amber-50/30" : "")">
+
+                        <!-- Thumbnail -->
+                        <td class="px-3 py-2">
+                            @if (!string.IsNullOrEmpty(row.ImageUrl))
+                            {
+                                <img src="@Img.Cld(row.ImageUrl, 96, 96)" alt="@row.ProductName" loading="lazy"
+                                     class="w-10 h-10 object-cover rounded-sm border border-neutral-100"
+                                     onerror="this.style.display='none'" />
+                            }
+                            else
+                            {
+                                <div class="w-10 h-10 rounded-sm bg-neutral-100"></div>
+                            }
+                        </td>
+
+                        <!-- Product name + SKU -->
+                        <td class="px-4 py-3">
+                            <p class="text-xs font-medium text-neutral-800 leading-snug">@row.ProductName</p>
+                            @if (!string.IsNullOrEmpty(row.Sku))
+                            {
+                                <p class="text-[10px] text-neutral-400 font-mono mt-0.5">@row.Sku</p>
+                            }
+                        </td>
+
+                        <!-- Category -->
+                        <td class="px-4 py-3 text-xs text-neutral-500">@row.CategoryName</td>
+
+                        <!-- Total stock -->
+                        <td class="px-4 py-3 text-center">
+                            <span class="text-sm font-medium @(total == 0 ? "text-red-600" : total < row.LowStockThreshold * Model.Stores.Count ? "text-amber-600" : "text-neutral-800")">
+                                @total
+                            </span>
+                        </td>
+
+                        <!-- Stock per store — editable inputs -->
+                        @foreach (var store in Model.Stores)
+                        {
+                            var qty = row.StockByStore.TryGetValue(store.Id, out var q2) ? q2 : -1;
+                            var cellBg = qty == -1 ? "bg-neutral-50" : qty == 0 ? "bg-red-50" : qty < row.LowStockThreshold ? "bg-amber-50" : "";
+                            <td class="px-3 py-2 text-center @cellBg">
+                                @if (canEdit && qty == -1)
+                                {
+                                    <!-- No record exists — show dash, still let admin enter a value -->
+                                    <input form="inv-@row.ProductId"
+                                           type="number" name="store_@store.Id"
+                                           placeholder="—" min="0"
+                                           data-pid="@row.ProductId" data-sid="@store.Id" data-orig=""
+                                           class="stock-cell w-16 text-center text-xs border border-neutral-200 rounded-sm px-2 py-1 focus:outline-none focus:border-neutral-400 bg-white" />
+                                }
+                                else if (canEdit)
+                                {
+                                    <input form="inv-@row.ProductId"
+                                           type="number" name="store_@store.Id"
+                                           value="@qty" min="0"
+                                           data-pid="@row.ProductId" data-sid="@store.Id" data-orig="@qty"
+                                           class="stock-cell w-16 text-center text-xs border border-neutral-200 rounded-sm px-2 py-1 focus:outline-none focus:border-neutral-400 bg-white
+                                                  @(qty == 0 ? "text-red-600 border-red-200" : qty < row.LowStockThreshold ? "text-amber-600 border-amber-200" : "")" />
+                                }
+                                else
+                                {
+                                    <span class="text-xs @(qty == -1 ? "text-neutral-300" : qty == 0 ? "text-red-600" : qty < row.LowStockThreshold ? "text-amber-600" : "text-neutral-700")">@(qty == -1 ? "—" : qty.ToString())</span>
+                                }
+                            </td>
+                        }
+
+                        <!-- Save button (full admin only) -->
+                        <td class="px-4 py-2 text-center">
+                            @if (canEdit)
+                            {
+                                <button form="inv-@row.ProductId" type="submit" data-no-loading="1"
+                                        class="px-4 py-1.5 bg-neutral-900 text-white text-xs rounded-sm hover:bg-neutral-700 transition-colors">
+                                    Save
+                                </button>
+                            }
+                            else
+                            {
+                                <span class="text-neutral-300 text-xs">—</span>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination — windowed, preserves filters -->
+    @if (Model.TotalPages > 1)
+    {
+        var cur = Model.CurrentPage;
+        var last = Model.TotalPages;
+        var start = Math.Max(1, cur - 2);
+        var end = Math.Min(last, cur + 2);
+        Func<int, Dictionary<string, string>> rd = pg => new Dictionary<string, string>
+        {
+            ["page"] = pg.ToString(),
+            ["q"] = Model.SearchQuery ?? "",
+            ["category"] = Model.CategoryFilter ?? "",
+            ["stock"] = Model.StockFilter ?? "",
+        };
+        var baseCls = "px-3 py-1.5 text-xs rounded-sm border border-neutral-200 text-neutral-600 hover:border-neutral-400 transition-colors";
+
+        <div class="flex items-center justify-center gap-1.5 mt-4 flex-wrap">
+            <span class="text-[11px] text-neutral-400 mr-1">Page @cur of @last</span>
+            @if (cur > 1)
+            {
+                <a asp-area="Admin" asp-controller="Inventory" asp-action="Index" asp-all-route-data="rd(1)" class="@baseCls">« First</a>
+                <a asp-area="Admin" asp-controller="Inventory" asp-action="Index" asp-all-route-data="rd(cur - 1)" class="@baseCls">‹ Prev</a>
+            }
+            @if (start > 1)
+            {
+                <a asp-area="Admin" asp-controller="Inventory" asp-action="Index" asp-all-route-data="rd(1)" class="@baseCls">1</a>
+                @if (start > 2) { <span class="px-1 text-neutral-300">…</span> }
+            }
+            @for (int pg = start; pg <= end; pg++)
+            {
+                <a asp-area="Admin" asp-controller="Inventory" asp-action="Index" asp-all-route-data="rd(pg)"
+                   class="px-3 py-1.5 text-xs rounded-sm border transition-colors @(pg == cur ? "bg-neutral-900 text-white border-neutral-900" : "border-neutral-200 text-neutral-600 hover:border-neutral-400")">@pg</a>
+            }
+            @if (end < last)
+            {
+                @if (end < last - 1) { <span class="px-1 text-neutral-300">…</span> }
+                <a asp-area="Admin" asp-controller="Inventory" asp-action="Index" asp-all-route-data="rd(last)" class="@baseCls">@last</a>
+            }
+            @if (cur < last)
+            {
+                <a asp-area="Admin" asp-controller="Inventory" asp-action="Index" asp-all-route-data="rd(cur + 1)" class="@baseCls">Next ›</a>
+                <a asp-area="Admin" asp-controller="Inventory" asp-action="Index" asp-all-route-data="rd(last)" class="@baseCls">Last »</a>
+            }
+        </div>
+    }
+
+    <script>
+    (function () {
+        const btn = document.getElementById('save-all-stock');
+        const countEl = document.getElementById('stock-change-count');
+        if (!btn) return;
+        const tokenEl = document.querySelector('input[name="__RequestVerificationToken"]');
+        const changed = () => [...document.querySelectorAll('input.stock-cell')]
+            .filter(i => i.value !== '' && i.value !== i.getAttribute('data-orig'));
+        const refresh = () => { const n = changed().length; countEl.textContent = n ? ' (' + n + ')' : ''; };
+        document.addEventListener('input', e => { if (e.target.classList && e.target.classList.contains('stock-cell')) refresh(); });
+        refresh();
+        btn.addEventListener('click', async () => {
+            const edits = changed().map(i => ({ productId: +i.dataset.pid, storeId: +i.dataset.sid, quantity: +i.value }));
+            if (!edits.length) { alert('No changes to save.'); return; }
+            btn.disabled = true; const label = btn.querySelector('span') ? null : null; btn.textContent = 'Saving…';
+            try {
+                const res = await fetch(__adminBase + '/Inventory/SetAllProductStock', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': tokenEl ? tokenEl.value : '' },
+                    body: JSON.stringify(edits)
+                });
+                const data = await res.json();
+                if (data.success) { location.reload(); }
+                else { alert('Save failed.'); btn.disabled = false; btn.textContent = 'Save all changes'; }
+            } catch { alert('Save failed. Please try again.'); btn.disabled = false; btn.textContent = 'Save all changes'; }
+        });
+    })();
+    </script>
+}

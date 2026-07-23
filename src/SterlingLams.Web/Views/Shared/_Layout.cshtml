@@ -1,0 +1,194 @@
+@using SterlingLams.Web.Services
+@inject ISettingsService SettingsService
+@{
+    var seoReq      = Context.Request;
+    var seoBaseUrl  = $"{seoReq.Scheme}://{seoReq.Host}";
+    var seoSiteName = await SettingsService.GetAsync("general.site_name", "Glamstar");
+    var seoDesc     = (ViewData["Description"]?.ToString()) ?? "Glamstar is an online jewelry store offering elegant earrings, necklaces, bracelets, rings, and accessories with secure shopping and nationwide delivery.";
+    var seoTitle    = ViewData["Title"] != null ? $"{ViewData["Title"]} — {seoSiteName}" : seoSiteName;
+    var seoCanonical= (ViewData["Canonical"]?.ToString()) ?? (seoBaseUrl + seoReq.Path);
+    var seoOgType   = (ViewData["OgType"]?.ToString()) ?? "website";
+    var seoRobots   = (ViewData["Robots"]?.ToString()) ?? "index, follow";
+    var seoLogo     = await SettingsService.GetAsync("general.logo_url", "");
+    string Abs(string u) => string.IsNullOrEmpty(u) ? u : (u.StartsWith("/") ? seoBaseUrl + u : u);
+    var seoOgImage  = ViewData["OgImage"]?.ToString();
+    if (string.IsNullOrEmpty(seoOgImage)) seoOgImage = seoLogo;
+    seoOgImage = Abs(seoOgImage ?? "");
+
+    var seoSocial = new[]
+    {
+        await SettingsService.GetAsync("general.instagram_url", ""),
+        await SettingsService.GetAsync("general.facebook_url", ""),
+        await SettingsService.GetAsync("general.tiktok_url", ""),
+    }.Where(u => !string.IsNullOrWhiteSpace(u)).ToArray();
+
+    var orgLd = System.Text.Json.JsonSerializer.Serialize(new Dictionary<string, object?>
+    {
+        ["@context"] = "https://schema.org",
+        ["@type"] = "Organization",
+        ["name"] = seoSiteName,
+        ["url"] = seoBaseUrl,
+        ["logo"] = string.IsNullOrEmpty(seoLogo) ? null : Abs(seoLogo),
+        ["sameAs"] = seoSocial.Length > 0 ? seoSocial : null,
+    }, new System.Text.Json.JsonSerializerOptions { DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull });
+
+    // WebSite + SearchAction → enables Google's "sitelinks search box". Target is the
+    // storefront's own search (GET /products?search=...).
+    var websiteLd = System.Text.Json.JsonSerializer.Serialize(new Dictionary<string, object?>
+    {
+        ["@context"] = "https://schema.org",
+        ["@type"] = "WebSite",
+        ["name"] = seoSiteName,
+        ["url"] = seoBaseUrl,
+        ["potentialAction"] = new Dictionary<string, object?>
+        {
+            ["@type"] = "SearchAction",
+            ["target"] = new Dictionary<string, object?>
+            {
+                ["@type"] = "EntryPoint",
+                ["urlTemplate"] = $"{seoBaseUrl}/products?search={{search_term_string}}",
+            },
+            ["query-input"] = "required name=search_term_string",
+        },
+    }, new System.Text.Json.JsonSerializerOptions { DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull });
+}
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@seoTitle</title>
+    <meta name="description" content="@seoDesc" />
+    <meta name="author" content="Dev Rapheal" />
+    <meta name="generator" content="Glamstar Platform — developed by Dev Rapheal" />
+    <meta name="robots" content="@seoRobots" />
+    <link rel="canonical" href="@seoCanonical" />
+
+    <!-- Favicon (Glamstar logo) -->
+    <link rel="icon" type="image/png" sizes="32x32" href="~/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="~/favicon-16.png" />
+    <link rel="apple-touch-icon" href="~/apple-touch-icon.png" />
+
+    <!-- Open Graph -->
+    <meta property="og:site_name" content="@seoSiteName" />
+    <meta property="og:type" content="@seoOgType" />
+    <meta property="og:title" content="@seoTitle" />
+    <meta property="og:description" content="@seoDesc" />
+    <meta property="og:url" content="@seoCanonical" />
+    @if (!string.IsNullOrEmpty(seoOgImage))
+    {
+        <meta property="og:image" content="@seoOgImage" />
+        <meta name="twitter:image" content="@seoOgImage" />
+    }
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="@seoTitle" />
+    <meta name="twitter:description" content="@seoDesc" />
+
+    <!-- Organization + WebSite structured data -->
+    <script type="application/ld+json" nonce="@Context.Items["csp-nonce"]">@Html.Raw(orgLd)</script>
+    <script type="application/ld+json" nonce="@Context.Items["csp-nonce"]">@Html.Raw(websiteLd)</script>
+
+    <!-- Fonts: Cormorant Garamond (luxury serif) + Inter + Lato (product-card CTA buttons) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Inter:wght@300;400;500;600&family=Lato:wght@400;700&display=swap" rel="stylesheet">
+
+    <!-- Tailwind compiled output -->
+    <link rel="stylesheet" href="~/css/app.css" asp-append-version="true" />
+
+    @await RenderSectionAsync("Styles", required: false)
+    @await RenderSectionAsync("Head", required: false)
+</head>
+<body class="bg-canvas text-neutral-900 font-inter antialiased">
+
+    <!-- ─── Page loader (self-drawing line diamond; hidden by app.js once ready) ── -->
+    @{
+        // How long to keep the drawing diamond up on each page. "Staff only" lets the owner enjoy it
+        // without slowing real shoppers. Clamped to 2s so it always clears before the CSS safety timer.
+        var loaderMinMs   = await SettingsService.GetIntAsync("loader.min_ms", 700);
+        var loaderStaffOnly = await SettingsService.GetBoolAsync("loader.staff_only", false);
+        var isStaffViewer = User?.Identity?.IsAuthenticated == true &&
+            (User.IsInRole(SterlingLams.Web.Areas.Admin.AdminSections.AdminRole)
+             || SterlingLams.Web.Areas.Admin.AdminSections.DefaultStaffRoles.Any(r => User.IsInRole(r)));
+        var loaderEffMs = Math.Clamp((loaderStaffOnly && !isStaffViewer) ? 0 : loaderMinMs, 0, 2000);
+    }
+    <div id="page-loader" aria-hidden="true" data-min-ms="@loaderEffMs">
+        <div class="pl-diamond">
+            <svg viewBox="0 0 200 190" width="74" height="70" fill="none" aria-hidden="true">
+                <g class="pl-draw" stroke="#0a0a0a" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+                    <path pathLength="1" d="M60 44 L140 44 L180 82 L100 176 L20 82 Z" />
+                    <path pathLength="1" d="M20 82 H180" />
+                    <path pathLength="1" d="M60 44 L54 82" />
+                    <path pathLength="1" d="M140 44 L146 82" />
+                    <path pathLength="1" d="M54 82 L100 176" />
+                    <path pathLength="1" d="M100 82 L100 176" />
+                    <path pathLength="1" d="M146 82 L100 176" />
+                </g>
+            </svg>
+        </div>
+    </div>
+
+    <!-- ─── Navigation ──────────────────────────────────────────────────── -->
+    @await Html.PartialAsync("_Navigation")
+
+    <!-- ─── Flash Messages ─────────────────────────────────────────────── -->
+    @if (TempData["Success"] != null)
+    {
+        <div class="bg-emerald-50 border-b border-emerald-200 px-6 py-3 text-center text-sm text-emerald-800">
+            @TempData["Success"]
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="bg-red-50 border-b border-red-200 px-6 py-3 text-center text-sm text-red-800">
+            @TempData["Error"]
+        </div>
+    }
+
+    <!-- ─── Main Content ────────────────────────────────────────────────── -->
+    <main>
+        @RenderBody()
+    </main>
+
+    <!-- ─── Footer ──────────────────────────────────────────────────────── -->
+    @await Html.PartialAsync("_Footer")
+
+    <!-- ─── Toast ───────────────────────────────────────────────────────── -->
+    <div id="toast"
+         class="fixed bottom-6 right-6 z-[9999] bg-neutral-900 text-white text-xs tracking-wide px-5 py-3 shadow-xl transition-all duration-300 translate-y-4 opacity-0 pointer-events-none max-w-xs">
+        <span id="toast-message"></span>
+    </div>
+
+    <!-- Compare bar (shown when products are selected to compare) -->
+    <div id="compare-bar" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[9998] bg-neutral-900 text-white rounded-full shadow-xl px-5 py-3 flex items-center gap-4 text-xs tracking-wide">
+        <span><span id="compare-count">0</span> selected to compare</span>
+        <a id="compare-go" href="#" class="bg-brand-500 hover:bg-brand-600 transition-colors px-4 py-1.5 rounded-full uppercase tracking-widest">Compare</a>
+        <button id="compare-clear" type="button" class="text-neutral-400 hover:text-white transition-colors">Clear</button>
+    </div>
+
+    @* ─── Floating WhatsApp button (storefront) ──────────────────────────────
+       Uses the same editable setting as the Contact page (Admin → Settings → General →
+       WhatsApp Number). Hidden when no number is set. Inline styles so it can never be
+       tree-shaken out of the production CSS build. *@
+    @{
+        var floatWa = await SettingsService.GetAsync("general.whatsapp_number");
+        var floatWaDigits = floatWa.Replace("+", "").Replace(" ", "").Replace("-", "").Replace("(", "").Replace(")", "");
+    }
+    @if (!string.IsNullOrWhiteSpace(floatWaDigits))
+    {
+        <a href="https://wa.me/@floatWaDigits" target="_blank" rel="noopener" aria-label="Chat with us on WhatsApp"
+           style="position:fixed;bottom:24px;right:24px;z-index:45;width:56px;height:56px;border-radius:9999px;background:#25D366;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(0,0,0,.28);">
+            <svg style="width:30px;height:30px;display:block;" fill="#ffffff" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+            </svg>
+        </a>
+    }
+
+    <partial name="_WelcomePopup" />
+
+    <!-- Scripts -->
+    <script src="~/js/app.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

@@ -1,0 +1,70 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>SterlingLams.Web</RootNamespace>
+    <AssemblyName>SterlingLams.Web</AssemblyName>
+
+    <!-- Project authorship / assembly metadata -->
+    <Product>Sterlin Glams Platform</Product>
+    <Authors>Dev Rapheal</Authors>
+    <Company>Sterlin Glams</Company>
+    <Description>Sterlin Glams e-commerce storefront, admin back office, and in-house inventory/POS platform. Developed by Dev Rapheal.</Description>
+    <Copyright>Copyright © Sterlin Glams. Developed by Dev Rapheal.</Copyright>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Entity Framework Core (PostgreSQL) -->
+    <PackageReference Include="CloudinaryDotNet" Version="1.29.2" />
+    <PackageReference Include="QRCoder" Version="1.6.0" />
+    <PackageReference Include="HtmlSanitizer" Version="9.0.892" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.17">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.17">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+
+    <!-- ASP.NET Core Identity -->
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="9.0.17" />
+
+    <!-- Data Protection key storage in the DB (survives redeploys/cold starts on ephemeral hosts) -->
+    <PackageReference Include="Microsoft.AspNetCore.DataProtection.EntityFrameworkCore" Version="9.0.17" />
+
+    <!-- Authentication (cookie auth ships in the ASP.NET Core shared framework — no package needed) -->
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" Version="9.0.17" />
+    <PackageReference Include="Sentry.AspNetCore" Version="6.6.0" />
+
+    <!-- Stripe -->
+    <PackageReference Include="Stripe.net" Version="47.3.0" />
+
+    <!-- HTTP Client -->
+    <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.17" />
+
+    <!-- Caching -->
+    <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="9.0.17" />
+
+    <!-- JSON -->
+    <PackageReference Include="System.Text.Json" Version="9.0.17" />
+
+    <!-- Logging -->
+    <PackageReference Include="Serilog.AspNetCore" Version="9.0.0" />
+    <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
+    <PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
+
+    <!-- FluentValidation -->
+    <PackageReference Include="FluentValidation.AspNetCore" Version="11.3.0" />
+  </ItemGroup>
+
+  <!-- Run Tailwind CSS build before publish.
+       Skip with /p:BuildTailwind=false (e.g. Docker/Render builds CSS in a separate Node stage). -->
+  <Target Name="BuildTailwind" BeforeTargets="Build" Condition="'$(Configuration)' == 'Release' and '$(BuildTailwind)' != 'false'">
+    <Exec Command="npm run build:css" WorkingDirectory="$(ProjectDir)" />
+  </Target>
+
+</Project>

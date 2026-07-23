@@ -1,0 +1,37 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+*.DotSettings.user
+
+# Node
+node_modules/
+npm-debug.log*
+
+# Generated CSS (built by Tailwind)
+src/SterlingLams.Web/wwwroot/css/app.css
+
+# Logs
+logs/
+*.log
+
+# Secrets & environment
+appsettings.Local.json
+.env
+
+# EF Core Migrations snapshots (keep migrations, exclude db snapshots)
+*.db
+*.sqlite
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local secrets — never commit
+appsettings.Development.json
+
+# Data Protection keys — sensitive, machine-generated; never commit
+**/App_Data/dp-keys/
+App_Data/

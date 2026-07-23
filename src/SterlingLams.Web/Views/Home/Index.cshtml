@@ -1,0 +1,560 @@
+@using SterlingLams.Web.Services
+@inject ISettingsService SettingsService
+@{
+    ViewData["Title"] = "Luxury Jewellery";
+    ViewData["Description"] = "Glamstar — luxury jewellery and accessories. Shop rings, necklaces, earrings, bracelets, watches and clutches, with in-store pickup at our Lagos and Abuja stores.";
+    Layout = "_Layout";
+    // Home ends on the black striped newsletter section — sit the (dark) footer flush against it,
+    // so there's no cream body-gap between them. Other pages keep the footer's normal top spacing.
+    ViewData["FooterFlush"] = true;
+    var featuredProducts = ViewBag.FeaturedProducts as List<SterlingLams.Web.Models.ViewModels.ProductCardViewModel> ?? new();
+    var bestSellers = ViewBag.BestSellers as List<SterlingLams.Web.Models.ViewModels.ProductCardViewModel> ?? new();
+    var trending = ViewBag.Trending as List<SterlingLams.Web.Models.ViewModels.ProductCardViewModel> ?? new();
+    var recentlyViewed = ViewBag.RecentlyViewed as List<SterlingLams.Web.Models.ViewModels.ProductCardViewModel> ?? new();
+
+    var heroImageUrl  = await SettingsService.GetAsync("homepage.hero_image_url", "");
+    var heroImagesRaw = await SettingsService.GetAsync("homepage.hero_images", "");
+    var heroEyebrow   = await SettingsService.GetAsync("homepage.hero_eyebrow",   "New Collection 2025");
+    var heroHeadline  = await SettingsService.GetAsync("homepage.hero_headline",  "Timeless Elegance");
+    var heroSubtext   = await SettingsService.GetAsync("homepage.hero_subtext",   "Luxury jewellery crafted for the discerning woman. Discover our newest arrivals.");
+    var heroCta       = await SettingsService.GetAsync("homepage.hero_cta",       "Shop Collection");
+    // Slider images: the multi-image list when set, otherwise the single campaign image.
+    var heroImages = heroImagesRaw.Split('\n', StringSplitOptions.RemoveEmptyEntries)
+        .Select(u => u.Trim()).Where(u => u.Length > 0).ToList();
+    if (heroImages.Count == 0 && !string.IsNullOrWhiteSpace(heroImageUrl)) heroImages.Add(heroImageUrl);
+    var hasHeroImage  = heroImages.Count > 0;
+
+    var showFeatured     = await SettingsService.GetBoolAsync("homepage.show_featured", true);
+    var showBestSellers  = await SettingsService.GetBoolAsync("homepage.show_best_sellers", true);
+    var showTrending     = await SettingsService.GetBoolAsync("homepage.show_trending", true);
+    var showRecentlyView = await SettingsService.GetBoolAsync("homepage.show_recently_viewed", true);
+    var featuredHeading = await SettingsService.GetAsync("homepage.featured_heading", "Featured Pieces");
+    // Low-stock threshold for the "Only N left" card badge (0 = off) — shared by every product
+    // card on the page (featured carousel + merchandising rows) via ViewData.
+    ViewData["CardLowThreshold"] = await SettingsService.GetBoolAsync("inventory.show_low_stock_nudge", true)
+        ? (int)await SettingsService.GetDecimalAsync("inventory.low_stock_threshold", 5)
+        : 0;
+    // Slider speeds (seconds → ms), clamped to a sane minimum.
+    var heroSlideMs     = Math.Max(2, await SettingsService.GetIntAsync("homepage.hero_slide_seconds", 5)) * 1000;
+    var featuredSlideMs = Math.Max(2, await SettingsService.GetIntAsync("homepage.featured_slide_seconds", 3)) * 1000;
+    var storeBannerText = await SettingsService.GetAsync("homepage.store_banner_text",
+        "Experience our jewellery in person at any of our three Lagos stores. Our consultants are ready to help you find the perfect piece.");
+
+    // Scrolling trust bar. Labels are editable in Settings → Homepage (Items 1–6). Items 4–6 are
+    // optional — leave a label blank to hide it. Each label pairs with the fixed icon at its index.
+    var trustPaths = new[]
+    {
+        "M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z",
+        "M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z",
+        "M16 15v-1a4 4 0 00-4-4H8m0 0l3 3m-3-3l3-3m9 14V5a2 2 0 00-2-2H6a2 2 0 00-2 2v16l4-2 4 2 4-2 4 2z",
+        "M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 12V8m0 0V5.5A2.5 2.5 0 109.5 8H12z",
+        "M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z",
+        "M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.196-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.783-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
+    };
+    var trustLabels = new[]
+    {
+        await SettingsService.GetAsync("homepage.trust_1", "Certified Authentic"),
+        await SettingsService.GetAsync("homepage.trust_2", "Secure Checkout"),
+        await SettingsService.GetAsync("homepage.trust_3", "Easy Returns"),
+        await SettingsService.GetAsync("homepage.trust_4", ""),
+        await SettingsService.GetAsync("homepage.trust_5", ""),
+        await SettingsService.GetAsync("homepage.trust_6", "")
+    };
+    // Pair each non-blank label with its icon; blanks are skipped so the admin can add up to six.
+    // Each item may also have an uploaded icon image (Settings → Homepage) that overrides the
+    // built-in one — shown white to match the bar. Falls back to the default icon when unset.
+    var trustItems = new List<(string Label, string Svg, string Img)>();
+    for (var ti = 0; ti < trustLabels.Length; ti++)
+    {
+        if (string.IsNullOrWhiteSpace(trustLabels[ti])) continue;
+        var trustImg = await SettingsService.GetAsync($"homepage.trust_{ti + 1}_icon", "");
+        trustItems.Add((trustLabels[ti].Trim(), trustPaths[ti], trustImg));
+    }
+}
+
+<partial name="_QuickViewModal" />
+
+<!-- ─── Hero ──────────────────────────────────────────────────────────────── -->
+<section class="relative h-screen min-h-[600px] flex items-center overflow-hidden">
+
+    <!-- Background: campaign image(s) (admin-set) or gradient fallback -->
+    <div class="absolute inset-0">
+        @if (hasHeroImage)
+        {
+            <div id="hero-slider" class="absolute inset-0">
+                @for (var i = 0; i < heroImages.Count; i++)
+                {
+                    @* First slide is the LCP element: load eagerly + high priority; the rest are lazy. *@
+                    <img src="@Img.Cld(heroImages[i], 1920)" alt="Campaign" decoding="async"
+                         loading="@(i == 0 ? "eager" : "lazy")" fetchpriority="@(i == 0 ? "high" : "low")"
+                         class="hero-slide absolute inset-0 w-full h-full object-cover object-center transition-opacity duration-700 @(i == 0 ? "opacity-100" : "opacity-0")"
+                         data-index="@i" />
+                }
+            </div>
+            <!-- Dark overlay so text remains readable over any image -->
+            <div class="absolute inset-0 bg-black/40"></div>
+
+            @if (heroImages.Count > 1)
+            {
+                <!-- Prev / Next -->
+                <button type="button" id="hero-prev" aria-label="Previous slide"
+                        class="absolute left-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-white/20 hover:bg-white/40 text-white flex items-center justify-center backdrop-blur-sm transition-colors">‹</button>
+                <button type="button" id="hero-next" aria-label="Next slide"
+                        class="absolute right-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-white/20 hover:bg-white/40 text-white flex items-center justify-center backdrop-blur-sm transition-colors">›</button>
+                <!-- Dots -->
+                <div id="hero-dots" class="absolute bottom-20 left-1/2 -translate-x-1/2 z-20 flex gap-2">
+                    @for (var i = 0; i < heroImages.Count; i++)
+                    {
+                        <button type="button" class="hero-dot w-2.5 h-2.5 rounded-full transition-colors @(i == 0 ? "bg-white" : "bg-white/40 hover:bg-white/70")" data-index="@i" aria-label="Go to slide @(i + 1)"></button>
+                    }
+                </div>
+            }
+        }
+        else
+        {
+            <div class="w-full h-full bg-gradient-to-br from-neutral-200 via-neutral-100 to-stone-100"></div>
+        }
+    </div>
+
+    <div class="relative z-10 max-w-7xl mx-auto px-6 text-center">
+        <p class="text-xs tracking-[0.4em] uppercase @(hasHeroImage ? "text-brand-300" : "text-brand-500") mb-6">@heroEyebrow</p>
+        <h1 class="font-cormorant text-6xl md:text-8xl font-light @(hasHeroImage ? "text-white" : "text-neutral-900") leading-none mb-6">
+            @{
+                var parts = heroHeadline.Split(' ', 2);
+                var firstWord = parts[0];
+                var rest = parts.Length > 1 ? parts[1] : "";
+            }
+            @firstWord<br>
+            <em class="italic @(hasHeroImage ? "text-brand-300" : "text-brand-500")">@rest</em>
+        </h1>
+        <p class="text-base font-light @(hasHeroImage ? "text-white/80" : "text-neutral-500") tracking-wide max-w-md mx-auto mb-10">
+            @heroSubtext
+        </p>
+        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+            <a asp-controller="Products" asp-action="Index"
+               class="inline-block bg-brand-500 text-white text-xs tracking-[0.2em] uppercase px-10 py-4 hover:bg-brand-600 transition-colors duration-300">
+                @heroCta
+            </a>
+            <a asp-controller="Home" asp-action="Collections"
+               class="inline-block border @(hasHeroImage ? "border-white text-white hover:bg-white hover:text-neutral-900" : "border-neutral-900 text-neutral-900 hover:bg-brand-500 hover:border-brand-500 hover:text-white") text-xs tracking-[0.2em] uppercase px-10 py-4 transition-colors duration-300">
+                Explore Lookbook
+            </a>
+        </div>
+    </div>
+
+    <!-- Scroll indicator -->
+    <div class="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2">
+        <div class="w-px h-12 bg-gradient-to-b from-transparent to-brand-400"></div>
+        <span class="text-[10px] tracking-[0.3em] uppercase text-brand-400">Scroll</span>
+    </div>
+</section>
+
+<!-- ─── Trust Bar (continuously scrolling marquee) ─────────────────────────── -->
+<section class="py-5 bg-brand-500 overflow-hidden" aria-label="Why shop with us">
+    <div class="trust-marquee flex w-max">
+        @* Two IDENTICAL halves so the -50% translate loops seamlessly. Each half repeats the (few,
+           short) items enough times to always overflow the viewport — otherwise the strip is
+           narrower than the screen and an empty gap scrolls past. *@
+        @{ const int TrustReps = 6; }
+        @for (var g = 0; g < 2; g++)
+        {
+            <div class="flex shrink-0">
+                @for (var r = 0; r < TrustReps; r++)
+                {
+                    @for (var i = 0; i < trustItems.Count; i++)
+                    {
+                        <div class="flex items-center justify-center gap-3 text-white px-12"
+                             aria-hidden="@((g == 1 || r > 0) ? "true" : "false")">
+                            @if (!string.IsNullOrWhiteSpace(trustItems[i].Img))
+                            {
+                                <img src="@trustItems[i].Img" alt="" class="w-5 h-5 flex-shrink-0 object-contain opacity-90" style="filter: brightness(0) invert(1);" />
+                            }
+                            else
+                            {
+                                <svg class="w-5 h-5 flex-shrink-0 opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="@trustItems[i].Svg" />
+                                </svg>
+                            }
+                            <span class="text-xs tracking-[0.2em] uppercase font-light whitespace-nowrap">@trustItems[i].Label</span>
+                        </div>
+                    }
+                }
+            </div>
+        }
+    </div>
+</section>
+<style>
+    @@keyframes trustScroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+    /* Duration scaled to the wider strip so the on-screen speed stays the same, calm ~26px/s. */
+    .trust-marquee { animation: trustScroll 180s linear infinite; will-change: transform; }
+    .trust-marquee:hover { animation-play-state: paused; }
+    @@media (prefers-reduced-motion: reduce) { .trust-marquee { animation: none; } }
+</style>
+
+<!-- ─── Shop by Category ──────────────────────────────────────────────────── -->
+@{
+    var shopCategories = ViewBag.ShopCategories as List<SterlingLams.Web.Models.Domain.Category> ?? new();
+}
+@if (shopCategories.Any())
+{
+    <section class="py-20 bg-white">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="text-center mb-14">
+                <h2 class="font-cormorant text-4xl font-light text-neutral-900">Shop by Category</h2>
+                @{
+                    // Admin-configurable (Settings → Homepage). Values are sanitised before they go
+                    // anywhere near an inline style / class so nothing can be injected.
+                    var dEnabled = await SettingsService.GetBoolAsync("home.diamond.enabled", true);
+                    var dColorRaw = await SettingsService.GetAsync("home.diamond.color", "#a855f7");
+                    var dColor = System.Text.RegularExpressions.Regex.IsMatch(dColorRaw ?? "", "^#[0-9a-fA-F]{3,8}$") ? dColorRaw : "#a855f7";
+                    var dSize = int.TryParse(await SettingsService.GetAsync("home.diamond.size", "74"), out var _sz) && _sz is >= 20 and <= 300 ? _sz : 74;
+                    var dAnim = SterlingLams.Web.Infrastructure.SettingsSelectOptions.Coerce("home.diamond.animation", await SettingsService.GetAsync("home.diamond.animation", "glow"));
+                }
+                @if (dEnabled)
+                {
+                    <!-- Decorative glowing diamond. Colour/size/animation come from Settings → Homepage. -->
+                    <div class="cat-diamond cat-diamond--@dAnim" style="--cat-d-size:@(dSize)px;--cat-d-color:@dColor;" aria-hidden="true">
+                        <svg class="cat-diamond__gem" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+                            <ellipse class="cat-diamond__shadow" cx="60" cy="111" rx="24" ry="3.5" />
+                            <g stroke="#ffffff" stroke-opacity="0.30" stroke-width="0.5" stroke-linejoin="round">
+                                <polygon class="cat-diamond__facet" fill-opacity="0.12" points="40,20 80,20 72,32 48,32" />
+                                <polygon class="cat-diamond__facet" fill-opacity="0.50" points="40,20 48,32 20,44" />
+                                <polygon class="cat-diamond__facet" fill-opacity="0.50" points="80,20 72,32 100,44" />
+                                <polygon class="cat-diamond__facet" fill-opacity="0.32" points="48,32 60,44 20,44" />
+                                <polygon class="cat-diamond__facet" fill-opacity="0.50" points="48,32 72,32 60,44" />
+                                <polygon class="cat-diamond__facet" fill-opacity="0.32" points="72,32 100,44 60,44" />
+                                <polygon class="cat-diamond__facet" fill-opacity="1"    points="20,44 40,44 60,104" />
+                                <polygon class="cat-diamond__facet" fill-opacity="0.62" points="40,44 60,44 60,104" />
+                                <polygon class="cat-diamond__facet" fill-opacity="1"    points="60,44 80,44 60,104" />
+                                <polygon class="cat-diamond__facet" fill-opacity="0.62" points="80,44 100,44 60,104" />
+                            </g>
+                            <polygon class="cat-diamond__shine" points="45,22 63,22 57,30 49,30" />
+                            <path class="cat-diamond__spark cat-diamond__spark--1" d="M28,18 L30,24 L36,26 L30,28 L28,34 L26,28 L20,26 L26,24 Z" />
+                            <path class="cat-diamond__spark cat-diamond__spark--2" d="M90,47 L91.2,50.8 L95,52 L91.2,53.2 L90,57 L88.8,53.2 L85,52 L88.8,50.8 Z" />
+                        </svg>
+                    </div>
+                }
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-6">
+                @{ var catIdx = 0; }
+                @foreach (var cat in shopCategories)
+                {
+                    // First row (up to 6 across on desktop) loads eagerly so the tiles don't pop in
+                    // as you reach this section; the rest stay lazy.
+                    var catEager = catIdx < 6;
+                    <a asp-controller="Products" asp-action="Index" asp-route-category="@cat.Slug"
+                       class="group block text-center">
+                        <div class="aspect-square overflow-hidden bg-neutral-100 mb-4">
+                            @if (!string.IsNullOrWhiteSpace(cat.ImageUrl))
+                            {
+                                <img src="@Img.Cld(cat.ImageUrl, 700, 700)" alt="@cat.Name"
+                                     loading="@(catEager ? "eager" : "lazy")" decoding="async" width="700" height="700"
+                                     class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                            }
+                            else
+                            {
+                                <div class="w-full h-full bg-gradient-to-br from-neutral-200 via-neutral-100 to-stone-100 flex items-center justify-center">
+                                    <span class="font-cormorant text-2xl text-neutral-400">@cat.Name</span>
+                                </div>
+                            }
+                        </div>
+                        <span class="text-xs tracking-[0.2em] uppercase text-neutral-700 group-hover:text-neutral-900 transition-colors">
+                            @cat.Name
+                        </span>
+                        <!-- Brand-colour underline that grows on hover -->
+                        <div class="mx-auto mt-3 h-0.5 w-full max-w-[10rem] bg-brand-500 origin-center scale-x-0 group-hover:scale-x-100 transition-transform duration-300"></div>
+                    </a>
+                    catIdx++;
+                }
+            </div>
+        </div>
+    </section>
+}
+
+<!-- ─── Homepage Feature ("Icons of Summer"-style, admin-editable) ──────────── -->
+@{
+    var featOn       = await SettingsService.GetBoolAsync("home.feature.enabled", true);
+    var featHeading  = await SettingsService.GetAsync("home.feature.heading", "Icons of Summer");
+    var blocks = new[] { "b1", "b2" };
+    var featBlocks = new List<(string Image, string Title, string Text, string Category, string LinkText)>();
+    foreach (var b in blocks)
+    {
+        var img = await SettingsService.GetAsync($"home.feature.{b}.image", "");
+        if (string.IsNullOrWhiteSpace(img)) continue;
+        featBlocks.Add((
+            img,
+            await SettingsService.GetAsync($"home.feature.{b}.title", ""),
+            await SettingsService.GetAsync($"home.feature.{b}.text", ""),
+            await SettingsService.GetAsync($"home.feature.{b}.category", ""),
+            await SettingsService.GetAsync($"home.feature.{b}.link_text", "Shop the Collection")
+        ));
+    }
+}
+@if (featOn && featBlocks.Any())
+{
+    <section class="py-20 bg-white">
+        <div class="max-w-6xl mx-auto px-6">
+            @if (!string.IsNullOrWhiteSpace(featHeading))
+            {
+                <div class="text-center mb-12">
+                    <h2 class="font-cormorant text-4xl font-light text-neutral-900">@featHeading</h2>
+                </div>
+            }
+            <div class="grid gap-8 @(featBlocks.Count > 1 ? "md:grid-cols-2" : "max-w-xl mx-auto")">
+                @foreach (var blk in featBlocks)
+                {
+                    <div class="text-center flex flex-col h-full">
+                        @if (!string.IsNullOrWhiteSpace(blk.Category))
+                        {
+                            <a asp-controller="Products" asp-action="Index" asp-route-category="@blk.Category"
+                               class="block aspect-[4/5] overflow-hidden bg-neutral-100 mb-6 group">
+                                <img src="@Img.Cld(blk.Image, 800)" alt="@blk.Title" loading="lazy"
+                                     class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                            </a>
+                        }
+                        else
+                        {
+                            <div class="aspect-[4/5] overflow-hidden bg-neutral-100 mb-6 group">
+                                <img src="@Img.Cld(blk.Image, 800)" alt="@blk.Title" loading="lazy"
+                                     class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                            </div>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(blk.Title))
+                        {
+                            <h3 class="font-cormorant text-2xl font-light text-neutral-900 mb-2">@blk.Title</h3>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(blk.Text))
+                        {
+                            <p class="text-sm text-neutral-500 font-light max-w-md mx-auto mb-4 leading-relaxed">@blk.Text</p>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(blk.Category))
+                        {
+                            <div class="mt-auto pt-2">
+                                <a asp-controller="Products" asp-action="Index" asp-route-category="@blk.Category"
+                                   class="inline-block text-xs tracking-[0.2em] uppercase text-neutral-900 border-b-2 border-brand-500 pb-1 hover:text-brand-500 transition-colors">
+                                    @(string.IsNullOrWhiteSpace(blk.LinkText) ? "Shop the Collection" : blk.LinkText)
+                                </a>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </section>
+}
+
+<!-- ─── Featured Products ─────────────────────────────────────────────────── -->
+@if (showFeatured)
+{
+<section class="py-20 bg-stone-50">
+    <div class="max-w-7xl mx-auto px-6">
+        <div class="text-center mb-14">
+            <p class="text-xs tracking-[0.3em] uppercase text-brand-500 mb-3">Curated for you</p>
+            <h2 class="font-cormorant text-4xl font-light text-neutral-900">@featuredHeading</h2>
+        </div>
+
+        @if (featuredProducts.Any())
+        {
+            <div class="relative group/carousel">
+                @if (featuredProducts.Count > 4)
+                {
+                    <button type="button" id="feat-prev" aria-label="Previous"
+                            class="hidden md:flex absolute -left-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white shadow-md border border-neutral-100 text-neutral-700 hover:bg-brand-500 hover:text-white items-center justify-center transition-colors">‹</button>
+                    <button type="button" id="feat-next" aria-label="Next"
+                            class="hidden md:flex absolute -right-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white shadow-md border border-neutral-100 text-neutral-700 hover:bg-brand-500 hover:text-white items-center justify-center transition-colors">›</button>
+                }
+                <div id="feat-track" class="flex gap-6 overflow-x-auto snap-x snap-mandatory scroll-smooth pb-2 [&::-webkit-scrollbar]:hidden" style="scrollbar-width:none;">
+                    @foreach (var p in featuredProducts)
+                    {
+                        <div class="snap-start shrink-0 w-[calc(50%-12px)] md:w-[calc(25%-18px)]">
+                            <partial name="_ProductCard" model="p" />
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+                @for (int i = 0; i < 4; i++)
+                {
+                    <div class="group">
+                        <div class="aspect-square bg-neutral-100 mb-4 overflow-hidden">
+                            <div class="w-full h-full bg-gradient-to-br from-neutral-200 to-neutral-100"></div>
+                        </div>
+                        <div class="h-3 bg-neutral-200 rounded w-3/4 mb-2"></div>
+                        <div class="h-2 bg-neutral-100 rounded w-1/3"></div>
+                    </div>
+                }
+            </div>
+        }
+
+        <div class="text-center mt-12">
+            <a asp-controller="Products" asp-action="Index"
+               class="inline-block border border-brand-500 text-brand-500 text-xs tracking-[0.2em] uppercase px-12 py-4 hover:bg-brand-500 hover:text-white transition-colors duration-300">
+                View All
+            </a>
+        </div>
+    </div>
+</section>
+}
+
+<!-- ─── Merchandising rows (best sellers / trending / recently viewed) ────────── -->
+@if (showBestSellers)
+{
+    @await Html.PartialAsync("_ProductCardRow", bestSellers, new ViewDataDictionary(ViewData)
+    {
+        ["RowTitle"] = "Best Sellers", ["RowEyebrow"] = "Most loved", ["RowBg"] = "bg-white",
+    })
+}
+@if (showTrending)
+{
+    @await Html.PartialAsync("_ProductCardRow", trending, new ViewDataDictionary(ViewData)
+    {
+        ["RowTitle"] = "Trending Now", ["RowEyebrow"] = "Popular this month", ["RowBg"] = "bg-stone-50",
+    })
+}
+@if (showRecentlyView)
+{
+    @await Html.PartialAsync("_ProductCardRow", recentlyViewed, new ViewDataDictionary(ViewData)
+    {
+        ["RowTitle"] = "Recently Viewed", ["RowEyebrow"] = "Pick up where you left off", ["RowBg"] = "bg-white",
+    })
+}
+
+<!-- ─── Store Finder Banner ───────────────────────────────────────────────── -->
+<section class="py-20 bg-neutral-900 text-white">
+    <div class="max-w-7xl mx-auto px-6 grid md:grid-cols-2 gap-12 items-center">
+        <div>
+            <p class="text-xs tracking-[0.3em] uppercase text-neutral-400 mb-4">3 Locations in Lagos</p>
+            <h2 class="font-cormorant text-4xl font-light mb-6">Visit Us In-Store</h2>
+            <p class="text-neutral-400 font-light text-sm leading-relaxed mb-8">
+                @storeBannerText
+            </p>
+            <a asp-controller="Stores" asp-action="Index"
+               class="inline-block border border-brand-500 text-brand-500 text-xs tracking-[0.2em] uppercase px-10 py-4 hover:bg-brand-500 hover:text-white transition-colors duration-300">
+                Find a Store
+            </a>
+        </div>
+        <div class="grid grid-cols-3 gap-4">
+            @foreach (var store in new[] { "Glamstar Abuja", "Glamstar Allen", "Glamstar Ikota" })
+            {
+                <div class="bg-neutral-800 p-6 text-center">
+                    <div class="w-8 h-8 rounded-full bg-neutral-700 flex items-center justify-center mx-auto mb-3">
+                        <svg class="w-4 h-4 text-neutral-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                        </svg>
+                    </div>
+                    <p class="text-xs tracking-widest uppercase text-neutral-300">@store</p>
+                </div>
+            }
+        </div>
+    </div>
+</section>
+
+<!-- ─── Newsletter signup ─────────────────────────────────────────────────── -->
+<section class="relative overflow-hidden bg-black" aria-label="Newsletter signup">
+    <!-- diagonal stripe backdrop (finer stripes) -->
+    <div class="absolute inset-0 opacity-90"
+         style="background: repeating-linear-gradient(135deg, #000 0, #000 9px, #ffffff 9px, #ffffff 18px);"></div>
+    <div class="relative max-w-7xl mx-auto px-6 py-12 flex justify-center">
+        <div class="w-full max-w-md bg-black/85 backdrop-blur-sm px-6 sm:px-8 py-7 text-center">
+            <p class="text-[11px] tracking-[0.3em] uppercase text-neutral-400 mb-1.5">Enjoy amazing discounts</p>
+            <h2 class="font-cormorant text-2xl sm:text-3xl font-semibold text-white mb-4">Join Our Newsletter</h2>
+
+            <form id="newsletter-form" class="text-left">
+                <input id="newsletter-email" name="email" type="email" required placeholder="Your email address" aria-label="Email address"
+                       class="w-full bg-transparent border border-neutral-600 text-white placeholder-neutral-500 px-4 py-2.5 mb-3 text-sm focus:outline-none focus:border-brand-500 transition-colors" />
+                <div class="text-center">
+                    <button type="submit"
+                            class="bg-white text-neutral-900 text-xs tracking-[0.2em] uppercase px-10 py-2.5 hover:bg-brand-500 hover:text-white transition-colors duration-300 disabled:opacity-60">
+                        Sign Up
+                    </button>
+                </div>
+                <p id="newsletter-msg" class="text-sm text-center mt-3 min-h-[1.25rem]"></p>
+            </form>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+<script nonce="@Context.Items["csp-nonce"]">
+(function () {
+    const form = document.getElementById('newsletter-form');
+    if (!form) return;
+    const msg = document.getElementById('newsletter-msg');
+    const btn = form.querySelector('button[type=submit]');
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('newsletter-email').value.trim();
+        btn.disabled = true; msg.textContent = ''; msg.className = 'text-sm text-center mt-3 min-h-[1.25rem] text-neutral-300';
+        try {
+            const res = await fetch('/Home/Subscribe', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'email=' + encodeURIComponent(email)
+            });
+            const data = await res.json();
+            msg.textContent = data.message;
+            msg.classList.add(data.success ? 'text-emerald-400' : 'text-red-400');
+            if (data.success) form.reset();
+        } catch {
+            msg.textContent = 'Something went wrong. Please try again.';
+            msg.classList.add('text-red-400');
+        } finally { btn.disabled = false; }
+    });
+}());
+</script>
+<script nonce="@Context.Items["csp-nonce"]">
+// Hero campaign slider — fade between images, auto-advance, arrows + dots.
+(function () {
+    var slider = document.getElementById('hero-slider');
+    if (!slider) return;
+    var slides = slider.querySelectorAll('.hero-slide');
+    if (slides.length < 2) return;
+    var dots = document.querySelectorAll('.hero-dot');
+    var idx = 0, timer;
+    function show(n) {
+        idx = (n + slides.length) % slides.length;
+        slides.forEach(function (s, i) { s.classList.toggle('opacity-100', i === idx); s.classList.toggle('opacity-0', i !== idx); });
+        dots.forEach(function (d, i) { d.classList.toggle('bg-white', i === idx); d.classList.toggle('bg-white/40', i !== idx); });
+    }
+    function restart() { clearInterval(timer); timer = setInterval(function () { show(idx + 1); }, @heroSlideMs); }
+    var nb = document.getElementById('hero-next'), pb = document.getElementById('hero-prev');
+    if (nb) nb.addEventListener('click', function () { show(idx + 1); restart(); });
+    if (pb) pb.addEventListener('click', function () { show(idx - 1); restart(); });
+    dots.forEach(function (d) { d.addEventListener('click', function () { show(+d.dataset.index); restart(); }); });
+    restart();
+}());
+// Featured products carousel — auto-slides one card at a time, loops, pauses on hover.
+(function () {
+    var track = document.getElementById('feat-track');
+    if (!track) return;
+    function page() { return Math.max(track.clientWidth * 0.9, 240); }
+    function card() { var c = track.firstElementChild; return c ? c.getBoundingClientRect().width + 24 : page(); }
+    function atEnd() { return track.scrollLeft + track.clientWidth >= track.scrollWidth - 8; }
+
+    var next = document.getElementById('feat-next'), prev = document.getElementById('feat-prev');
+    if (next) next.addEventListener('click', function () { track.scrollBy({ left: page(), behavior: 'smooth' }); restart(); });
+    if (prev) prev.addEventListener('click', function () { track.scrollBy({ left: -page(), behavior: 'smooth' }); restart(); });
+
+    var timer;
+    function advance() {
+        if (atEnd()) track.scrollTo({ left: 0, behavior: 'smooth' });
+        else track.scrollBy({ left: card(), behavior: 'smooth' });
+    }
+    function start() { if (track.scrollWidth > track.clientWidth + 8) timer = setInterval(advance, @featuredSlideMs); }
+    function stop() { clearInterval(timer); }
+    function restart() { stop(); start(); }
+
+    // Pause while the visitor is interacting, resume after.
+    track.addEventListener('mouseenter', stop);
+    track.addEventListener('mouseleave', start);
+    track.addEventListener('touchstart', stop, { passive: true });
+    track.addEventListener('touchend', function () { setTimeout(start, 4000); }, { passive: true });
+    document.addEventListener('visibilitychange', function () { if (document.hidden) stop(); else start(); });
+    start();
+}());
+</script>
+}

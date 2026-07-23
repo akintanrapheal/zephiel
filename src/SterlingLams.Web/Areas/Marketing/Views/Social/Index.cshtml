@@ -1,0 +1,155 @@
+@model List<SterlingLams.Web.Models.Domain.SocialPost>
+@using SterlingLams.Web.Models.Domain
+@{
+    ViewData["Title"] = "Social";
+    bool publishing = ViewBag.PublishingEnabled ?? false;
+    string ChannelBadges(SocialChannel c)
+    {
+        var parts = new List<string>();
+        if (c.HasFlag(SocialChannel.Instagram)) parts.Add("Instagram");
+        if (c.HasFlag(SocialChannel.Facebook)) parts.Add("Facebook");
+        if (c.HasFlag(SocialChannel.TikTok)) parts.Add("TikTok");
+        return parts.Count > 0 ? string.Join(" · ", parts) : "—";
+    }
+    (string Css, string Label) StatusBadge(SocialPostStatus s) => s switch
+    {
+        SocialPostStatus.Scheduled => ("bg-blue-50 text-blue-700", "Scheduled"),
+        SocialPostStatus.Published => ("bg-emerald-50 text-emerald-700", "Published"),
+        SocialPostStatus.Failed => ("bg-red-50 text-red-700", "Failed"),
+        _ => ("bg-neutral-100 text-neutral-500", "Draft")
+    };
+}
+@Html.AntiForgeryToken()
+
+<div class="mb-6 flex items-start justify-between gap-4 flex-wrap">
+    <div>
+        <h1 class="text-2xl font-light text-neutral-900">Social</h1>
+        <p class="text-sm text-neutral-500 mt-1">Compose and schedule posts for Instagram, Facebook &amp; TikTok.</p>
+    </div>
+    <button type="button" onclick="document.getElementById('compose').classList.toggle('hidden')" class="px-4 py-2 text-sm bg-neutral-900 text-white rounded-sm hover:bg-neutral-700">+ New post</button>
+</div>
+
+@if (TempData["Success"] != null) { <div class="mb-4 bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm px-4 py-3 rounded-sm">@TempData["Success"]</div> }
+@if (TempData["Error"] != null) { <div class="mb-4 bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-sm">@TempData["Error"]</div> }
+
+@if (!publishing)
+{
+    <div class="mb-6 bg-amber-50 border border-amber-200 text-amber-800 text-sm px-4 py-3 rounded-sm">
+        <strong>Publishing isn't connected yet.</strong> Linking Instagram/Facebook/TikTok needs Meta &amp; TikTok app approval.
+        Until then, this works as your content calendar — scheduled posts are saved here and will auto-publish once accounts are connected.
+    </div>
+}
+
+<div id="compose" class="hidden bg-white border border-neutral-200 rounded-sm p-5 mb-6">
+    <form asp-area="Marketing" asp-controller="Social" asp-action="Save" method="post" class="space-y-4">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="id" value="0" />
+        <div>
+            <label class="block text-xs text-neutral-500 mb-1">Caption *</label>
+            <textarea name="content" rows="4" required placeholder="What's the post?" class="w-full border border-neutral-200 rounded-sm px-3 py-2 text-sm"></textarea>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-xs text-neutral-500 mb-1">Image (optional)</label>
+                <input id="social-image-url" name="imageUrl" placeholder="Paste a URL, or upload below" class="w-full border border-neutral-200 rounded-sm px-3 py-2 text-sm" />
+                <div class="flex items-center gap-2 mt-2 flex-wrap">
+                    <input id="social-image-file" type="file" accept="image/*" class="text-xs text-neutral-600 file:mr-2 file:px-2 file:py-1 file:text-xs file:border file:border-neutral-300 file:rounded-sm file:bg-white hover:file:bg-neutral-100" />
+                    <button type="button" id="social-image-upload-btn" class="px-3 py-1.5 text-xs border border-neutral-300 rounded-sm hover:bg-neutral-900 hover:text-white transition-colors">Upload</button>
+                    <span id="social-image-status" class="text-xs text-neutral-400"></span>
+                </div>
+                <img id="social-image-preview" class="hidden mt-2 w-20 h-20 object-cover rounded-sm border border-neutral-200" alt="preview" />
+            </div>
+            <div>
+                <label class="block text-xs text-neutral-500 mb-1">Schedule for (UTC)</label>
+                <input name="scheduledAt" type="datetime-local" class="w-full border border-neutral-200 rounded-sm px-3 py-2 text-sm" />
+                <p class="text-[10px] text-neutral-400 mt-1">Leave blank to save as a draft.</p>
+            </div>
+        </div>
+        <div>
+            <label class="block text-xs text-neutral-500 mb-2">Channels</label>
+            <div class="flex gap-4 text-sm">
+                <label class="flex items-center gap-2"><input type="checkbox" name="channels" value="Instagram" class="rounded-none border-neutral-300 text-neutral-900" /> Instagram</label>
+                <label class="flex items-center gap-2"><input type="checkbox" name="channels" value="Facebook" class="rounded-none border-neutral-300 text-neutral-900" /> Facebook</label>
+                <label class="flex items-center gap-2"><input type="checkbox" name="channels" value="TikTok" class="rounded-none border-neutral-300 text-neutral-900" /> TikTok</label>
+            </div>
+        </div>
+        <button type="submit" class="px-5 py-2 text-sm bg-neutral-900 text-white rounded-sm hover:bg-neutral-700">Save</button>
+    </form>
+</div>
+
+<script>
+    // Upload a post image → fill the URL field + preview. The upload happens immediately (separate
+    // from saving the post); the returned URL is what gets submitted with the form.
+    (function () {
+        var btn = document.getElementById('social-image-upload-btn');
+        if (!btn) return;
+        var fileInput = document.getElementById('social-image-file');
+        var urlInput = document.getElementById('social-image-url');
+        var status = document.getElementById('social-image-status');
+        var preview = document.getElementById('social-image-preview');
+        function showPreview(url) {
+            if (url) { preview.src = url; preview.classList.remove('hidden'); }
+            else { preview.classList.add('hidden'); }
+        }
+        urlInput.addEventListener('input', function () { showPreview(urlInput.value.trim()); });
+        btn.addEventListener('click', async function () {
+            var f = fileInput.files && fileInput.files[0];
+            if (!f) { status.textContent = 'Choose a file first.'; return; }
+            var tokenEl = document.querySelector('#compose input[name="__RequestVerificationToken"]');
+            var fd = new FormData();
+            fd.append('file', f);
+            if (tokenEl) fd.append('__RequestVerificationToken', tokenEl.value);
+            btn.disabled = true;
+            status.textContent = 'Uploading…';
+            try {
+                var res = await fetch('@Url.Action("Upload", "Social")', { method: 'POST', body: fd });
+                var data = await res.json().catch(function () { return null; });
+                if (res.ok && data && data.url) {
+                    urlInput.value = data.url;
+                    showPreview(data.url);
+                    status.textContent = 'Uploaded ✓';
+                } else {
+                    status.textContent = (data && data.error) || 'Upload failed.';
+                }
+            } catch (e) {
+                status.textContent = 'Upload failed.';
+            } finally {
+                btn.disabled = false;
+            }
+        });
+    })();
+</script>
+
+@if (!Model.Any())
+{
+    <div class="bg-white border border-neutral-200 rounded-sm p-12 text-center text-sm text-neutral-400">No posts yet. Compose one to start your calendar.</div>
+}
+else
+{
+    <div class="space-y-3">
+        @foreach (var p in Model)
+        {
+            var badge = StatusBadge(p.Status);
+            <div class="bg-white border border-neutral-200 rounded-sm p-4 flex items-start gap-4">
+                @if (!string.IsNullOrEmpty(p.ImageUrl))
+                {
+                    <img src="@Img.Cld(p.ImageUrl, 128, 128)" alt="" loading="lazy" class="w-16 h-16 object-cover rounded-sm flex-shrink-0" />
+                }
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <span class="text-[10px] px-2 py-0.5 rounded-full @badge.Css">@badge.Label</span>
+                        <span class="text-xs text-neutral-400">@ChannelBadges(p.Channels)</span>
+                        @if (p.ScheduledAt != null) { <span class="text-xs text-neutral-400">· @p.ScheduledAt.Value.ToLocalTime().ToString("dd MMM yyyy HH:mm") WAT</span> }
+                    </div>
+                    <p class="text-sm text-neutral-700 mt-1.5 line-clamp-2 whitespace-pre-line">@p.Content</p>
+                    @if (!string.IsNullOrEmpty(p.Error)) { <p class="text-xs text-red-500 mt-1">@p.Error</p> }
+                </div>
+                <form asp-area="Marketing" asp-controller="Social" asp-action="Delete" method="post" onsubmit="return confirm('Delete this post?');">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" value="@p.Id" />
+                    <button type="submit" class="text-xs text-red-500 hover:text-red-700">Delete</button>
+                </form>
+            </div>
+        }
+    </div>
+}

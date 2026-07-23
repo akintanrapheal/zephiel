@@ -1,0 +1,28 @@
+@model List<SterlingLams.Web.Models.ViewModels.ProductCardViewModel>
+@{
+    var title = ViewData["RowTitle"] as string ?? "";
+    var eyebrow = ViewData["RowEyebrow"] as string ?? "";
+    var bg = ViewData["RowBg"] as string ?? "bg-white";
+}
+@* Reusable merchandising row (best sellers / trending / recently viewed / new arrivals).
+   Renders nothing when there are no products, so empty rows never show. *@
+@if (Model != null && Model.Any())
+{
+    <section class="py-20 @bg">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="text-center mb-14">
+                @if (!string.IsNullOrEmpty(eyebrow))
+                {
+                    <p class="text-xs tracking-[0.3em] uppercase text-brand-500 mb-3">@eyebrow</p>
+                }
+                <h2 class="font-cormorant text-4xl font-light text-neutral-900">@title</h2>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+                @foreach (var p in Model)
+                {
+                    <partial name="_ProductCard" model="p" />
+                }
+            </div>
+        </div>
+    </section>
+}

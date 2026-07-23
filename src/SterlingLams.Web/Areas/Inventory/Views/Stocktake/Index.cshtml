@@ -1,0 +1,232 @@
+@{
+    ViewData["Title"] = "Stock Take";
+    var stores = ViewBag.Stores as List<SterlingLams.Web.Models.Domain.Store> ?? new();
+    var staff = (ViewBag.Staff as IEnumerable<dynamic>) ?? Enumerable.Empty<dynamic>();
+    var reasons = ViewBag.Reasons as string[] ?? System.Array.Empty<string>();
+    int? storeId = ViewBag.StoreId;
+    string? staffId = ViewBag.StaffId;
+    string storeName = ViewBag.StoreName ?? "";
+    bool started = storeId != null;
+}
+@Html.AntiForgeryToken()
+
+@if (!started)
+{
+    <div class="bg-white border border-neutral-200 rounded-md p-6 max-w-3xl">
+        <h2 class="text-sm font-semibold text-neutral-800 mb-4">Select staff and location of the stock take</h2>
+        <form asp-area="Inventory" asp-controller="Stocktake" asp-action="Index" method="get" class="space-y-4">
+            <div class="grid grid-cols-[140px_1fr] items-center gap-4">
+                <label class="text-sm text-neutral-600">Staff Member:</label>
+                <select name="staffId" required class="border border-neutral-200 rounded-md px-3 py-2.5 text-sm bg-white">
+                    <option value="">No staff member selected</option>
+                    @foreach (var s in staff) { <option value="@s.id">@s.name</option> }
+                </select>
+                <label class="text-sm text-neutral-600">Location:</label>
+                <select name="storeId" required class="border border-neutral-200 rounded-md px-3 py-2.5 text-sm bg-white">
+                    <option value="">No location selected</option>
+                    @foreach (var s in stores) { <option value="@s.Id">@s.Name</option> }
+                </select>
+            </div>
+            <button type="submit" class="px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700">Start Stock Take</button>
+        </form>
+    </div>
+}
+else
+{
+    <div class="bg-white border border-neutral-200 rounded-md">
+        <div class="flex items-center justify-between gap-3 px-5 py-4 border-b border-neutral-100 flex-wrap">
+            <div>
+                <h1 class="text-xl font-semibold text-neutral-900">Stocktake</h1>
+                <p class="text-xs text-neutral-500 mt-0.5">@storeName.Replace("Glamstar ", "")</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <button type="button" id="st-notes-btn" class="px-4 py-2 bg-sky-500 text-white text-xs font-medium rounded-md hover:bg-sky-600">Stocktake Notes</button>
+                <button type="button" id="st-review-btn" class="px-4 py-2 bg-emerald-600 text-white text-xs font-medium rounded-md hover:bg-emerald-700">Review Stocktake</button>
+            </div>
+        </div>
+
+        <div id="st-notes" class="hidden px-5 pt-4">
+            <textarea id="st-note" rows="2" placeholder="Stocktake notes…" class="w-full border border-neutral-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-blue-400"></textarea>
+        </div>
+
+        <div class="px-5 py-4">
+            <div class="relative">
+                <input id="st-search" type="text" autocomplete="off" placeholder="Search for products…"
+                       class="w-full border border-neutral-300 rounded-md px-4 py-3 text-sm focus:outline-none focus:border-blue-400" />
+                <div id="st-suggest" class="hidden absolute z-20 left-0 right-0 mt-1 bg-white border border-neutral-200 rounded-md shadow-lg max-h-72 overflow-y-auto"></div>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2 px-5 pb-3 border-b border-neutral-100 flex-wrap">
+            <select id="st-reason-all" class="border border-neutral-200 rounded-md px-3 py-2 text-sm bg-white">
+                <option value="">Reason (required)</option>
+                @foreach (var r in reasons) { <option value="@r">@r</option> }
+            </select>
+            <button type="button" id="st-apply-all" class="px-4 py-2 bg-blue-500 text-white text-xs font-medium rounded-md hover:bg-blue-600">Apply to all</button>
+            <div class="ml-auto flex items-center gap-2">
+                <button type="button" id="st-clear" class="px-4 py-2 border border-neutral-200 text-neutral-600 text-xs rounded-md hover:border-neutral-400">Clear list</button>
+                <button type="button" id="st-complete" class="px-4 py-2 bg-emerald-600 text-white text-xs font-medium rounded-md hover:bg-emerald-700">Complete Stocktake</button>
+            </div>
+        </div>
+
+        <div id="st-cards" class="hidden grid grid-cols-2 sm:grid-cols-4 gap-3 px-5 py-4">
+            <div class="rounded-md bg-blue-500 text-white text-center py-3"><div class="text-[10px] uppercase tracking-wide">Showing</div><div class="text-2xl font-semibold" id="c-all">0</div><div class="text-[11px]">All items</div></div>
+            <div class="rounded-md border-2 border-red-300 text-center py-3"><div class="text-[10px] uppercase tracking-wide text-red-400">Show</div><div class="text-2xl font-semibold text-red-500" id="c-disc">0</div><div class="text-[11px] text-red-500">Discrepancies</div></div>
+            <div class="rounded-md border-2 border-emerald-300 text-center py-3"><div class="text-[10px] uppercase tracking-wide text-emerald-500">Show</div><div class="text-2xl font-semibold text-emerald-600" id="c-correct">0</div><div class="text-[11px] text-emerald-600">Correct</div></div>
+            <div class="rounded-md border-2 border-neutral-300 text-center py-3"><div class="text-[10px] uppercase tracking-wide text-neutral-400">Show</div><div class="text-2xl font-semibold text-neutral-600" id="c-unc">0</div><div class="text-[11px] text-neutral-600">Uncounted</div></div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm min-w-[760px]">
+                <thead class="bg-neutral-50 text-neutral-500 text-xs">
+                    <tr>
+                        <th class="text-left font-semibold px-4 py-3">Product</th>
+                        <th class="text-left font-semibold px-4 py-3">Barcode</th>
+                        <th class="text-left font-semibold px-4 py-3">Category</th>
+                        <th class="text-center font-semibold px-4 py-3">Expected stock</th>
+                        <th class="text-center font-semibold px-4 py-3">Actual stock</th>
+                        <th class="px-2 py-3 w-10"></th>
+                    </tr>
+                </thead>
+                <tbody id="st-rows" class="divide-y divide-neutral-100">
+                    <tr id="st-empty"><td colspan="6" class="px-4 py-16 text-center text-neutral-400 text-sm">Search or scan a product to add it to the count.</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+@section Scripts {
+<script>
+(function () {
+    @if (!started) { <text>return;</text> }
+    var storeId = @(storeId ?? 0);
+    var staffId = '@(staffId ?? "")';
+    var reasons = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(reasons));
+    var token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+    var el = function (id) { return document.getElementById(id); };
+    var lines = {};   // pid → { name, barcode, category, expected, counted, reason }
+    var reviewing = false;
+
+    function reasonOptions(sel) {
+        return '<option value="">Reason…</option>' + reasons.map(function (r) { return '<option value="' + r + '"' + (r === sel ? ' selected' : '') + '>' + r + '</option>'; }).join('');
+    }
+    function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (m) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m]); }); }
+
+    function rowHtml(pid, l) {
+        var counted = (l.counted === null || l.counted === undefined) ? '' : l.counted;
+        var diff = counted !== '' && parseInt(counted, 10) !== l.expected;
+        return '<tr data-pid="' + pid + '">'
+            + '<td class="px-4 py-2.5 text-neutral-800">' + esc(l.name) + '</td>'
+            + '<td class="px-4 py-2.5 text-neutral-500 font-mono text-xs">' + esc(l.barcode || '—') + '</td>'
+            + '<td class="px-4 py-2.5 text-neutral-500 text-xs">' + esc(l.category || '—') + '</td>'
+            + '<td class="px-4 py-2.5 text-center text-neutral-600">' + l.expected + '</td>'
+            + '<td class="px-4 py-2.5 text-center"><input type="number" min="0" value="' + counted + '" data-counted class="w-24 text-center border border-neutral-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-blue-400" />'
+            + '<div data-reasonwrap class="mt-1 ' + (diff ? '' : 'hidden') + '"><select data-reason class="text-xs border border-neutral-200 rounded px-2 py-1">' + reasonOptions(l.reason) + '</select></div></td>'
+            + '<td class="px-2 py-2.5 text-right"><button type="button" data-rm class="text-neutral-400 hover:text-red-600">✕</button></td></tr>';
+    }
+    function render() {
+        var rows = el('st-rows'); var ids = Object.keys(lines);
+        if (!ids.length) { rows.innerHTML = '<tr id="st-empty"><td colspan="6" class="px-4 py-16 text-center text-neutral-400 text-sm">Search or scan a product to add it to the count.</td></tr>'; updateCards(); return; }
+        rows.innerHTML = ids.map(function (pid) { return rowHtml(pid, lines[pid]); }).join('');
+        updateCards();
+    }
+    function updateCards() {
+        var ids = Object.keys(lines);
+        var counted = ids.filter(function (id) { var c = lines[id].counted; return c !== '' && c !== null && c !== undefined; });
+        var disc = counted.filter(function (id) { return parseInt(lines[id].counted, 10) !== lines[id].expected; });
+        el('c-all').textContent = ids.length;
+        el('c-disc').textContent = disc.length;
+        el('c-correct').textContent = counted.length - disc.length;
+        el('c-unc').textContent = ids.length - counted.length;
+    }
+
+    function addProduct(p) {
+        if (!lines[p.id]) lines[p.id] = { name: p.name, barcode: p.barcode, category: p.category, expected: p.expected, counted: '', reason: '' };
+        render();
+        var tr = el('st-rows').querySelector('tr[data-pid="' + p.id + '"]');
+        if (tr) { tr.scrollIntoView({ block: 'center' }); var i = tr.querySelector('[data-counted]'); if (i) i.focus(); }
+    }
+
+    el('st-rows').addEventListener('input', function (e) {
+        if (!e.target.hasAttribute('data-counted')) return;
+        var tr = e.target.closest('tr'); var pid = tr.dataset.pid;
+        lines[pid].counted = e.target.value;
+        var diff = e.target.value !== '' && parseInt(e.target.value, 10) !== lines[pid].expected;
+        tr.querySelector('[data-reasonwrap]').classList.toggle('hidden', !diff);
+        updateCards();
+    });
+    el('st-rows').addEventListener('change', function (e) {
+        if (e.target.hasAttribute('data-reason')) lines[e.target.closest('tr').dataset.pid].reason = e.target.value;
+    });
+    el('st-rows').addEventListener('click', function (e) {
+        if (e.target.hasAttribute('data-rm')) { delete lines[e.target.closest('tr').dataset.pid]; render(); }
+    });
+
+    var sug = el('st-suggest'); var t;
+    el('st-search').addEventListener('input', function () {
+        var q = this.value.trim(); clearTimeout(t);
+        if (q.length < 2) { sug.classList.add('hidden'); return; }
+        t = setTimeout(function () {
+            fetch(__invBase + '/Stocktake/StSearch?storeId=' + storeId + '&q=' + encodeURIComponent(q))
+                .then(function (r) { return r.json(); })
+                .then(function (list) {
+                    if (!list.length) { sug.classList.add('hidden'); return; }
+                    sug.innerHTML = list.map(function (p) {
+                        return '<button type="button" data-p="' + esc(JSON.stringify(p)) + '" class="flex items-center justify-between gap-3 w-full text-left px-4 py-2.5 text-sm hover:bg-neutral-50 border-b border-neutral-50">'
+                            + '<span>' + esc(p.name) + '</span><span class="text-blue-600 text-xs">Add</span></button>';
+                    }).join('');
+                    sug.classList.remove('hidden');
+                });
+        }, 200);
+    });
+    sug.addEventListener('click', function (e) {
+        var b = e.target.closest('[data-p]'); if (!b) return;
+        var raw = b.getAttribute('data-p').replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+        addProduct(JSON.parse(raw));
+        el('st-search').value = ''; sug.classList.add('hidden');
+    });
+    el('st-search').addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter') return; e.preventDefault();
+        var code = this.value.trim(); if (!code) return;
+        fetch(__invBase + '/Stocktake/ScanLookup?storeId=' + storeId + '&code=' + encodeURIComponent(code))
+            .then(function (r) { return r.json(); })
+            .then(function (d) { if (d.found) { addProduct(d); el('st-search').value = ''; sug.classList.add('hidden'); } });
+    });
+    document.addEventListener('click', function (e) { if (!sug.contains(e.target) && e.target !== el('st-search')) sug.classList.add('hidden'); });
+
+    el('st-notes-btn').addEventListener('click', function () { el('st-notes').classList.toggle('hidden'); });
+    el('st-review-btn').addEventListener('click', function () { reviewing = !reviewing; el('st-cards').classList.toggle('hidden', !reviewing); });
+    el('st-apply-all').addEventListener('click', function () {
+        var r = el('st-reason-all').value; if (!r) { alert('Pick a reason first.'); return; }
+        Object.keys(lines).forEach(function (pid) { if (lines[pid].counted !== '' && parseInt(lines[pid].counted, 10) !== lines[pid].expected) lines[pid].reason = r; });
+        render();
+    });
+    el('st-clear').addEventListener('click', function () { if (confirm('Clear the count list?')) { lines = {}; render(); } });
+
+    el('st-complete').addEventListener('click', function () {
+        var payload = []; var missingReason = false;
+        Object.keys(lines).forEach(function (pid) {
+            var l = lines[pid];
+            if (l.counted === '' || l.counted === null) return;
+            var c = parseInt(l.counted, 10); if (isNaN(c)) return;
+            if (c !== l.expected && !l.reason) missingReason = true;
+            payload.push({ productId: parseInt(pid, 10), counted: c, reason: l.reason || null });
+        });
+        if (!payload.length) { alert('Enter at least one count.'); return; }
+        if (missingReason) { alert('Please select a reason for each difference.'); return; }
+        var btn = el('st-complete'); btn.disabled = true; btn.textContent = 'Completing…';
+        fetch(__invBase + '/Stocktake/Complete', {
+            method: 'POST', headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
+            body: JSON.stringify({ storeId: storeId, staffId: staffId, note: el('st-note').value, lines: payload })
+        })
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                if (d.success) { window.location.href = __invBase + '/Stocktake/Details/' + d.id; }
+                else { alert(d.message || 'Could not complete.'); btn.disabled = false; btn.textContent = 'Complete Stocktake'; }
+            })
+            .catch(function () { alert('Could not complete.'); btn.disabled = false; btn.textContent = 'Complete Stocktake'; });
+    });
+})();
+</script>
+}

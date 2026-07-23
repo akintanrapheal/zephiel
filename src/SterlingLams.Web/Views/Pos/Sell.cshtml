@@ -1,0 +1,2479 @@
+@model SterlingLams.Web.Models.Domain.Register
+@{
+    ViewData["Title"] = "POS";
+    var session = ViewData["Session"] as SterlingLams.Web.Models.Domain.TillSession;
+    var cashierName = ViewData["CashierName"]?.ToString() ?? User.Identity?.Name ?? "";
+}
+
+@Html.AntiForgeryToken()
+
+<div class="h-screen flex flex-col bg-neutral-100 overflow-hidden select-none">
+
+    <!-- ── Top bar ───────────────────────────────────────────────────────── -->
+    <header class="flex items-center gap-3 px-4 py-2 bg-neutral-900 text-white flex-shrink-0">
+        <!-- Menu -->
+        <button type="button" id="hamburger-btn"
+                class="relative flex-shrink-0 w-8 h-8 flex items-center justify-center rounded hover:bg-neutral-800 transition-colors" title="Menu">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+            </svg>
+            <span id="hamburger-dot" class="hidden absolute top-1 right-1 w-2 h-2 rounded-full bg-brand-500"></span>
+        </button>
+        <!-- Logo -->
+        <img src="~/images/sg-logo.png" alt="Glamstar" class="h-7 object-contain flex-shrink-0 bg-white rounded-md px-1.5 py-0.5" />
+        <div class="flex-1 min-w-0">
+            <p class="text-xs font-medium text-white leading-none">@Model.Store?.Name</p>
+            <p class="text-[10px] text-neutral-400 leading-none mt-0.5">@Model.Name</p>
+        </div>
+        <div class="flex items-center gap-4">
+            <div class="text-right">
+                <p class="text-xs text-neutral-300 tabular-nums" id="till-clock"></p>
+                <p class="text-[10px] text-neutral-500" id="till-date-top"></p>
+            </div>
+            <div class="h-5 w-px bg-neutral-700"></div>
+            <div class="flex items-center gap-1.5">
+                <div class="w-6 h-6 rounded-full bg-brand-500 flex items-center justify-center text-[10px] font-medium">
+                    @(cashierName.Length > 0 ? cashierName.Substring(0, 1).ToUpper() : "?")
+                </div>
+                <span class="text-xs text-neutral-300">@cashierName</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- ── Side menu ─────────────────────────────────────────────────────── -->
+    <div id="menu-overlay" class="hidden fixed inset-0 bg-black/40 z-40"></div>
+    <div id="till-menu" class="fixed inset-y-0 left-0 w-72 max-w-[85vw] bg-white z-50 shadow-2xl -translate-x-full transition-transform duration-200 flex flex-col">
+        <div class="flex items-center justify-between px-4 py-3 bg-neutral-900 text-white flex-shrink-0">
+            <div class="flex items-center gap-2 min-w-0">
+                <img src="~/images/sg-logo.png" alt="Glamstar" class="h-6 object-contain flex-shrink-0 bg-white rounded-md px-1 py-0.5" />
+                <span class="text-sm font-medium truncate">@Model.Store?.Name</span>
+            </div>
+            <button type="button" id="menu-close-btn" class="text-neutral-400 hover:text-white transition-colors flex-shrink-0">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+        <nav class="flex-1 overflow-y-auto py-2">
+            <p class="px-4 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wide text-neutral-400">Admin</p>
+            <button type="button" id="till-cashup-btn" class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors text-left">
+                <svg class="w-5 h-5 flex-shrink-0 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 10-8 0v2h8z"/></svg>
+                Close session
+            </button>
+            <button type="button" id="menu-cashinout-btn" class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors text-left">
+                <svg class="w-5 h-5 flex-shrink-0 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                Cash in / out
+            </button>
+            <button type="button" onclick="window.open(window.__posBase + '/Xreport','_blank')" class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors text-left">
+                <svg class="w-5 h-5 flex-shrink-0 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                X-report (read)
+            </button>
+            <button type="button" id="menu-changeregister-btn" class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors text-left">
+                <svg class="w-5 h-5 flex-shrink-0 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
+                Change register
+            </button>
+            <button type="button" id="menu-sync-btn" class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors text-left">
+                <svg class="w-5 h-5 flex-shrink-0 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999A5.5 5.5 0 105.5 15"/></svg>
+                Sync with cloud
+                <span id="sync-pending-count" class="hidden ml-auto inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-amber-500 text-white text-[10px] font-semibold">0</span>
+            </button>
+            <p id="sync-status" class="px-4 pb-1 text-[10px] text-neutral-400"></p>
+
+            <p class="px-4 pt-4 pb-1 text-[10px] font-semibold uppercase tracking-wide text-neutral-400">Sales</p>
+            <button type="button" id="till-held-btn" class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors text-left">
+                <svg class="w-5 h-5 flex-shrink-0 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                Held sales
+                <span id="till-held-count" class="hidden ml-auto inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-brand-500 text-white text-[10px] font-semibold">0</span>
+            </button>
+            <button type="button" id="till-refund-btn" class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors text-left">
+                <svg class="w-5 h-5 flex-shrink-0 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 10h10a4 4 0 014 4v1m-4-9l-4 4 4 4"/></svg>
+                Refund
+            </button>
+            <button type="button" id="menu-receipts-btn" class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors text-left">
+                <svg class="w-5 h-5 flex-shrink-0 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+                Recent receipts
+            </button>
+            <button type="button" id="menu-pickup-btn" class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors text-left">
+                <svg class="w-5 h-5 flex-shrink-0 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/></svg>
+                Verify pickup
+            </button>
+
+            <p class="px-4 pt-4 pb-1 text-[10px] font-semibold uppercase tracking-wide text-neutral-400">Stock</p>
+            <button type="button" id="menu-stocklookup-btn" class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors text-left">
+                <svg class="w-5 h-5 flex-shrink-0 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                Stock Lookup
+            </button>
+            <button type="button" id="menu-sendstock-btn" class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors text-left">
+                <svg class="w-5 h-5 flex-shrink-0 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 8h14M5 8a2 2 0 100-4h14a2 2 0 100 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>
+                Send Stock
+            </button>
+            <button type="button" id="menu-receivestock-btn" class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors text-left">
+                <svg class="w-5 h-5 flex-shrink-0 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/></svg>
+                Receive Stock
+                <span id="receivestock-badge" class="hidden ml-auto min-w-[18px] h-[18px] px-1 rounded-full bg-brand-500 text-white text-[10px] leading-[18px] text-center font-semibold"></span>
+            </button>
+            <button type="button" id="menu-transferhistory-btn" class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors text-left">
+                <svg class="w-5 h-5 flex-shrink-0 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                Transfer History
+            </button>
+        </nav>
+        <div class="border-t border-neutral-100 p-2 flex-shrink-0">
+            <form asp-controller="Pos" asp-action="Logout" method="post">
+                <button type="submit" class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors text-left">
+                    <svg class="w-5 h-5 flex-shrink-0 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+                    Sign out
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ── Body ──────────────────────────────────────────────────────────── -->
+    <div class="flex-1 flex overflow-hidden">
+
+        <!-- ── Left panel: categories / products ─────────────────────────── -->
+        <div class="flex-1 flex flex-col overflow-hidden">
+
+            <!-- Search bar + breadcrumb -->
+            <div class="flex items-center gap-2 px-3 py-2 bg-white border-b border-neutral-200 flex-shrink-0">
+                <button type="button" id="home-btn"
+                        class="hidden flex-shrink-0 items-center gap-1 text-xs text-brand-500 hover:text-brand-700 transition-colors font-medium">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                    </svg>
+                    Categories
+                </button>
+                <div id="breadcrumb-divider" class="hidden text-neutral-300 text-sm">›</div>
+                <span id="breadcrumb-cat" class="hidden text-xs font-medium text-neutral-700 truncate"></span>
+                <div class="flex-1 relative">
+                    <svg class="w-4 h-4 text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                    <input id="till-search" type="text" autocomplete="off" placeholder="Search or scan barcode…"
+                           class="w-full pl-9 pr-4 py-2 text-sm bg-neutral-50 border border-neutral-200 rounded-lg focus:outline-none focus:border-brand-500 focus:bg-white transition-colors" />
+                </div>
+                <button type="button" id="quick-item-btn" title="Add a one-off / un-barcoded item"
+                        class="flex-shrink-0 flex items-center gap-1 px-3 py-2 text-xs font-medium text-brand-600 border border-brand-200 rounded-lg hover:bg-brand-50 transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4v16m8-8H4"/></svg>
+                    Quick item
+                </button>
+            </div>
+
+            <!-- Category grid / product grid -->
+            <div class="flex-1 overflow-y-auto p-3">
+
+                <!-- Category tiles -->
+                <div id="cat-grid" class="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-2.5"></div>
+
+                <!-- Product grid (hidden initially) -->
+                <div id="till-results" class="hidden grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5"></div>
+
+            </div>
+        </div>
+
+        <!-- ── Right panel: tabs + cart ──────────────────────────────────── -->
+        <div class="w-72 xl:w-80 bg-white border-l border-neutral-200 flex flex-col flex-shrink-0">
+
+            <!-- Tab bar -->
+            <div class="flex border-b border-neutral-200 flex-shrink-0">
+                <button type="button" data-tab="products" class="till-tab flex-1 flex flex-col items-center py-2.5 gap-0.5 border-b-2 border-brand-500 text-brand-500">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+                    </svg>
+                    <span class="text-[10px] font-medium uppercase tracking-wide">Products</span>
+                </button>
+                <button type="button" data-tab="customers" class="till-tab flex-1 flex flex-col items-center py-2.5 gap-0.5 border-b-2 border-transparent text-neutral-400 hover:text-neutral-600 transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    </svg>
+                    <span class="text-[10px] font-medium uppercase tracking-wide">Customers</span>
+                </button>
+                <button type="button" data-tab="orders" class="till-tab flex-1 flex flex-col items-center py-2.5 gap-0.5 border-b-2 border-transparent text-neutral-400 hover:text-neutral-600 transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                    </svg>
+                    <span class="text-[10px] font-medium uppercase tracking-wide">Orders</span>
+                </button>
+            </div>
+
+            <!-- PRODUCTS tab (cart) -->
+            <div id="tab-products" class="flex-1 flex flex-col overflow-hidden">
+                <!-- Attached customer banner -->
+                <div id="customer-banner" class="hidden flex items-center gap-2 px-3 py-2 bg-brand-50 border-b border-brand-100 flex-shrink-0">
+                    <svg class="w-4 h-4 text-brand-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                    <div class="flex-1 min-w-0">
+                        <p id="customer-banner-name" class="text-xs font-medium text-brand-700 truncate"></p>
+                        <p id="customer-banner-phone" class="text-[10px] text-brand-400 truncate"></p>
+                    </div>
+                    <button type="button" id="customer-remove" class="text-brand-300 hover:text-red-400 transition-colors flex-shrink-0" title="Remove customer">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+                    </button>
+                </div>
+                <!-- Cart line items -->
+                <div id="till-cart" class="flex-1 overflow-y-auto">
+                    <div id="cart-empty" class="flex flex-col items-center justify-center h-full text-center px-6 py-8">
+                        <svg class="w-12 h-12 text-neutral-200 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-1.5 6h13M9 21a1 1 0 100-2 1 1 0 000 2zm10 0a1 1 0 100-2 1 1 0 000 2z"/>
+                        </svg>
+                        <p class="text-sm font-medium text-neutral-400">Add an item</p>
+                        <p class="text-xs text-neutral-300 mt-1">Tap a product to add to the transaction</p>
+                    </div>
+                    <div id="cart-items" class="hidden divide-y divide-neutral-100 px-3 py-1"></div>
+                </div>
+
+                <!-- Cart summary -->
+                <div class="border-t border-neutral-200 flex-shrink-0">
+                    <div class="px-4 py-2 space-y-1 text-xs text-neutral-500 bg-neutral-50">
+                        <div class="flex justify-between">
+                            <span>ITEMS</span>
+                            <span id="cart-count" class="font-medium text-neutral-700">0</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>TOTAL DISCOUNT</span>
+                            <span id="cart-total-discount" class="font-medium text-emerald-600">₦0</span>
+                        </div>
+                        <div id="till-loyalty-row" class="hidden flex justify-between items-center">
+                            <span>LOYALTY <span id="till-loyalty-bal" class="text-neutral-400"></span></span>
+                            <span class="flex items-center gap-2">
+                                <span id="till-loyalty-disc" class="font-medium text-emerald-600"></span>
+                                <button type="button" id="till-loyalty-btn" class="text-[11px] px-2 py-0.5 rounded border transition-colors"></button>
+                            </span>
+                        </div>
+                        <div class="flex justify-between text-sm font-semibold text-neutral-900 border-t border-neutral-200 pt-1.5 mt-1.5">
+                            <span>TOTAL</span>
+                            <span id="till-total">₦0</span>
+                        </div>
+                        <div class="flex justify-between font-medium text-neutral-700">
+                            <span>DUE</span>
+                            <span id="till-due">₦0</span>
+                        </div>
+                    </div>
+
+                    <!-- Cash tendered row (cash method only) -->
+                    <div id="till-cash-row" class="px-3 pb-2 bg-neutral-50">
+                        <div class="flex gap-2 items-center">
+                            <input id="till-tendered" type="number" min="0" step="any" placeholder="Cash received (₦)"
+                                   class="flex-1 border border-neutral-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-500 bg-white" />
+                            <span class="text-xs text-neutral-400">Change: <span id="till-change" class="font-medium text-neutral-700">₦0</span></span>
+                        </div>
+                    </div>
+
+                    <!-- Payment method -->
+                    <div class="px-3 pb-2 bg-neutral-50">
+                        <div class="flex gap-1.5" id="till-methods">
+                            <button type="button" data-method="Cash" class="till-method flex-1 border-2 border-brand-500 bg-brand-50 text-brand-700 rounded-lg py-1.5 text-xs font-medium">Cash</button>
+                            <button type="button" data-method="Card" class="till-method flex-1 border border-neutral-200 text-neutral-600 rounded-lg py-1.5 text-xs font-medium hover:border-neutral-300">Card</button>
+                            <button type="button" data-method="Transfer" class="till-method flex-1 border border-neutral-200 text-neutral-600 rounded-lg py-1.5 text-xs font-medium hover:border-neutral-300">Transfer</button>
+                            <button type="button" data-method="Split" class="till-method flex-1 border border-neutral-200 text-neutral-600 rounded-lg py-1.5 text-xs font-medium hover:border-neutral-300">Split</button>
+                        </div>
+                        <p id="till-split-summary" class="hidden mt-1.5 text-[11px] text-neutral-500"></p>
+                    </div>
+
+                    <!-- Customer-required hint (shown when cart has items but no customer attached) -->
+                    <div id="till-customer-hint" class="hidden px-3 pb-2 bg-neutral-50 text-[11px] text-amber-600 flex items-center gap-1.5">
+                        <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        Attach a customer to take payment.
+                    </div>
+
+                    <!-- Action buttons: DELETE | HOLD | PAY -->
+                    <div class="flex gap-0 border-t border-neutral-200">
+                        <button type="button" id="till-void-btn"
+                                class="flex-1 flex flex-col items-center justify-center gap-1 py-3 text-red-400 hover:bg-red-50 transition-colors border-r border-neutral-200">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                            </svg>
+                            <span class="text-[10px] font-medium uppercase tracking-wide">Delete</span>
+                        </button>
+                        <button type="button" id="till-hold-btn"
+                                class="flex-1 flex flex-col items-center justify-center gap-1 py-3 text-neutral-400 hover:bg-neutral-50 transition-colors border-r border-neutral-200">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <span class="text-[10px] font-medium uppercase tracking-wide">Hold</span>
+                        </button>
+                        <button id="till-pay" type="button" disabled
+                                class="flex-2 w-28 flex flex-col items-center justify-center gap-1 py-3 bg-brand-500 text-white hover:bg-brand-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+                            </svg>
+                            <span class="text-[10px] font-semibold uppercase tracking-wide">Pay</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CUSTOMERS tab -->
+            <div id="tab-customers" class="hidden flex-1 flex flex-col overflow-hidden">
+                <div class="p-3 border-b border-neutral-100 flex-shrink-0">
+                    <input id="cust-search" type="text" autocomplete="off" placeholder="Search name or phone…"
+                           class="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-500" />
+                </div>
+                <div id="cust-results" class="flex-1 overflow-y-auto divide-y divide-neutral-100 text-sm">
+                    <p class="text-center text-neutral-400 py-6 text-xs">Search for a customer, or add a new one below.</p>
+                </div>
+                <!-- Add new customer -->
+                <div class="border-t border-neutral-200 flex-shrink-0 bg-neutral-50">
+                    <button type="button" id="cust-add-toggle"
+                            class="w-full flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium text-brand-600 hover:bg-brand-50 transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4v16m8-8H4"/></svg>
+                        Add new customer
+                    </button>
+                    <div id="cust-add-form" class="hidden px-3 pb-3 space-y-2">
+                        <div class="flex gap-2">
+                            <input id="cust-first" type="text" placeholder="First name" class="flex-1 min-w-0 border border-neutral-200 rounded-lg px-2.5 py-2 text-sm focus:outline-none focus:border-brand-500" />
+                            <input id="cust-last" type="text" placeholder="Last name" class="flex-1 min-w-0 border border-neutral-200 rounded-lg px-2.5 py-2 text-sm focus:outline-none focus:border-brand-500" />
+                        </div>
+                        <input id="cust-phone" type="tel" placeholder="Phone" class="w-full border border-neutral-200 rounded-lg px-2.5 py-2 text-sm focus:outline-none focus:border-brand-500" />
+                        <input id="cust-email" type="email" placeholder="Email (optional)" class="w-full border border-neutral-200 rounded-lg px-2.5 py-2 text-sm focus:outline-none focus:border-brand-500" />
+                        <button type="button" id="cust-save"
+                                class="w-full bg-brand-500 text-white rounded-lg py-2.5 text-sm font-semibold hover:bg-brand-600 transition-colors">Save &amp; attach</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ORDERS tab -->
+            <div id="tab-orders" class="hidden flex-1 flex flex-col overflow-hidden">
+                <div class="px-3 py-2 border-b border-neutral-100">
+                    <p class="text-xs font-medium uppercase tracking-wide text-neutral-400">Recent orders</p>
+                </div>
+                <div id="orders-list" class="flex-1 overflow-y-auto divide-y divide-neutral-100 text-xs">
+                    <p class="text-center text-neutral-400 py-6">Loading…</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Item Note / Discount modal ────────────────────────────────────────── -->
+<div id="item-modal" class="hidden fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center p-4">
+    <div class="bg-white rounded-xl w-full max-w-sm overflow-hidden">
+        <!-- Header -->
+        <div class="flex items-center justify-between px-5 py-4 border-b border-neutral-100">
+            <p id="modal-item-name" class="text-sm font-semibold text-neutral-800 truncate flex-1 mr-3"></p>
+            <button type="button" id="item-modal-close" class="text-neutral-400 hover:text-neutral-700 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+        <!-- Tabs -->
+        <div class="flex border-b border-neutral-100">
+            <button type="button" id="modal-tab-notes" class="flex-1 py-3 text-sm font-semibold tracking-wide text-brand-600 border-b-2 border-brand-500 transition-colors">NOTES</button>
+            <button type="button" id="modal-tab-discount" class="flex-1 py-3 text-sm font-semibold tracking-wide text-neutral-400 transition-colors">DISCOUNT</button>
+        </div>
+
+        <!-- Notes panel -->
+        <div id="modal-notes-panel" class="p-5">
+            <p class="text-xs font-medium text-neutral-500 mb-2">Note</p>
+            <div class="relative">
+                <textarea id="item-note-input" rows="3" placeholder="Add a note…"
+                    class="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-500 resize-none pr-8"></textarea>
+                <button type="button" id="item-note-clear" class="absolute right-2 top-2 text-neutral-300 hover:text-neutral-500 transition-colors">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/></svg>
+                </button>
+            </div>
+            <button type="button" id="item-note-done" class="mt-3 w-full bg-brand-500 text-white rounded-lg py-3 text-sm font-semibold hover:bg-brand-600 transition-colors">DONE</button>
+        </div>
+
+        <!-- Discount panel -->
+        <div id="modal-discount-panel" class="hidden">
+            <!-- Step 1: Select reason -->
+            <div id="discount-step1">
+                <p class="px-4 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wide border-b border-neutral-100">Select Discount Reason</p>
+                <div id="discount-reasons-list" class="max-h-64 overflow-y-auto"></div>
+            </div>
+            <!-- Step 2: Select type -->
+            <div id="discount-step2" class="hidden">
+                <div class="flex items-center gap-2 px-4 py-3 border-b border-neutral-100">
+                    <button type="button" id="discount-step2-back" class="text-neutral-400 hover:text-neutral-700">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                    </button>
+                    <p id="discount-step2-title" class="text-sm font-semibold text-neutral-800"></p>
+                </div>
+                <div id="discount-types-list" class="max-h-64 overflow-y-auto"></div>
+            </div>
+            <!-- Step 3: Numpad -->
+            <div id="discount-step3" class="hidden">
+                <div class="flex items-center gap-2 px-4 py-3 border-b border-neutral-100">
+                    <button type="button" id="discount-step3-back" class="text-neutral-400 hover:text-neutral-700">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                    </button>
+                    <p id="discount-step3-title" class="text-sm font-semibold text-neutral-800 flex-1"></p>
+                    <span id="discount-type-label" class="text-sm font-bold text-blue-700">%</span>
+                </div>
+                <div class="px-4 py-2 border-b border-neutral-100">
+                    <p id="numpad-display" class="text-2xl font-semibold text-neutral-800 text-right min-h-[2rem]"></p>
+                </div>
+                <div class="grid grid-cols-3 divide-x divide-y divide-neutral-100 border-b border-neutral-100">
+                    @foreach (var n in new[]{"1","2","3","4","5","6","7","8","9",".","0"})
+                    {
+                        <button type="button" data-num="@n" class="py-4 text-base font-medium text-neutral-700 hover:bg-neutral-50 transition-colors">@n</button>
+                    }
+                    <button type="button" id="numpad-backspace" class="py-4 flex items-center justify-center text-neutral-400 hover:bg-neutral-50 transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 12l6.414 6.414a2 2 0 001.414.586H19a2 2 0 002-2V7a2 2 0 00-2-2h-8.172a2 2 0 00-1.414.586L3 12z"/></svg>
+                    </button>
+                </div>
+                <div class="p-4">
+                    <button type="button" id="discount-update" class="w-full border-2 border-brand-500 text-brand-600 rounded-lg py-3 text-sm font-semibold hover:bg-brand-50 transition-colors">UPDATE</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Variant picker modal ──────────────────────────────────────────────── -->
+<div id="variant-modal" class="hidden fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center p-4">
+    <div class="bg-white rounded-xl p-6 w-full max-w-sm">
+        <h3 id="variant-title" class="text-base font-medium text-neutral-900 mb-1"></h3>
+        <p class="text-xs text-neutral-400 mb-4">Choose an option to add to the cart.</p>
+        <div id="variant-list" class="space-y-2 max-h-60 overflow-y-auto mb-4"></div>
+        <button type="button" id="variant-cancel"
+                class="w-full border border-neutral-200 rounded-lg py-2.5 text-sm text-neutral-600 hover:border-neutral-400 transition-colors">
+            Cancel
+        </button>
+    </div>
+</div>
+
+<!-- ── Refund modal ──────────────────────────────────────────────────────── -->
+<div id="till-refund" class="hidden fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
+        <div id="refund-search-state">
+            <h3 class="text-lg font-medium text-neutral-900 mb-1">Refund a sale</h3>
+            <p class="text-sm text-neutral-500 mb-4">Enter the receipt number, pick what's coming back.</p>
+            <div class="flex gap-2 mb-4">
+                <input id="refund-order" type="text" placeholder="POS-…"
+                       class="flex-1 border border-neutral-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-brand-500" />
+                <button type="button" id="refund-find"
+                        class="px-4 bg-neutral-900 text-white rounded-lg text-sm hover:bg-neutral-700 transition-colors">Find</button>
+            </div>
+            <div id="refund-body" class="hidden">
+                <div id="refund-items" class="divide-y divide-neutral-100 mb-4"></div>
+                <label class="block text-xs text-neutral-500 mb-1">Refund method</label>
+                <div class="flex gap-2 mb-3" id="refund-methods">
+                    <button type="button" data-method="Cash" class="refund-method flex-1 border-2 border-brand-500 bg-brand-50 rounded-lg py-2 text-sm">Cash</button>
+                    <button type="button" data-method="Card" class="refund-method flex-1 border border-neutral-200 text-neutral-600 rounded-lg py-2 text-sm">Card</button>
+                    <button type="button" data-method="Transfer" class="refund-method flex-1 border border-neutral-200 text-neutral-600 rounded-lg py-2 text-sm">Transfer</button>
+                </div>
+                <input id="refund-reason" type="text" placeholder="Reason (optional)"
+                       class="w-full border border-neutral-300 rounded-lg px-3 py-2 text-sm mb-4 focus:outline-none focus:border-brand-500" />
+                <div class="flex justify-between text-base font-medium text-neutral-900 mb-3">
+                    <span>Refund total</span><span id="refund-total">₦0</span>
+                </div>
+            </div>
+            <p id="refund-msg" class="text-xs text-red-500 mb-3"></p>
+            <div class="flex gap-2">
+                <button type="button" id="refund-cancel"
+                        class="flex-1 border border-neutral-200 rounded-lg py-2.5 text-sm text-neutral-600 hover:border-neutral-400 transition-colors">Close</button>
+                <button type="button" id="refund-confirm"
+                        class="flex-1 bg-red-600 text-white rounded-lg py-2.5 text-sm hover:bg-red-700 transition-colors disabled:opacity-40" disabled>Process refund</button>
+            </div>
+        </div>
+        <div id="refund-success-state" class="hidden text-center py-4">
+            <div class="w-14 h-14 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-4">
+                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 13l4 4L19 7"/>
+                </svg>
+            </div>
+            <p class="text-base font-medium text-neutral-900 mb-1">Refund processed</p>
+            <p id="refund-success-detail" class="text-sm text-neutral-500 mb-6"></p>
+            <button type="button" id="refund-print"
+                    class="w-full border border-neutral-300 text-neutral-800 rounded-lg py-3 text-sm hover:bg-neutral-50 transition-colors mb-2 flex items-center justify-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+                Print receipt
+            </button>
+            <button type="button" id="refund-done"
+                    class="w-full bg-neutral-900 text-white rounded-lg py-3 text-sm hover:bg-neutral-700 transition-colors">Done</button>
+        </div>
+    </div>
+</div>
+
+<!-- ── Cash-up modal ─────────────────────────────────────────────────────── -->
+<div id="till-cashup" class="hidden fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl p-6 max-w-sm w-full">
+        <h3 class="text-lg font-medium text-neutral-900 mb-1">Cash up &amp; close session</h3>
+        <p class="text-sm text-neutral-500 mb-5">Count the cash in the drawer and enter the total.</p>
+        <label class="block text-xs text-neutral-500 mb-1">Counted cash (₦)</label>
+        <input id="cashup-counted" type="number" min="0" step="any"
+               class="w-full border border-neutral-300 rounded-lg px-3 py-2.5 text-base mb-3 focus:outline-none focus:border-brand-500" />
+        <label class="block text-xs text-neutral-500 mb-1">Note (optional)</label>
+        <input id="cashup-note" type="text"
+               class="w-full border border-neutral-300 rounded-lg px-3 py-2.5 text-sm mb-5 focus:outline-none focus:border-brand-500" />
+        <div class="flex gap-2">
+            <button type="button" id="cashup-cancel"
+                    class="flex-1 border border-neutral-200 rounded-lg py-2.5 text-sm text-neutral-600 hover:border-neutral-400 transition-colors">Cancel</button>
+            <button type="button" id="cashup-confirm"
+                    class="flex-1 bg-neutral-900 text-white rounded-lg py-2.5 text-sm hover:bg-neutral-700 transition-colors">Close session</button>
+        </div>
+    </div>
+</div>
+
+<!-- ── Quick item modal ──────────────────────────────────────────────────── -->
+<div id="till-quickitem" class="hidden fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl p-6 max-w-sm w-full">
+        <h3 class="text-lg font-medium text-neutral-900 mb-1">Quick item</h3>
+        <p class="text-sm text-neutral-500 mb-4">Sell a one-off or un-barcoded item. Stock isn't tracked.</p>
+        <label class="block text-xs text-neutral-500 mb-1">Description</label>
+        <input id="qi-name" type="text" placeholder="e.g. Gift wrap, repair"
+               class="w-full border border-neutral-300 rounded-lg px-3 py-2.5 text-sm mb-3 focus:outline-none focus:border-brand-500" />
+        <label class="block text-xs text-neutral-500 mb-1">Price (₦)</label>
+        <input id="qi-price" type="number" min="0" step="any"
+               class="w-full border border-neutral-300 rounded-lg px-3 py-2.5 text-base mb-5 focus:outline-none focus:border-brand-500" />
+        <div class="flex gap-2">
+            <button type="button" id="qi-cancel" class="flex-1 border border-neutral-200 rounded-lg py-2.5 text-sm text-neutral-600 hover:border-neutral-400 transition-colors">Cancel</button>
+            <button type="button" id="qi-add" class="flex-1 bg-neutral-900 text-white rounded-lg py-2.5 text-sm hover:bg-neutral-700 transition-colors">Add to cart</button>
+        </div>
+    </div>
+</div>
+
+<!-- ── Split payment modal ───────────────────────────────────────────────── -->
+<div id="till-split" class="hidden fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl p-6 max-w-sm w-full">
+        <h3 class="text-lg font-medium text-neutral-900 mb-1">Split payment</h3>
+        <div class="flex justify-between text-sm text-neutral-500 mb-4">
+            <span>Total <span id="split-total" class="font-medium text-neutral-800">₦0</span></span>
+            <span>Remaining <span id="split-remaining" class="font-medium text-amber-600">₦0</span></span>
+        </div>
+        <div class="space-y-2 mb-3">
+            <div class="flex items-center gap-2"><label class="w-20 text-sm text-neutral-600">Cash</label>
+                <input data-pm="Cash" type="number" min="0" step="any" class="split-amt flex-1 border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-500" /></div>
+            <div class="flex items-center gap-2"><label class="w-20 text-sm text-neutral-600">Card</label>
+                <input data-pm="Card" type="number" min="0" step="any" class="split-amt flex-1 border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-500" /></div>
+            <div class="flex items-center gap-2"><label class="w-20 text-sm text-neutral-600">Transfer</label>
+                <input data-pm="Transfer" type="number" min="0" step="any" class="split-amt flex-1 border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-500" /></div>
+        </div>
+        <p class="text-xs text-neutral-400 mb-4">Change (from cash): <span id="split-change" class="font-medium text-neutral-700">₦0</span></p>
+        <div class="flex gap-2">
+            <button type="button" id="split-cancel" class="flex-1 border border-neutral-200 rounded-lg py-2.5 text-sm text-neutral-600 hover:border-neutral-400 transition-colors">Cancel</button>
+            <button type="button" id="split-confirm" class="flex-1 bg-neutral-900 text-white rounded-lg py-2.5 text-sm hover:bg-neutral-700 transition-colors disabled:opacity-40" disabled>Confirm</button>
+        </div>
+    </div>
+</div>
+
+<!-- ── Cash in / out modal ───────────────────────────────────────────────── -->
+<div id="till-cashinout" class="hidden fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl p-6 max-w-sm w-full">
+        <h3 class="text-lg font-medium text-neutral-900 mb-1">Cash in / out</h3>
+        <p class="text-sm text-neutral-500 mb-4">Record a drop or top-up so cash-up still balances.</p>
+        <div class="grid grid-cols-2 gap-2 mb-4">
+            <button type="button" data-dir="in" class="cashio-dir border rounded-lg py-2.5 text-sm font-medium border-brand-500 bg-brand-50 text-brand-600">Cash in</button>
+            <button type="button" data-dir="out" class="cashio-dir border rounded-lg py-2.5 text-sm font-medium border-neutral-200 text-neutral-500">Cash out</button>
+        </div>
+        <label class="block text-xs text-neutral-500 mb-1">Amount (₦)</label>
+        <input id="cashio-amount" type="number" min="0" step="any"
+               class="w-full border border-neutral-300 rounded-lg px-3 py-2.5 text-base mb-3 focus:outline-none focus:border-brand-500" />
+        <label class="block text-xs text-neutral-500 mb-1">Reason (optional)</label>
+        <input id="cashio-reason" type="text" placeholder="e.g. paid supplier, float top-up"
+               class="w-full border border-neutral-300 rounded-lg px-3 py-2.5 text-sm mb-5 focus:outline-none focus:border-brand-500" />
+        <div class="flex gap-2">
+            <button type="button" id="cashio-cancel"
+                    class="flex-1 border border-neutral-200 rounded-lg py-2.5 text-sm text-neutral-600 hover:border-neutral-400 transition-colors">Cancel</button>
+            <button type="button" id="cashio-confirm"
+                    class="flex-1 bg-neutral-900 text-white rounded-lg py-2.5 text-sm hover:bg-neutral-700 transition-colors">Record</button>
+        </div>
+    </div>
+</div>
+
+<!-- ── Held sales modal ──────────────────────────────────────────────────── -->
+<div id="till-held" class="hidden fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl w-full max-w-md max-h-[80vh] flex flex-col overflow-hidden">
+        <div class="flex items-center justify-between px-5 py-4 border-b border-neutral-100 flex-shrink-0">
+            <h3 class="text-base font-medium text-neutral-900">Held sales</h3>
+            <button type="button" id="held-close" class="text-neutral-400 hover:text-neutral-700 transition-colors">
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+            </button>
+        </div>
+        <div id="held-list" class="flex-1 overflow-y-auto divide-y divide-neutral-100 text-sm">
+            <p class="text-center text-neutral-400 py-8 text-xs">Loading…</p>
+        </div>
+    </div>
+</div>
+
+<!-- ── Sale complete modal ───────────────────────────────────────────────── -->
+<div id="till-done" class="hidden fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl p-8 max-w-sm w-full text-center">
+        <div class="w-16 h-16 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-4">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 13l4 4L19 7"/>
+            </svg>
+        </div>
+        <p id="till-done-info" class="text-base text-neutral-700 mb-6"></p>
+        <div class="flex gap-2">
+            <a id="till-receipt" href="#" target="_blank"
+               class="flex-1 border border-neutral-200 rounded-lg py-3 text-sm hover:border-neutral-400 transition-colors">Receipt</a>
+            <button id="till-email" type="button"
+                    class="hidden flex-1 border border-neutral-200 rounded-lg py-3 text-sm hover:border-neutral-400 transition-colors">Email</button>
+            <button id="till-new" type="button"
+                    class="flex-1 bg-neutral-900 text-white rounded-lg py-3 text-sm hover:bg-neutral-700 transition-colors">Next sale</button>
+        </div>
+    </div>
+</div>
+
+<!-- ── Stock lookup (full-screen) ──────────────────────────────────────── -->
+<div id="till-stocklookup" class="hidden fixed inset-0 z-50 bg-white flex flex-col">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-neutral-100 flex-shrink-0">
+        <div class="flex items-center gap-3 min-w-0">
+            <button type="button" id="stocklookup-back" class="hidden text-neutral-400 hover:text-neutral-700 transition-colors flex-shrink-0">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+            </button>
+            <div class="min-w-0">
+                <p class="text-xs text-neutral-400">POS</p>
+                <h3 id="stocklookup-title" class="text-lg font-semibold text-neutral-900 truncate leading-tight">Stock lookup</h3>
+            </div>
+        </div>
+        <button type="button" id="stocklookup-close" class="text-neutral-400 hover:text-neutral-700 transition-colors flex-shrink-0">
+            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+        </button>
+    </div>
+    <div id="stocklookup-searchbar" class="px-6 py-3 border-b border-neutral-100 flex-shrink-0 flex items-center gap-4 flex-wrap">
+        <div class="relative flex-1 min-w-[240px] max-w-md">
+            <svg class="w-4 h-4 text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            <input id="stocklookup-search" type="text" autocomplete="off" placeholder="Search name, SKU, or scan barcode…"
+                   class="w-full pl-9 pr-4 py-2.5 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:border-brand-500" />
+        </div>
+        <div class="flex items-center gap-2">
+            <label for="stocklookup-location" class="text-[10px] text-neutral-400 font-medium uppercase tracking-wide">Filter by location</label>
+            <select id="stocklookup-location" class="text-sm border border-neutral-200 rounded-lg px-3 py-2.5 focus:outline-none focus:border-brand-500">
+                <option value="">All locations</option>
+            </select>
+        </div>
+        <div class="flex items-center gap-2">
+            <label for="stocklookup-period" class="text-[10px] text-neutral-400 font-medium uppercase tracking-wide">Quantity sold in</label>
+            <select id="stocklookup-period" class="text-sm border border-neutral-200 rounded-lg px-3 py-2.5 focus:outline-none focus:border-brand-500">
+                <option value="today">Today</option>
+                <option value="week">This week</option>
+                <option value="month">This month</option>
+                <option value="all">All dates</option>
+            </select>
+        </div>
+    </div>
+    <div id="stocklookup-results" class="flex-1 overflow-y-auto text-sm">
+        <p class="text-center text-neutral-400 py-8 text-xs">Search for a product to see stock levels.</p>
+    </div>
+    <div id="stocklookup-detail" class="hidden flex-1 overflow-y-auto text-sm px-6 py-4"></div>
+</div>
+
+<!-- Product popup (long-press / right-click a product) -->
+<div id="till-product-popup" class="hidden fixed inset-0 z-[60] bg-black/40 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+        <div class="flex items-start justify-between gap-3 px-5 pt-5">
+            <h3 id="pp-name" class="text-lg font-semibold text-neutral-900 leading-snug"></h3>
+            <button type="button" id="pp-close" class="text-neutral-400 hover:text-neutral-700 transition-colors flex-shrink-0">
+                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+            </button>
+        </div>
+        <div class="px-5 pt-2 pb-1 flex items-center gap-2 text-sm">
+            <span id="pp-price" class="font-semibold text-neutral-800"></span>
+            <span class="text-neutral-300">·</span>
+            <span id="pp-stock"></span>
+        </div>
+        <div class="px-5 py-3 flex gap-3">
+            <button type="button" id="pp-stockinfo" class="flex-1 border border-sky-300 text-sky-600 rounded-lg py-2.5 text-xs font-semibold uppercase tracking-wide hover:bg-sky-50 transition-colors">Stock info</button>
+            <button type="button" id="pp-toggle" class="flex-1 border border-rose-300 text-rose-600 rounded-lg py-2.5 text-xs font-semibold uppercase tracking-wide hover:bg-rose-50 transition-colors disabled:opacity-50">Mark unavailable</button>
+        </div>
+        <div class="px-5 pb-5 pt-2 border-t border-neutral-100">
+            <p id="pp-barcode" class="text-xs text-sky-500 font-mono"></p>
+        </div>
+    </div>
+</div>
+
+<!-- Verify pickup (scan the customer's QR pass) -->
+<div id="till-pickup" class="hidden fixed inset-0 z-[60] bg-black/40 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
+        <div class="flex items-center justify-between px-5 py-4 border-b border-neutral-100 flex-shrink-0">
+            <h3 class="text-base font-semibold text-neutral-900">Verify pickup</h3>
+            <button type="button" id="pickup-close" class="text-neutral-400 hover:text-neutral-700 transition-colors">
+                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+            </button>
+        </div>
+        <div class="p-5 overflow-y-auto">
+            <input id="pickup-code" type="text" autocomplete="off" placeholder="Scan or enter the pickup QR code…"
+                   class="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-brand-500" />
+            <div id="pickup-result" class="mt-4"></div>
+        </div>
+    </div>
+</div>
+
+@* ── Send stock (cashier → creates a transfer request, admin approves, cashier marks sent) ── *@
+<div id="till-sendstock" class="hidden fixed inset-0 z-50 bg-white flex flex-col">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-neutral-100 flex-shrink-0">
+        <div><p class="text-xs text-neutral-400">POS</p><h3 class="text-lg font-semibold text-neutral-900 leading-tight">Send stock</h3></div>
+        <button type="button" id="sendstock-close" class="text-neutral-400 hover:text-neutral-700"><svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg></button>
+    </div>
+    <div class="flex-1 overflow-y-auto">
+        <div class="max-w-xl mx-auto px-6 py-5 space-y-4">
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-medium text-neutral-500 mb-1 uppercase tracking-wide">Send to branch</label>
+                    <select id="sendstock-dest" class="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:border-brand-500"></select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-neutral-500 mb-1 uppercase tracking-wide">Reason</label>
+                    <select id="sendstock-reason" class="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:border-brand-500"></select>
+                </div>
+            </div>
+            <div class="relative">
+                <label class="block text-xs font-medium text-neutral-500 mb-1 uppercase tracking-wide">Add product</label>
+                <input id="sendstock-search" type="text" autocomplete="off" placeholder="Search name / SKU, or scan…" class="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-brand-500" />
+                <div id="sendstock-results" class="hidden absolute z-10 left-0 right-0 mt-1 bg-white border border-neutral-200 rounded-lg shadow-lg max-h-60 overflow-y-auto"></div>
+            </div>
+            <div>
+                <p class="text-xs font-medium text-neutral-500 mb-2 uppercase tracking-wide">Items to send</p>
+                <div id="sendstock-basket" class="space-y-2"><p class="text-xs text-neutral-400 py-3 text-center">No items yet — search above.</p></div>
+            </div>
+            <button type="button" id="sendstock-submit" class="w-full bg-brand-500 text-white text-sm font-medium py-3 rounded-lg hover:bg-brand-600 disabled:opacity-40" disabled>Request transfer</button>
+            <p id="sendstock-msg" class="text-xs text-center h-4"></p>
+
+            <div class="pt-4 border-t border-neutral-100">
+                <p class="text-xs font-medium text-neutral-500 mb-2 uppercase tracking-wide">My transfers out</p>
+                <div id="sendstock-outgoing" class="space-y-2"><p class="text-xs text-neutral-400 py-2 text-center">None.</p></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* ── Receive stock (destination cashier picks an in-transit transfer to check in) ── *@
+<div id="till-receivestock" class="hidden fixed inset-0 z-50 bg-white flex flex-col">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-neutral-100 flex-shrink-0">
+        <div><p class="text-xs text-neutral-400">POS</p><h3 class="text-lg font-semibold text-neutral-900 leading-tight">Receive stock</h3></div>
+        <button type="button" id="receivestock-close" class="text-neutral-400 hover:text-neutral-700"><svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg></button>
+    </div>
+    <div class="flex-1 overflow-y-auto">
+        <div class="max-w-xl mx-auto px-6 py-5">
+            <div id="receivestock-list" class="space-y-3"><p class="text-sm text-neutral-400 py-8 text-center">No incoming transfers.</p></div>
+        </div>
+    </div>
+</div>
+
+@* ── Receive detail: scan items in, edit counts, add a reason if short ── *@
+<div id="till-receive-detail" class="hidden fixed inset-0 z-[60] bg-white flex flex-col">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-neutral-100 flex-shrink-0">
+        <button type="button" id="recvdetail-back" class="flex items-center gap-1.5 text-sm text-neutral-500 hover:text-neutral-800"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 19l-7-7 7-7"/></svg>Back</button>
+        <div class="text-center"><p class="text-xs text-neutral-400" id="recvdetail-num">—</p><h3 class="text-base font-semibold text-neutral-900 leading-tight" id="recvdetail-from">Check in items</h3></div>
+        <span class="w-12"></span>
+    </div>
+    <div class="flex-1 overflow-y-auto">
+        <div class="max-w-xl mx-auto px-6 py-5 space-y-4">
+            <div>
+                <label class="block text-xs font-medium text-neutral-500 mb-1 uppercase tracking-wide">Scan a barcode to tick items off</label>
+                <input id="recvdetail-scan" type="text" autocomplete="off" placeholder="Scan or type a barcode…" class="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-brand-500" />
+                <p id="recvdetail-scanmsg" class="text-xs text-center h-4 mt-1"></p>
+            </div>
+            <div id="recvdetail-lines" class="space-y-2"></div>
+            <div>
+                <label class="block text-xs font-medium text-neutral-500 mb-1 uppercase tracking-wide">Reason (required if counts don't match)</label>
+                <textarea id="recvdetail-notes" rows="2" placeholder="e.g. 1 unit arrived damaged / short-shipped" class="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-500"></textarea>
+            </div>
+            <button type="button" id="recvdetail-submit" class="w-full bg-emerald-600 text-white text-sm font-medium py-3 rounded-lg hover:bg-emerald-700 disabled:opacity-40">Confirm receipt into this branch</button>
+            <p id="recvdetail-msg" class="text-xs text-center h-4"></p>
+        </div>
+    </div>
+</div>
+
+@* ── Transfer history (past transfers touching this branch, both directions) ── *@
+<div id="till-transferhistory" class="hidden fixed inset-0 z-50 bg-white flex flex-col">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-neutral-100 flex-shrink-0">
+        <div><p class="text-xs text-neutral-400">POS</p><h3 class="text-lg font-semibold text-neutral-900 leading-tight">Transfer history</h3></div>
+        <button type="button" id="transferhistory-close" class="text-neutral-400 hover:text-neutral-700"><svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg></button>
+    </div>
+    <div class="flex-1 overflow-y-auto">
+        <div class="max-w-xl mx-auto px-6 py-5">
+            <div id="transferhistory-list" class="space-y-2"><p class="text-sm text-neutral-400 py-8 text-center">Loading…</p></div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+(function () {
+    const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
+    const fmt = n => '₦' + Number(n || 0).toLocaleString('en-NG', { maximumFractionDigits: 0 });
+    // Cart is persisted per register + session so an accidental refresh / crash doesn't lose an in-progress sale.
+    const TILL_CART_KEY = 'till_cart_@(Model.Id)_@(session?.Id ?? 0)';
+
+    // ── Clock ─────────────────────────────────────────────────────────────────
+    function tick() {
+        const now = new Date();
+        const t = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        const d = now.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+        const c = document.getElementById('till-clock');
+        const dt = document.getElementById('till-date-top');
+        if (c) c.textContent = t;
+        if (dt) dt.textContent = d;
+    }
+    tick(); setInterval(tick, 1000);
+
+    // ── Tabs ──────────────────────────────────────────────────────────────────
+    const tabPanels = { products: document.getElementById('tab-products'), customers: document.getElementById('tab-customers'), orders: document.getElementById('tab-orders') };
+    document.querySelectorAll('.till-tab').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const name = btn.dataset.tab;
+            document.querySelectorAll('.till-tab').forEach(b => {
+                b.classList.remove('border-brand-500', 'text-brand-500');
+                b.classList.add('border-transparent', 'text-neutral-400');
+            });
+            btn.classList.remove('border-transparent', 'text-neutral-400');
+            btn.classList.add('border-brand-500', 'text-brand-500');
+            Object.values(tabPanels).forEach(p => p.classList.add('hidden'));
+            tabPanels[name].classList.remove('hidden');
+            if (name === 'orders') loadOrders();
+            if (name === 'customers') searchCustomers('');
+        });
+    });
+
+    // ── Category palette ──────────────────────────────────────────────────────
+    const palettes = [
+        'bg-brand-500 text-white', 'bg-neutral-800 text-white', 'bg-violet-600 text-white',
+        'bg-sky-600 text-white', 'bg-emerald-600 text-white', 'bg-amber-500 text-white',
+        'bg-rose-600 text-white', 'bg-indigo-600 text-white', 'bg-teal-600 text-white',
+        'bg-orange-500 text-white', 'bg-pink-600 text-white', 'bg-cyan-600 text-white',
+    ];
+
+    const catGrid = document.getElementById('cat-grid');
+    const resultsEl = document.getElementById('till-results');
+    const searchBox = document.getElementById('till-search');
+    const homeBtn = document.getElementById('home-btn');
+    const breadcrumbDivider = document.getElementById('breadcrumb-divider');
+    const breadcrumbCat = document.getElementById('breadcrumb-cat');
+    let activeCategoryId = null, debounce, lastResults = [];
+
+    async function loadCategories() {
+        const res = await fetch('/Pos/Categories');
+        const cats = await res.json();
+        if (!cats.length) {
+            catGrid.innerHTML = '<p class="col-span-full text-sm text-neutral-400 py-8 text-center">No categories found. Products will show below.</p>';
+            showAllProducts();
+            return;
+        }
+        catGrid.innerHTML = cats.map((c, i) => {
+            const palette = palettes[i % palettes.length];
+            return `<button type="button" class="cat-tile ${palette} rounded-xl p-4 flex flex-col items-center justify-center gap-2 min-h-[90px] text-center hover:opacity-90 active:scale-95 transition-all shadow-sm" data-id="${c.id}" data-name="${c.name}">
+                <span class="text-3xl">${catEmoji(c.name)}</span>
+                <span class="text-xs font-semibold uppercase tracking-wide leading-tight">${c.name}</span>
+            </button>`;
+        }).join('');
+        catGrid.querySelectorAll('.cat-tile').forEach(b => b.addEventListener('click', () => {
+            activeCategoryId = +b.dataset.id;
+            showCategoryProducts(activeCategoryId, b.dataset.name);
+        }));
+    }
+
+    function catEmoji(name) {
+        const n = name.toLowerCase();
+        if (n.includes('ring')) return '💍';
+        if (n.includes('necklace') || n.includes('chain')) return '📿';
+        if (n.includes('earring') || n.includes('ear')) return '✨';
+        if (n.includes('bracelet') || n.includes('bangle')) return '🔮';
+        if (n.includes('watch')) return '⌚';
+        if (n.includes('brooch') || n.includes('pin')) return '🔹';
+        if (n.includes('pendant')) return '💎';
+        if (n.includes('anklet')) return '🦋';
+        if (n.includes('hair')) return '🌸';
+        if (n.includes('bag') || n.includes('purse')) return '👜';
+        return '✦';
+    }
+
+    async function showCategoryProducts(catId, catName) {
+        catGrid.classList.add('hidden');
+        resultsEl.classList.remove('hidden');
+        homeBtn.classList.remove('hidden');
+        homeBtn.classList.add('flex');
+        breadcrumbDivider.classList.remove('hidden');
+        breadcrumbCat.classList.remove('hidden');
+        breadcrumbCat.textContent = catName;
+        resultsEl.innerHTML = '<p class="col-span-full text-sm text-neutral-400 py-6 text-center">Loading…</p>';
+        const res = await fetch('/Pos/Search?categoryId=' + catId);
+        lastResults = await res.json();
+        renderProducts(lastResults);
+    }
+
+    async function showAllProducts() {
+        catGrid.classList.add('hidden');
+        resultsEl.classList.remove('hidden');
+        homeBtn.classList.add('hidden');
+        homeBtn.classList.remove('flex');
+        breadcrumbDivider.classList.add('hidden');
+        breadcrumbCat.classList.add('hidden');
+        activeCategoryId = null;
+        const res = await fetch('/Pos/Search?q=' + encodeURIComponent(searchBox.value.trim()));
+        lastResults = await res.json();
+        renderProducts(lastResults);
+    }
+
+    homeBtn.addEventListener('click', () => {
+        catGrid.classList.remove('hidden');
+        resultsEl.classList.add('hidden');
+        homeBtn.classList.add('hidden');
+        homeBtn.classList.remove('flex');
+        breadcrumbDivider.classList.add('hidden');
+        breadcrumbCat.classList.add('hidden');
+        activeCategoryId = null;
+        searchBox.value = '';
+    });
+
+    searchBox.addEventListener('input', () => {
+        clearTimeout(debounce);
+        debounce = setTimeout(() => {
+            if (searchBox.value.trim()) {
+                activeCategoryId = null;
+                catGrid.classList.add('hidden');
+                resultsEl.classList.remove('hidden');
+                homeBtn.classList.add('hidden');
+                homeBtn.classList.remove('flex');
+                breadcrumbDivider.classList.add('hidden');
+                breadcrumbCat.classList.add('hidden');
+                runSearch();
+            } else if (activeCategoryId === null) {
+                catGrid.classList.remove('hidden');
+                resultsEl.classList.add('hidden');
+            }
+        }, 180);
+    });
+    searchBox.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); onScan(searchBox.value.trim()); } });
+
+    async function runSearch() {
+        const q = searchBox.value.trim();
+        const url = '/Pos/Search?q=' + encodeURIComponent(q) + (activeCategoryId ? '&categoryId=' + activeCategoryId : '');
+        const res = await fetch(url);
+        lastResults = await res.json();
+        renderProducts(lastResults);
+    }
+
+    function renderProducts(items) {
+        if (!items.length) {
+            resultsEl.innerHTML = '<p class="col-span-full text-sm text-neutral-400 py-8 text-center">No products found.</p>';
+            return;
+        }
+        resultsEl.innerHTML = items.map(p => {
+            const out = p.stock <= 0;
+            return `<button type="button" class="till-prod text-left bg-white border border-neutral-200 rounded-xl overflow-hidden hover:border-brand-400 hover:shadow-md transition-all ${out ? 'opacity-40' : ''}" data-p='${encodeURIComponent(JSON.stringify(p)).replace(/'/g, '%27')}'>
+                <div class="aspect-square bg-neutral-50 relative">${p.image ? `<img src="${p.image}" class="w-full h-full object-cover">` : '<div class="w-full h-full flex items-center justify-center text-neutral-300"><svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></div>'}
+                    ${out ? '<div class="absolute inset-0 bg-white/60 flex items-center justify-center"><span class="text-[10px] text-red-500 font-medium">Out of stock</span></div>' : ''}
+                </div>
+                <div class="p-2.5">
+                    ${p.sku ? `<p class="text-[10px] text-neutral-400 font-mono leading-none mb-0.5">${p.sku}</p>` : ''}
+                    <p class="text-xs text-neutral-800 leading-snug line-clamp-2 font-medium">${p.name}</p>
+                    <p class="text-sm text-neutral-700 mt-1 font-semibold">${fmt(p.price)}</p>
+                    <p class="text-[10px] ${out ? 'text-red-400' : 'text-emerald-600'} mt-0.5">${out ? 'Out of stock' : p.stock + ' in stock'}</p>
+                </div>
+            </button>`;
+        }).join('');
+        resultsEl.querySelectorAll('.till-prod').forEach(b => {
+            const prod = () => JSON.parse(decodeURIComponent(b.dataset.p));
+            let lpTimer = null, longPressed = false;
+            const startLP = () => { longPressed = false; lpTimer = setTimeout(() => { longPressed = true; openProductPopup(prod()); }, 500); };
+            const cancelLP = () => { if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; } };
+            b.addEventListener('pointerdown', startLP);
+            ['pointerup', 'pointerleave', 'pointercancel', 'pointermove'].forEach(ev => b.addEventListener(ev, cancelLP));
+            b.addEventListener('contextmenu', e => { e.preventDefault(); cancelLP(); openProductPopup(prod()); }); // desktop right-click
+            b.addEventListener('click', () => {
+                if (longPressed) { longPressed = false; return; }  // long-press already opened the popup
+                const p = prod();
+                if ((p.stock || 0) <= 0) return;                   // out of stock: don't add
+                add(p);
+            });
+        });
+    }
+
+    // ── Product popup (long-press / right-click a product card) ──────────────────
+    const pp = document.getElementById('till-product-popup');
+    const ppName = document.getElementById('pp-name');
+    const ppPrice = document.getElementById('pp-price');
+    const ppStock = document.getElementById('pp-stock');
+    const ppBarcode = document.getElementById('pp-barcode');
+    const ppStockBtn = document.getElementById('pp-stockinfo');
+    const ppToggle = document.getElementById('pp-toggle');
+    let ppCurrent = null;
+    function openProductPopup(p) {
+        ppCurrent = p;
+        ppName.textContent = p.name;
+        ppPrice.textContent = fmt(p.price);
+        const s = p.stock || 0;
+        ppStock.innerHTML = s > 0
+            ? `<span class="text-emerald-600 font-medium">${s} in stock</span>`
+            : '<span class="text-red-500 font-medium">Out of stock</span>';
+        ppBarcode.textContent = (p.barcode || p.sku) ? `${p.barcode || p.sku} (${p.name})` : '';
+        ppToggle.disabled = false;
+        pp.classList.remove('hidden');
+    }
+    function closeProductPopup() { pp.classList.add('hidden'); ppCurrent = null; }
+    document.getElementById('pp-close').addEventListener('click', closeProductPopup);
+    pp.addEventListener('click', e => { if (e.target === pp) closeProductPopup(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && !pp.classList.contains('hidden')) closeProductPopup(); });
+    ppStockBtn.addEventListener('click', () => { const p = ppCurrent; closeProductPopup(); if (window.SGStockLookup) window.SGStockLookup.open(p.sku || p.barcode || p.name); });
+    ppToggle.addEventListener('click', async () => {
+        if (!ppCurrent) return;
+        const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
+        ppToggle.disabled = true;
+        try {
+            const res = await fetch('/Pos/SetPosVisibility', {
+                method: 'POST', headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
+                body: JSON.stringify({ productId: ppCurrent.id, hidden: true })
+            });
+            const data = await res.json();
+            if (data.success) { closeProductPopup(); runSearch(); }   // refresh — product now hidden from POS
+            else showError(data.message || 'Could not update.');
+        } catch { showError('Could not update.'); }
+        finally { ppToggle.disabled = false; }
+    });
+
+    async function onScan(code) {
+        if (!code) return;
+        // Store-pickup QR pass — verify instead of product search.
+        if (/^SGPICK-/i.test(code)) { if (window.openPickupVerify) window.openPickupVerify(code); searchBox.value = ''; return; }
+        const res = await fetch('/Pos/Search?q=' + encodeURIComponent(code));
+        const items = await res.json();
+        const exact = items.find(p => (p.barcode && p.barcode.toLowerCase() === code.toLowerCase()) || (p.sku && p.sku.toLowerCase() === code.toLowerCase()));
+        if (exact && exact.stock > 0) { add(exact); searchBox.value = ''; }
+        else { lastResults = items; catGrid.classList.add('hidden'); resultsEl.classList.remove('hidden'); renderProducts(items); }
+    }
+
+    // ── Variant picker ────────────────────────────────────────────────────────
+    const variantModal = document.getElementById('variant-modal');
+    const variantTitle = document.getElementById('variant-title');
+    const variantList = document.getElementById('variant-list');
+    let resolveVariant = null;
+    document.getElementById('variant-cancel').addEventListener('click', () => {
+        variantModal.classList.add('hidden');
+        if (resolveVariant) { resolveVariant(null); resolveVariant = null; }
+    });
+    variantModal.addEventListener('click', e => {
+        if (e.target === variantModal) {
+            variantModal.classList.add('hidden');
+            if (resolveVariant) { resolveVariant(null); resolveVariant = null; }
+        }
+    });
+
+    function pickVariant(p) {
+        return new Promise(resolve => {
+            resolveVariant = resolve;
+            variantTitle.textContent = p.name;
+            variantList.innerHTML = p.variants.map((v, i) => {
+                const price = p.price + (v.priceAdjustment || 0);
+                const st = (v.stock != null) ? v.stock : 0;
+                const out = st <= 0;
+                const stockLabel = out
+                    ? '<span class="text-[11px] text-red-500 font-medium">Out of stock</span>'
+                    : `<span class="text-[11px] ${st <= 3 ? 'text-amber-600' : 'text-neutral-400'}">${st} in stock</span>`;
+                return `<button type="button" class="variant-opt w-full flex justify-between items-center border border-neutral-200 rounded-lg px-4 py-3 text-left ${out ? 'opacity-50 cursor-not-allowed' : 'hover:border-brand-500 hover:bg-brand-50 transition-colors'}" data-idx="${i}" ${out ? 'disabled' : ''}>
+                    <span class="flex flex-col gap-0.5">
+                        <span class="text-sm text-neutral-800">${v.name}</span>
+                        ${stockLabel}
+                    </span>
+                    <span class="text-sm font-medium text-neutral-700">${fmt(price)}</span>
+                </button>`;
+            }).join('');
+            variantList.querySelectorAll('.variant-opt').forEach(b => b.addEventListener('click', () => {
+                if (b.disabled) return;
+                variantModal.classList.add('hidden');
+                resolveVariant = null;
+                resolve(p.variants[+b.dataset.idx]);
+            }));
+            variantModal.classList.remove('hidden');
+        });
+    }
+
+    // ── Cart ──────────────────────────────────────────────────────────────────
+    const cartEmpty = document.getElementById('cart-empty');
+    const cartItems = document.getElementById('cart-items');
+    const cartCountEl = document.getElementById('cart-count');
+    const totalDiscountEl = document.getElementById('cart-total-discount');
+    const totalEl = document.getElementById('till-total');
+    const dueEl = document.getElementById('till-due');
+    const tenderedEl = document.getElementById('till-tendered');
+    const changeEl = document.getElementById('till-change');
+    const payBtn = document.getElementById('till-pay');
+    const voidBtn = document.getElementById('till-void-btn');
+    let cart = [], method = 'Cash', customer = null, splitPayments = null;
+    let loyalty = { enabled: false, balance: 0, pointValue: 0, redeem: 0 };
+
+    // ── Cart persistence ────────────────────────────────────────────────────────
+    function saveCart() {
+        try { localStorage.setItem(TILL_CART_KEY, JSON.stringify({ cart, method, tendered: tenderedEl.value, customer })); } catch (e) {}
+    }
+    function clearSavedCart() { try { localStorage.removeItem(TILL_CART_KEY); } catch (e) {} }
+    function selectMethod(m) {
+        method = m;
+        document.querySelectorAll('.till-method').forEach(x => {
+            const on = x.dataset.method === m;
+            x.classList.toggle('border-2', on); x.classList.toggle('border-brand-500', on); x.classList.toggle('bg-brand-50', on); x.classList.toggle('text-brand-700', on);
+            x.classList.toggle('border', !on); x.classList.toggle('border-neutral-200', !on); x.classList.toggle('text-neutral-600', !on);
+        });
+        document.getElementById('till-cash-row').style.display = m === 'Cash' ? '' : 'none';
+        // Leaving Split clears any captured breakdown; the summary line only shows under Split.
+        const sum = document.getElementById('till-split-summary');
+        if (m !== 'Split') { splitPayments = null; if (sum) sum.classList.add('hidden'); }
+    }
+    function loadCart() {
+        try {
+            const saved = JSON.parse(localStorage.getItem(TILL_CART_KEY) || 'null');
+            if (!saved) return;
+            if (Array.isArray(saved.cart)) cart = saved.cart;
+            if (saved.method) selectMethod(saved.method);
+            if (saved.tendered) tenderedEl.value = saved.tendered;
+            if (saved.customer) { customer = saved.customer; renderCustomerBanner(); }
+        } catch (e) {}
+    }
+
+    // ── Customer attach ─────────────────────────────────────────────────────────
+    const customerBanner = document.getElementById('customer-banner');
+    function renderCustomerBanner() {
+        if (customer) {
+            customerBanner.classList.remove('hidden');
+            customerBanner.classList.add('flex');
+            document.getElementById('customer-banner-name').textContent = customer.name || 'Customer';
+            document.getElementById('customer-banner-phone').textContent = customer.phone || '';
+        } else {
+            customerBanner.classList.add('hidden');
+            customerBanner.classList.remove('flex');
+        }
+    }
+    function setCustomer(c) { customer = c; loyalty.redeem = 0; renderCustomerBanner(); updatePayState(); saveCart(); fetchLoyalty(); }
+
+    // ── Loyalty redemption ──────────────────────────────────────────────────────
+    async function fetchLoyalty() {
+        loyalty.enabled = false; loyalty.balance = 0; loyalty.pointValue = 0; loyalty.redeem = 0;
+        if (customer && customer.id) {
+            try {
+                const r = await fetch('/Pos/CustomerLoyalty?userId=' + encodeURIComponent(customer.id));
+                const d = await r.json();
+                if (d.enabled) { loyalty.enabled = true; loyalty.balance = d.balance || 0; loyalty.pointValue = d.pointValue || 0; }
+            } catch { /* offline / error → no redemption offered */ }
+        }
+        renderCart();
+    }
+    function grossTotal() { return cart.reduce((s, c) => s + c.unitPrice * c.qty - (c.discountAmount || 0), 0); }
+    function maxRedeemPoints() {
+        if (!loyalty.enabled || loyalty.pointValue <= 0) return 0;
+        return Math.min(loyalty.balance, Math.floor(grossTotal() / loyalty.pointValue));
+    }
+    function loyaltyDiscount() { return (loyalty.redeem || 0) * loyalty.pointValue; }
+    function renderLoyalty() {
+        const row = document.getElementById('till-loyalty-row');
+        if (!row) return;
+        const maxPts = maxRedeemPoints();
+        if (loyalty.redeem > maxPts) loyalty.redeem = maxPts;   // cart changed → re-clamp
+        if (!loyalty.enabled || loyalty.balance <= 0 || !cart.length) { row.classList.add('hidden'); return; }
+        row.classList.remove('hidden');
+        document.getElementById('till-loyalty-bal').textContent = '(' + loyalty.balance + ' pts)';
+        const on = loyalty.redeem > 0;
+        document.getElementById('till-loyalty-disc').textContent = on ? '-' + fmt(loyaltyDiscount()) : '';
+        const btn = document.getElementById('till-loyalty-btn');
+        btn.textContent = on ? 'Remove' : ('Redeem ' + maxPts + ' pts');
+        btn.className = 'text-[11px] px-2 py-0.5 rounded border transition-colors ' +
+            (on ? 'border-emerald-300 bg-emerald-50 text-emerald-600' : 'border-brand-300 text-brand-600 hover:bg-brand-50');
+        btn.disabled = maxPts <= 0 && !on;
+    }
+    document.getElementById('till-loyalty-btn')?.addEventListener('click', () => {
+        loyalty.redeem = loyalty.redeem > 0 ? 0 : maxRedeemPoints();
+        renderCart();
+    });
+    document.getElementById('customer-remove').addEventListener('click', () => setCustomer(null));
+
+    function gotoTab(name) { document.querySelector(`.till-tab[data-tab="${name}"]`)?.click(); }
+
+    const custSearch = document.getElementById('cust-search');
+    const custResults = document.getElementById('cust-results');
+    let custDebounce;
+    function attachAndGo(c) {
+        setCustomer(c);
+        custSearch.value = '';
+        custResults.innerHTML = '<p class="text-center text-neutral-400 py-6 text-xs">Search for a customer, or add a new one below.</p>';
+        gotoTab('products');
+    }
+    async function searchCustomers(q) {
+        const term = (q || '').trim();
+        custResults.innerHTML = '<p class="text-center text-neutral-400 py-6 text-xs">' + (term ? 'Searching…' : 'Loading customers…') + '</p>';
+        try {
+            const res = await fetch('/Pos/CustomerSearch?q=' + encodeURIComponent(term));
+            const list = await res.json();
+            if (!list.length) {
+                custResults.innerHTML = '<p class="text-center text-neutral-400 py-6 text-xs">' +
+                    (term ? 'No match. Add a new customer below.' : 'No saved customers yet. Add one below.') + '</p>';
+                return;
+            }
+            custResults.innerHTML = list.map(c =>
+                `<button type="button" data-cust='${JSON.stringify(c).replace(/'/g, "&#39;")}' class="cust-row w-full text-left px-3 py-2.5 hover:bg-neutral-50 transition-colors flex items-center justify-between gap-2">
+                    <span class="min-w-0"><span class="block text-neutral-800 truncate">${c.name || '(no name)'}</span>${c.phone ? `<span class="block text-[11px] text-neutral-400">${c.phone}</span>` : ''}</span>
+                    <span class="text-[11px] text-brand-500 font-medium flex-shrink-0">Attach</span>
+                </button>`).join('');
+            custResults.querySelectorAll('.cust-row').forEach(b =>
+                b.addEventListener('click', () => attachAndGo(JSON.parse(b.dataset.cust.replace(/&#39;/g, "'")))));
+        } catch { custResults.innerHTML = '<p class="text-center text-neutral-400 py-6 text-xs">Could not search.</p>'; }
+    }
+    custSearch.addEventListener('input', () => { clearTimeout(custDebounce); custDebounce = setTimeout(() => searchCustomers(custSearch.value), 250); });
+
+    document.getElementById('cust-add-toggle').addEventListener('click', () => {
+        document.getElementById('cust-add-form').classList.toggle('hidden');
+    });
+    document.getElementById('cust-save').addEventListener('click', async () => {
+        const body = {
+            firstName: document.getElementById('cust-first').value.trim(),
+            lastName: document.getElementById('cust-last').value.trim(),
+            phone: document.getElementById('cust-phone').value.trim(),
+            email: document.getElementById('cust-email').value.trim() || null
+        };
+        if (!body.firstName && !body.lastName) { showError('Enter a name.'); return; }
+        if (!body.phone && !body.email) { showError('Enter a phone number.'); return; }
+        try {
+            const res = await fetch('/Pos/CustomerQuickAdd', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
+                body: JSON.stringify(body)
+            });
+            const data = await res.json();
+            if (data.success) {
+                ['cust-first', 'cust-last', 'cust-phone', 'cust-email'].forEach(id => document.getElementById(id).value = '');
+                document.getElementById('cust-add-form').classList.add('hidden');
+                attachAndGo({ id: data.id, name: data.name, phone: data.phone });
+            } else showError(data.message || 'Could not add customer.');
+        } catch { showError('Could not add customer.'); }
+    });
+
+    async function add(p) {
+        let variantId = null, variantName = null, unitPrice = p.price, lineStock = p.stock;
+        if (p.variants && p.variants.length) {
+            const v = await pickVariant(p);
+            if (!v) return;
+            variantId = v.id; variantName = v.name; unitPrice = p.price + (v.priceAdjustment || 0);
+            lineStock = (v.stock != null) ? v.stock : p.stock; // per-variant available
+        }
+        if (lineStock <= 0) { showError('Out of stock.'); return; }
+        const key = p.id + '-' + (variantId ?? '');
+        const ex = cart.find(c => c.key === key);
+        if ((ex ? ex.qty : 0) + 1 > lineStock) { showError('Not enough stock.'); return; }
+        if (ex) ex.qty++;
+        else cart.push({ key, productId: p.id, variantId, sku: p.sku, name: p.name, variantName, unitPrice, qty: 1, stock: lineStock, note: null, discountAmount: 0, discountReason: null, discountType: null });
+        renderCart();
+    }
+
+    function renderCart() {
+        const totalDiscount = cart.reduce((s, c) => s + (c.discountAmount || 0), 0);
+        renderLoyalty();                    // clamps loyalty.redeem to the current cart, toggles the row
+        const total = cartTotal();          // gross − line discounts − loyalty redemption
+        const count = cart.reduce((s, c) => s + c.qty, 0);
+
+        if (!cart.length) {
+            cartEmpty.classList.remove('hidden');
+            cartItems.classList.add('hidden');
+            cartItems.innerHTML = '';
+        } else {
+            cartEmpty.classList.add('hidden');
+            cartItems.classList.remove('hidden');
+            cartItems.innerHTML = cart.map((c, i) => {
+                const lineTotal = c.unitPrice * c.qty - (c.discountAmount || 0);
+                const hasDiscount = (c.discountAmount || 0) > 0;
+                const hasNote = !!c.note;
+                return `
+                <div class="py-2.5">
+                    <div class="flex items-start gap-2">
+                        <div class="flex-1 min-w-0">
+                            ${c.sku ? `<p class="text-[10px] text-neutral-400 font-mono leading-none mb-0.5">${c.sku}</p>` : ''}
+                            <p class="text-xs text-neutral-800 font-medium leading-snug">${c.name}${c.variantName ? `<span class="text-neutral-400 font-normal"> · ${c.variantName}</span>` : ''}</p>
+                            <p class="text-[11px] text-neutral-500 mt-0.5">${fmt(c.unitPrice)} each${hasDiscount ? ` &nbsp;<span class="text-emerald-600">-${fmt(c.discountAmount)}</span>${c.discountReason ? ` · ${c.discountReason}` : ''}` : ''}</p>
+                            ${hasNote ? `<p class="text-[10px] text-brand-500 mt-0.5 italic truncate">"${c.note}"</p>` : ''}
+                        </div>
+                        <div class="flex items-center border border-neutral-200 rounded-lg overflow-hidden flex-shrink-0">
+                            <button type="button" data-dec="${i}" class="w-6 h-6 text-neutral-500 hover:bg-neutral-50 text-sm leading-none">−</button>
+                            <span class="w-6 text-center text-xs font-medium">${c.qty}</span>
+                            <button type="button" data-inc="${i}" class="w-6 h-6 text-neutral-500 hover:bg-neutral-50 text-sm leading-none">+</button>
+                        </div>
+                        <span class="text-xs font-semibold text-neutral-800 w-14 text-right flex-shrink-0">${fmt(lineTotal)}</span>
+                        <button type="button" data-del="${i}" class="text-neutral-300 hover:text-red-400 transition-colors flex-shrink-0 mt-0.5">
+                            <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+                        </button>
+                    </div>
+                    <div class="flex gap-1.5 mt-1.5">
+                        <button type="button" data-note-open="${i}" class="flex items-center gap-1 text-[11px] px-2 py-0.5 rounded border transition-colors ${hasNote ? 'border-brand-300 bg-brand-50 text-brand-600' : 'border-neutral-200 text-neutral-400 hover:text-neutral-600'}">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                            NOTE
+                        </button>
+                        <button type="button" data-disc-open="${i}" class="flex items-center gap-1 text-[11px] px-2 py-0.5 rounded border transition-colors ${hasDiscount ? 'border-emerald-300 bg-emerald-50 text-emerald-600' : 'border-neutral-200 text-neutral-400 hover:text-neutral-600'}">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
+                            DISCOUNT${hasDiscount ? ` (${fmt(c.discountAmount)})` : ''}
+                        </button>
+                    </div>
+                </div>`;
+            }).join('');
+            cartItems.querySelectorAll('[data-inc]').forEach(b => b.addEventListener('click', () => qty(+b.dataset.inc, 1)));
+            cartItems.querySelectorAll('[data-dec]').forEach(b => b.addEventListener('click', () => qty(+b.dataset.dec, -1)));
+            cartItems.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', () => { cart.splice(+b.dataset.del, 1); renderCart(); }));
+            cartItems.querySelectorAll('[data-note-open]').forEach(b => b.addEventListener('click', () => openItemModal(+b.dataset.noteOpen, 'notes')));
+            cartItems.querySelectorAll('[data-disc-open]').forEach(b => b.addEventListener('click', () => openItemModal(+b.dataset.discOpen, 'discount')));
+        }
+
+        cartCountEl.textContent = count;
+        totalDiscountEl.textContent = totalDiscount > 0 ? '-' + fmt(totalDiscount) : fmt(0);
+        totalEl.textContent = fmt(total);
+        dueEl.textContent = fmt(total);
+        updatePayState();
+        updateChange();
+        saveCart();
+    }
+
+    // Pay is only enabled once there's a cart AND an attached customer (mandatory on POS).
+    function cartTotal() { return Math.max(0, grossTotal() - loyaltyDiscount()); }
+    function splitOk() {
+        if (!splitPayments) return false;
+        const paid = splitPayments.reduce((s, p) => s + p.amount, 0);
+        return paid + 0.001 >= cartTotal();
+    }
+    function updatePayState() {
+        payBtn.disabled = !cart.length || !customer || (method === 'Split' && !splitOk());
+        const hint = document.getElementById('till-customer-hint');
+        if (hint) hint.classList.toggle('hidden', !(cart.length && !customer));
+    }
+
+    function qty(i, d) {
+        const c = cart[i];
+        if (d > 0 && c.qty + 1 > c.stock) { showError('Not enough stock.'); return; }
+        c.qty += d; if (c.qty <= 0) cart.splice(i, 1); renderCart();
+    }
+
+    voidBtn.addEventListener('click', () => { cart = []; tenderedEl.value = ''; setCustomer(null); selectMethod('Cash'); renderCart(); });
+
+    // ── Hold / recall ─────────────────────────────────────────────────────────
+    const holdBtn = document.getElementById('till-hold-btn');
+    holdBtn.addEventListener('click', async () => {
+        if (!cart.length) { showError('Nothing to hold.'); return; }
+        holdBtn.disabled = true;
+        try {
+            const res = await fetch('/Pos/Hold', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
+                body: JSON.stringify({ customerUserId: customer?.id || null, items: cart })
+            });
+            const data = await res.json();
+            if (data.success) {
+                cart = []; tenderedEl.value = ''; setCustomer(null); clearSavedCart(); renderCart();
+                refreshHeldBadge();
+                showToast('Sale held');
+            } else showError(data.message || 'Could not hold the sale.');
+        } catch { showError('Could not hold the sale.'); }
+        finally { holdBtn.disabled = false; }
+    });
+
+    const heldModal = document.getElementById('till-held');
+    const heldList = document.getElementById('held-list');
+    const heldCountEl = document.getElementById('till-held-count');
+
+    async function refreshHeldBadge() {
+        try {
+            const res = await fetch('/Pos/ParkedSales');
+            const list = await res.json();
+            heldCountEl.textContent = list.length;
+            heldCountEl.classList.toggle('hidden', list.length === 0);
+            document.getElementById('hamburger-dot')?.classList.toggle('hidden', list.length === 0);
+            return list;
+        } catch { return []; }
+    }
+
+    function renderHeldList(list) {
+        if (!list.length) { heldList.innerHTML = '<p class="text-center text-neutral-400 py-8 text-xs">No held sales.</p>'; return; }
+        heldList.innerHTML = list.map(h => {
+            const dt = new Date(h.createdAt);
+            const when = dt.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) + ' ' +
+                         dt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+            const who = h.customerName || h.label || 'Walk-in';
+            return `<div class="px-4 py-3 flex items-center gap-3">
+                <div class="flex-1 min-w-0">
+                    <p class="font-medium text-neutral-800 truncate">${who}</p>
+                    <p class="text-[11px] text-neutral-400">${when} · ${h.itemCount} item${h.itemCount === 1 ? '' : 's'} · ${h.cashierName || ''}</p>
+                </div>
+                <span class="font-semibold text-neutral-800 flex-shrink-0">${fmt(h.total)}</span>
+                <button type="button" data-recall="${h.id}" class="flex-shrink-0 text-xs font-medium text-brand-600 border border-brand-200 rounded-lg px-2.5 py-1.5 hover:bg-brand-50 transition-colors">Recall</button>
+                <button type="button" data-discard="${h.id}" class="flex-shrink-0 text-neutral-300 hover:text-red-400 transition-colors" title="Discard">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                </button>
+            </div>`;
+        }).join('');
+        heldList.querySelectorAll('[data-recall]').forEach(b => b.addEventListener('click', () => recallHeld(+b.dataset.recall)));
+        heldList.querySelectorAll('[data-discard]').forEach(b => b.addEventListener('click', () => discardHeld(+b.dataset.discard)));
+    }
+
+    async function openHeld() {
+        heldModal.classList.remove('hidden');
+        heldList.innerHTML = '<p class="text-center text-neutral-400 py-8 text-xs">Loading…</p>';
+        renderHeldList(await refreshHeldBadge());
+    }
+
+    async function recallHeld(id) {
+        if (cart.length && !confirm('Recall this held sale? Your current cart will be replaced.')) return;
+        try {
+            const res = await fetch('/Pos/RecallParkedSale/' + id, {
+                method: 'POST', headers: { 'RequestVerificationToken': token }
+            });
+            const data = await res.json();
+            if (!data.success) { showError(data.message || 'Could not recall the sale.'); refreshHeldBadge(); return; }
+            cart = JSON.parse(data.cart || '[]');
+            setCustomer(data.customerUserId ? { id: data.customerUserId, name: data.customerName } : null);
+            tenderedEl.value = '';
+            heldModal.classList.add('hidden');
+            renderCart();
+            refreshHeldBadge();
+            gotoTab('products');
+        } catch { showError('Could not recall the sale.'); }
+    }
+
+    async function discardHeld(id) {
+        if (!confirm('Discard this held sale?')) return;
+        try {
+            await fetch('/Pos/DeleteParkedSale/' + id, { method: 'POST', headers: { 'RequestVerificationToken': token } });
+        } catch {}
+        renderHeldList(await refreshHeldBadge());
+    }
+
+    document.getElementById('till-held-btn').addEventListener('click', openHeld);
+    document.getElementById('held-close').addEventListener('click', () => heldModal.classList.add('hidden'));
+    heldModal.addEventListener('click', e => { if (e.target === heldModal) heldModal.classList.add('hidden'); });
+
+    function showToast(msg) {
+        const el = document.createElement('div');
+        el.className = 'fixed top-4 left-1/2 -translate-x-1/2 bg-neutral-900 text-white text-sm px-5 py-3 rounded-lg shadow-lg z-[100] transition-opacity';
+        el.textContent = msg;
+        document.body.appendChild(el);
+        setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, 2000);
+    }
+
+    // ── Payment method ────────────────────────────────────────────────────────
+    document.querySelectorAll('.till-method').forEach(b => b.addEventListener('click', () => {
+        const m = b.dataset.method;
+        selectMethod(m);
+        updateChange(); saveCart(); updatePayState();
+        if (m === 'Split') { if (!cart.length) { showError('Add items first.'); return; } openSplit(); }
+    }));
+    tenderedEl.addEventListener('input', () => { updateChange(); saveCart(); });
+    function updateChange() {
+        changeEl.textContent = fmt(Math.max(0, (parseFloat(tenderedEl.value) || 0) - cartTotal()));
+    }
+
+    // ── Split payment modal ─────────────────────────────────────────────────────
+    const splitModal = document.getElementById('till-split');
+    const splitAmts = Array.from(document.querySelectorAll('.split-amt'));
+    const splitConfirm = document.getElementById('split-confirm');
+    function splitSum() { return splitAmts.reduce((s, el) => s + (parseFloat(el.value) || 0), 0); }
+    function renderSplit() {
+        const total = cartTotal(), paid = splitSum();
+        document.getElementById('split-total').textContent = fmt(total);
+        document.getElementById('split-remaining').textContent = fmt(Math.max(0, total - paid));
+        document.getElementById('split-change').textContent = fmt(Math.max(0, paid - total));
+        splitConfirm.disabled = paid + 0.001 < total;
+    }
+    function openSplit() {
+        // Pre-fill from an existing breakdown, else seed Cash with the full total.
+        splitAmts.forEach(el => { el.value = ''; });
+        if (splitPayments) splitPayments.forEach(p => { const el = splitAmts.find(e => e.dataset.pm === p.method); if (el) el.value = p.amount; });
+        else { const cashEl = splitAmts.find(e => e.dataset.pm === 'Cash'); if (cashEl) cashEl.value = cartTotal(); }
+        renderSplit();
+        splitModal.classList.remove('hidden');
+        setTimeout(() => splitAmts[0].focus(), 50);
+    }
+    splitAmts.forEach(el => el.addEventListener('input', renderSplit));
+    document.getElementById('split-cancel').addEventListener('click', () => {
+        splitModal.classList.add('hidden');
+        selectMethod('Cash'); updateChange(); saveCart(); updatePayState(); // revert if they back out
+    });
+    splitConfirm.addEventListener('click', () => {
+        const parts = splitAmts.map(el => ({ method: el.dataset.pm, amount: parseFloat(el.value) || 0 })).filter(p => p.amount > 0);
+        if (!parts.length) { showError('Enter at least one amount.'); return; }
+        splitPayments = parts;
+        const summary = document.getElementById('till-split-summary');
+        summary.textContent = parts.map(p => p.method + ' ' + fmt(p.amount)).join(' · ');
+        summary.classList.remove('hidden');
+        splitModal.classList.add('hidden');
+        updatePayState();
+    });
+
+    // ── Quick item (one-off / un-barcoded) ─────────────────────────────────────
+    const qiModal = document.getElementById('till-quickitem');
+    const qiName = document.getElementById('qi-name');
+    const qiPrice = document.getElementById('qi-price');
+    document.getElementById('quick-item-btn').addEventListener('click', () => {
+        if (window.SGPOS && !SGPOS.isOnline()) { showError('Quick items need a connection.'); return; }
+        qiName.value = ''; qiPrice.value = ''; qiModal.classList.remove('hidden'); setTimeout(() => qiName.focus(), 50);
+    });
+    document.getElementById('qi-cancel').addEventListener('click', () => qiModal.classList.add('hidden'));
+    document.getElementById('qi-add').addEventListener('click', () => {
+        const name = qiName.value.trim();
+        const price = parseFloat(qiPrice.value);
+        if (!name) { showError('Enter a description.'); return; }
+        if (!(price >= 0)) { showError('Enter a price.'); return; }
+        cart.push({ key: 'custom-' + Date.now(), productId: 0, custom: true, variantId: null, sku: null,
+                    name, variantName: null, unitPrice: price, qty: 1, stock: 999999,
+                    note: null, discountAmount: 0, discountReason: null, discountType: null });
+        qiModal.classList.add('hidden');
+        renderCart();
+    });
+
+    // ── Keyboard shortcuts ────────────────────────────────────────────────────
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Enter' && !e.target.closest('input, button, [contenteditable]') && !payBtn.disabled) {
+            e.preventDefault(); payBtn.click();
+        }
+        if (e.key === 'Escape') {
+            variantModal.classList.add('hidden');
+            document.getElementById('till-done').classList.add('hidden');
+        }
+    });
+
+    // ── Scan anywhere ───────────────────────────────────────────────────────────
+    // Hardware scanners type a burst of characters then Enter. Capture that burst
+    // wherever focus is (so the cashier needn't click the search box first) and route
+    // it to onScan. Capture phase + stopImmediatePropagation keeps it from triggering
+    // the Enter-to-pay shortcut above.
+    let scanBuf = '', scanLast = 0;
+    document.addEventListener('keydown', e => {
+        const inField = !!e.target.closest('input, textarea, [contenteditable]');
+        const now = Date.now();
+        if (e.key === 'Enter') {
+            if (!inField && scanBuf.length >= 3 && now - scanLast < 120) {
+                e.preventDefault(); e.stopImmediatePropagation();
+                const code = scanBuf;
+                onScan(code);
+            }
+            scanBuf = '';
+            return;
+        }
+        if (inField) { scanBuf = ''; return; }
+        if (e.key.length === 1) {
+            if (now - scanLast > 120) scanBuf = '';
+            scanBuf += e.key; scanLast = now;
+        }
+    }, true);
+
+    // ── Checkout ──────────────────────────────────────────────────────────────
+    payBtn.addEventListener('click', async () => {
+        if (!cart.length) return;
+        if (method === 'Split' && window.SGPOS && !SGPOS.isOnline()) { showError('Split payment needs a connection.'); return; }
+        payBtn.disabled = true; payBtn.querySelector('span').textContent = '…';
+        try {
+            let managerPin = null, res, data;
+            while (true) {
+                // NOTE: keep this URL as the literal '/Pos/Checkout'. pos-offline.js wraps fetch and
+                // matches this exact path to capture the sale offline on a network failure; the inner
+                // _PosLayout shim then rewrites '/Pos/...' to the secret prefix for the real request.
+                // Building this from window.__posBase instead would silently bypass offline capture.
+                res = await fetch('/Pos/Checkout', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
+                    body: JSON.stringify({ paymentMethod: method, amountTendered: parseFloat(tenderedEl.value) || 0,
+                        customerUserId: customer?.id || null,
+                        loyaltyPointsToRedeem: loyalty.redeem || 0,
+                        managerPin: managerPin,
+                        payments: (method === 'Split' && splitPayments) ? splitPayments : null,
+                        items: cart.map(c => ({ productId: c.productId, variantId: c.variantId, quantity: c.qty, note: c.note || null, discountAmount: c.discountAmount || 0, discountReason: c.discountReason || null, discountType: c.discountType || null, custom: c.custom || false, name: c.custom ? c.name : null, unitPrice: c.custom ? c.unitPrice : null })) })
+                });
+                data = await res.json();
+                // Server asks for a manager PIN (discount over threshold) — prompt once and retry.
+                if (data.needsApproval && !managerPin) {
+                    managerPin = prompt('Manager PIN to approve this discount:');
+                    if (!managerPin) { showError('Approval cancelled — sale not completed.'); return; }
+                    continue;
+                }
+                break;
+            }
+            if (data.success) {
+                const receiptBtn = document.getElementById('till-receipt');
+                const emailBtn = document.getElementById('till-email');
+                // Email button only for synced sales (an offline sale has no server order yet).
+                if (data.offline || !data.orderId) { emailBtn.classList.add('hidden'); }
+                else {
+                    emailBtn.classList.remove('hidden');
+                    emailBtn.onclick = async () => {
+                        const to = prompt('Email the receipt to:', '');
+                        if (to === null) return; // cancelled
+                        const r = await fetch('/Pos/EmailReceipt', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
+                            body: JSON.stringify({ orderId: data.orderId, email: to })
+                        });
+                        const d = await r.json();
+                        showError(d.success ? ('Receipt emailed to ' + d.email) : (d.message || 'Could not email receipt.'), !d.success);
+                    };
+                }
+                if (data.offline) {
+                    // Sale captured offline (pos-offline.js). Print a self-contained receipt now;
+                    // the server receipt becomes available once it syncs.
+                    document.getElementById('till-done-info').innerHTML =
+                        `<span class="font-medium">${fmt(data.total)}</span> · Saved offline` +
+                        (data.change > 0 ? `<br>Change due: <span class="font-medium text-emerald-600">${fmt(data.change)}</span>` : '') +
+                        `<br><span class="text-xs text-amber-600">Syncs automatically when you're back online.</span>`;
+                    receiptBtn.classList.remove('hidden');
+                    receiptBtn.removeAttribute('href');
+                    receiptBtn.onclick = (e) => { e.preventDefault(); if (window.SGPOS) SGPOS.printOfflineReceipt(data.receipt); };
+                } else {
+                    document.getElementById('till-done-info').innerHTML =
+                        `<span class="font-medium">${fmt(data.total)}</span> · ${data.orderNumber}`+
+                        (data.change > 0 ? `<br>Change due: <span class="font-medium text-emerald-600">${fmt(data.change)}</span>` : '');
+                    receiptBtn.onclick = null;
+                    // Use __posBase, not a literal "/Pos" — this is an <a href> navigation (not a
+                    // shimmed fetch), so under a secret POS prefix "/Pos/Receipt/.." 404s.
+                    receiptBtn.href = window.__posBase + '/Receipt/' + data.orderId;
+                    receiptBtn.classList.remove('hidden');
+                }
+                cart = []; tenderedEl.value = ''; setCustomer(null); selectMethod('Cash'); clearSavedCart(); renderCart();
+                document.getElementById('till-done').classList.remove('hidden');
+            } else showError(data.message || 'Could not complete the sale.');
+        } finally { payBtn.querySelector('span').textContent = 'Pay'; updatePayState(); }
+    });
+
+    document.getElementById('till-new').addEventListener('click', () => {
+        cart = []; tenderedEl.value = ''; setCustomer(null); selectMethod('Cash');
+        document.getElementById('till-done').classList.add('hidden');
+        renderCart();
+    });
+
+    // ── Orders tab ────────────────────────────────────────────────────────────
+    async function loadOrders() {
+        const el = document.getElementById('orders-list');
+        el.innerHTML = '<p class="text-center text-neutral-400 py-6 text-xs">Loading…</p>';
+        try {
+            const res = await fetch('/Pos/RecentOrders');
+            const orders = await res.json();
+            if (!orders.length) {
+                el.innerHTML = '<p class="text-center text-neutral-400 py-6 text-xs">No sales yet on this POS.</p>';
+                return;
+            }
+            el.innerHTML = orders.map(o => {
+                const dt = new Date(o.createdAt);
+                const when = dt.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) + ' ' +
+                             dt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+                const who = o.customerName ? ' · ' + o.customerName : '';
+                const by = o.cashierName ? ' · by ' + o.cashierName : '';
+                return `<div data-receipt="${o.id}" title="View / print receipt"
+                     class="px-3 py-2.5 flex items-center gap-2 cursor-pointer hover:bg-neutral-50 transition-colors">
+                    <div class="flex-1 min-w-0">
+                        <p class="font-medium text-neutral-800 truncate">${o.orderNumber}</p>
+                        <p class="text-[11px] text-neutral-400 truncate">${when} · ${o.itemCount} item${o.itemCount === 1 ? '' : 's'} · ${o.method}${who}${by}</p>
+                    </div>
+                    <span class="font-semibold text-neutral-800 flex-shrink-0">${fmt(o.total)}</span>
+                    <a href="${window.__posBase}/Receipt/${o.id}" target="_blank" title="Reprint receipt"
+                       class="flex-shrink-0 text-neutral-400 hover:text-brand-500 transition-colors p-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+                    </a>
+                    <button type="button" data-refund="${o.orderNumber}" title="Refund this sale"
+                            class="flex-shrink-0 text-neutral-400 hover:text-red-500 transition-colors p-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 10h10a4 4 0 014 4v1m-4-9l-4 4 4 4"/></svg>
+                    </button>
+                </div>`;
+            }).join('');
+            // Click anywhere on a row (except the action buttons) to view/print the receipt.
+            el.querySelectorAll('[data-receipt]').forEach(row =>
+                row.addEventListener('click', (e) => {
+                    if (e.target.closest('a,button')) return;
+                    window.open(window.__posBase + '/Receipt/' + row.dataset.receipt, '_blank');
+                }));
+            el.querySelectorAll('[data-refund]').forEach(b =>
+                b.addEventListener('click', () => window.tillOpenRefund?.(b.dataset.refund)));
+        } catch { el.innerHTML = '<p class="text-center text-neutral-400 py-6 text-xs">Could not load orders.</p>'; }
+    }
+
+    function showError(msg, isError = true) {
+        const el = document.createElement('div');
+        el.className = 'fixed top-4 left-1/2 -translate-x-1/2 ' + (isError ? 'bg-red-600' : 'bg-emerald-600') + ' text-white text-sm px-5 py-3 rounded-lg shadow-lg z-[100] transition-opacity';
+        el.textContent = msg;
+        document.body.appendChild(el);
+        setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, 2500);
+    }
+
+    // Safety net: never let a script error or rejected promise fail silently in the POS — surface it
+    // so the cashier knows something went wrong and can report it, rather than a dead button.
+    window.addEventListener('error', (e) => { if (e && e.message) showError('Something went wrong: ' + e.message); });
+    window.addEventListener('unhandledrejection', (e) => {
+        const m = (e && e.reason && (e.reason.message || e.reason)) || 'unexpected error';
+        showError('Something went wrong: ' + m);
+    });
+
+    // ── Item note/discount modal ──────────────────────────────────────────────
+    let discountReasons = [];
+    let modalItemIdx = -1;
+
+    async function loadDiscountReasons() {
+        try {
+            const res = await fetch('/Pos/DiscountReasons');
+            discountReasons = await res.json();
+        } catch { discountReasons = []; }
+    }
+
+    const itemModal = document.getElementById('item-modal');
+    const modalItemName = document.getElementById('modal-item-name');
+
+    function openItemModal(idx, tab) {
+        modalItemIdx = idx;
+        const c = cart[idx];
+        modalItemName.textContent = (c.sku ? c.sku + ' · ' : '') + c.name + (c.variantName ? ' · ' + c.variantName : '');
+        switchModalTab(tab);
+        itemModal.classList.remove('hidden');
+    }
+
+    function switchModalTab(tab) {
+        document.getElementById('modal-tab-notes').classList.toggle('border-b-2', tab === 'notes');
+        document.getElementById('modal-tab-notes').classList.toggle('border-brand-500', tab === 'notes');
+        document.getElementById('modal-tab-notes').classList.toggle('text-brand-600', tab === 'notes');
+        document.getElementById('modal-tab-notes').classList.toggle('text-neutral-400', tab !== 'notes');
+        document.getElementById('modal-tab-discount').classList.toggle('border-b-2', tab === 'discount');
+        document.getElementById('modal-tab-discount').classList.toggle('border-brand-500', tab === 'discount');
+        document.getElementById('modal-tab-discount').classList.toggle('text-brand-600', tab === 'discount');
+        document.getElementById('modal-tab-discount').classList.toggle('text-neutral-400', tab !== 'discount');
+        document.getElementById('modal-notes-panel').classList.toggle('hidden', tab !== 'notes');
+        document.getElementById('modal-discount-panel').classList.toggle('hidden', tab !== 'discount');
+
+        if (tab === 'notes') {
+            document.getElementById('item-note-input').value = cart[modalItemIdx]?.note || '';
+        } else {
+            showDiscountStep1();
+        }
+    }
+
+    document.getElementById('modal-tab-notes').addEventListener('click', () => switchModalTab('notes'));
+    document.getElementById('modal-tab-discount').addEventListener('click', () => switchModalTab('discount'));
+    document.getElementById('item-modal-close').addEventListener('click', () => itemModal.classList.add('hidden'));
+    itemModal.addEventListener('click', e => { if (e.target === itemModal) itemModal.classList.add('hidden'); });
+
+    document.getElementById('item-note-clear').addEventListener('click', () => { document.getElementById('item-note-input').value = ''; });
+    document.getElementById('item-note-done').addEventListener('click', () => {
+        if (modalItemIdx >= 0) {
+            cart[modalItemIdx].note = document.getElementById('item-note-input').value.trim() || null;
+            renderCart();
+        }
+        itemModal.classList.add('hidden');
+    });
+
+    // Discount flow
+    function showDiscountStep1() {
+        document.getElementById('discount-step1').classList.remove('hidden');
+        document.getElementById('discount-step2').classList.add('hidden');
+        document.getElementById('discount-step3').classList.add('hidden');
+        const list = document.getElementById('discount-reasons-list');
+        if (!discountReasons.length) {
+            list.innerHTML = '<p class="px-4 py-6 text-sm text-neutral-400 text-center">No discount reasons configured.<br>Add them in Admin → POS → Discount Reasons.</p>';
+            return;
+        }
+        list.innerHTML = discountReasons.map(r =>
+            `<button type="button" data-rid="${r.id}" class="w-full text-left px-4 py-3 border-b border-neutral-100 text-sm text-blue-700 hover:bg-neutral-50 transition-colors">${r.name}</button>`
+        ).join('');
+        list.querySelectorAll('[data-rid]').forEach(b => b.addEventListener('click', () => showDiscountStep2(+b.dataset.rid)));
+    }
+
+    function showDiscountStep2(reasonId) {
+        const reason = discountReasons.find(r => r.id === reasonId);
+        if (!reason) return;
+        document.getElementById('discount-step1').classList.add('hidden');
+        document.getElementById('discount-step2').classList.remove('hidden');
+        document.getElementById('discount-step3').classList.add('hidden');
+        document.getElementById('discount-step2-title').textContent = reason.name;
+        document.getElementById('discount-step2-back').onclick = showDiscountStep1;
+
+        const customOptions = [
+            { label: 'Discount by Percentage', type: 'Percentage' },
+            { label: 'Discount by Amount', type: 'Amount' },
+            { label: 'Set New Price', type: 'NewPrice' },
+        ];
+        const presetOptions = (reason.presets || []).map(p => ({ label: p.label, type: p.type, value: p.value, isPreset: true }));
+        const allOptions = [...customOptions, ...presetOptions];
+
+        const list = document.getElementById('discount-types-list');
+        list.innerHTML = allOptions.map((opt, i) =>
+            `<button type="button" data-oidx="${i}" class="w-full text-left px-4 py-3 border-b border-neutral-100 text-sm text-blue-700 hover:bg-neutral-50 transition-colors">${opt.label}</button>`
+        ).join('');
+        list.querySelectorAll('[data-oidx]').forEach(b => b.addEventListener('click', () => {
+            const opt = allOptions[+b.dataset.oidx];
+            if (opt.isPreset) { applyDiscount(reason.name, opt.type, opt.value); itemModal.classList.add('hidden'); renderCart(); }
+            else showDiscountStep3(reason.name, opt.type);
+        }));
+    }
+
+    let numpadValue = '';
+    let numpadReasonName = '', numpadType = '';
+
+    function showDiscountStep3(reasonName, type) {
+        document.getElementById('discount-step1').classList.add('hidden');
+        document.getElementById('discount-step2').classList.add('hidden');
+        document.getElementById('discount-step3').classList.remove('hidden');
+        document.getElementById('discount-step3-title').textContent = reasonName;
+        document.getElementById('discount-type-label').textContent = type === 'Amount' ? '₦' : type === 'NewPrice' ? '₦ new' : '%';
+        numpadValue = ''; numpadReasonName = reasonName; numpadType = type;
+        document.getElementById('numpad-display').textContent = '';
+
+        const reason = discountReasons.find(r => r.name === reasonName);
+        document.getElementById('discount-step3-back').onclick = () => { if (reason) showDiscountStep2(reason.id); else showDiscountStep1(); };
+        document.getElementById('discount-update').onclick = () => {
+            const val = parseFloat(numpadValue) || 0;
+            if (val <= 0) { showError('Enter a value.'); return; }
+            applyDiscount(numpadReasonName, numpadType, val);
+            itemModal.classList.add('hidden');
+            renderCart();
+        };
+    }
+
+    document.querySelectorAll('[data-num]').forEach(b => b.addEventListener('click', () => {
+        if (b.dataset.num === '.' && numpadValue.includes('.')) return;
+        if (numpadValue.length >= 9) return;
+        numpadValue += b.dataset.num;
+        document.getElementById('numpad-display').textContent = numpadValue;
+    }));
+    document.getElementById('numpad-backspace').addEventListener('click', () => {
+        numpadValue = numpadValue.slice(0, -1);
+        document.getElementById('numpad-display').textContent = numpadValue;
+    });
+
+    function applyDiscount(reasonName, type, value) {
+        const c = cart[modalItemIdx];
+        if (!c) return;
+        const lineTotal = c.unitPrice * c.qty;
+        let discountAmount = 0;
+        if (type === 'Percentage') discountAmount = lineTotal * (value / 100);
+        else if (type === 'Amount') discountAmount = value;
+        else if (type === 'NewPrice') discountAmount = Math.max(0, lineTotal - value * c.qty);
+        c.discountAmount = Math.min(Math.max(0, discountAmount), lineTotal);
+        c.discountReason = reasonName;
+        c.discountType = type;
+    }
+
+    // Boot
+    loadCategories();
+    loadDiscountReasons();
+    loadCart();
+    renderCart();
+    refreshHeldBadge();
+}());
+
+// ── Cash up ───────────────────────────────────────────────────────────────────
+(function () {
+    const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
+    const modal = document.getElementById('till-cashup');
+    document.getElementById('till-cashup-btn').addEventListener('click', () => modal.classList.remove('hidden'));
+    document.getElementById('cashup-cancel').addEventListener('click', () => modal.classList.add('hidden'));
+    const confirmBtn = document.getElementById('cashup-confirm');
+    const cancelBtn = document.getElementById('cashup-cancel');
+    function cashupToast(msg) {
+        const el = document.createElement('div');
+        el.className = 'fixed top-4 left-1/2 -translate-x-1/2 bg-red-600 text-white text-sm px-5 py-3 rounded-lg shadow-lg z-[100]';
+        el.textContent = msg;
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), 4000);
+    }
+    confirmBtn.addEventListener('click', async () => {
+        if (confirmBtn.disabled) return; // guard against a double click / double submit
+        const counted = parseFloat(document.getElementById('cashup-counted').value) || 0;
+        const note = document.getElementById('cashup-note').value;
+
+        // Show the close is in flight so a slow request (e.g. a cold server) doesn't look frozen.
+        const original = confirmBtn.textContent;
+        confirmBtn.disabled = true; cancelBtn.disabled = true;
+        confirmBtn.textContent = 'Closing…';
+        try {
+            const res = await fetch('/Pos/CloseSession', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'RequestVerificationToken': token },
+                body: `countedCash=${counted}&note=${encodeURIComponent(note)}`
+            });
+            const data = await res.json();
+            if (data.success) { location.href = window.__posBase + '/Zreport/' + data.sessionId; return; }
+            cashupToast(data.message || 'Could not close the session.');
+        } catch (e) {
+            // Network error / timeout — surface it so the cashier knows to retry rather than waiting.
+            cashupToast('Network problem closing the session — check your connection and try again.');
+        }
+        // Only reached on failure (success redirects away): let them try again.
+        confirmBtn.disabled = false; cancelBtn.disabled = false;
+        confirmBtn.textContent = original;
+    });
+}());
+
+// ── Cash in / out ───────────────────────────────────────────────────────────────
+(function () {
+    const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
+    const modal = document.getElementById('till-cashinout');
+    const amount = document.getElementById('cashio-amount');
+    const reason = document.getElementById('cashio-reason');
+    let dir = 'in';
+    function toast(msg, bad) {
+        const el = document.createElement('div');
+        el.className = 'fixed top-4 left-1/2 -translate-x-1/2 ' + (bad ? 'bg-red-600' : 'bg-emerald-600') + ' text-white text-sm px-5 py-3 rounded-lg shadow-lg z-[100]';
+        el.textContent = msg; document.body.appendChild(el); setTimeout(() => el.remove(), 3000);
+    }
+    function open() { dir = 'in'; setDir(); amount.value = ''; reason.value = ''; modal.classList.remove('hidden'); setTimeout(() => amount.focus(), 50); }
+    function setDir() {
+        document.querySelectorAll('.cashio-dir').forEach(b => {
+            const on = b.dataset.dir === dir;
+            b.className = 'cashio-dir border rounded-lg py-2.5 text-sm font-medium ' +
+                (on ? 'border-brand-500 bg-brand-50 text-brand-600' : 'border-neutral-200 text-neutral-500');
+        });
+    }
+    document.getElementById('menu-cashinout-btn').addEventListener('click', open);
+    document.getElementById('cashio-cancel').addEventListener('click', () => modal.classList.add('hidden'));
+    document.querySelectorAll('.cashio-dir').forEach(b => b.addEventListener('click', () => { dir = b.dataset.dir; setDir(); }));
+    document.getElementById('cashio-confirm').addEventListener('click', async () => {
+        const amt = parseFloat(amount.value) || 0;
+        if (amt <= 0) { toast('Enter an amount.', true); return; }
+        const res = await fetch('/Pos/CashInOut', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
+            body: JSON.stringify({ amount: amt, direction: dir, reason: reason.value })
+        });
+        const data = await res.json();
+        if (data.success) { modal.classList.add('hidden'); toast('Cash ' + (dir === 'in' ? 'in' : 'out') + ' recorded.'); }
+        else toast(data.message || 'Could not record cash movement.', true);
+    });
+}());
+
+// ── Refunds ───────────────────────────────────────────────────────────────────
+(function () {
+    const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
+    const fmt = n => '₦' + Number(n || 0).toLocaleString('en-NG', { maximumFractionDigits: 0 });
+    const modal = document.getElementById('till-refund');
+    const searchState = document.getElementById('refund-search-state');
+    const successState = document.getElementById('refund-success-state');
+    const body = document.getElementById('refund-body');
+    const itemsEl = document.getElementById('refund-items');
+    const totalEl = document.getElementById('refund-total');
+    const msgEl = document.getElementById('refund-msg');
+    const confirmBtn = document.getElementById('refund-confirm');
+    let orderId = null, lines = [], method = 'Cash';
+
+    function open() { modal.classList.remove('hidden'); searchState.classList.remove('hidden'); successState.classList.add('hidden'); document.getElementById('refund-order').focus(); }
+    function close() {
+        modal.classList.add('hidden');
+        body.classList.add('hidden'); itemsEl.innerHTML = ''; msgEl.textContent = '';
+        lines = []; orderId = null; confirmBtn.disabled = true;
+        document.getElementById('refund-order').value = '';
+        document.getElementById('refund-reason').value = '';
+        successState.classList.add('hidden'); searchState.classList.remove('hidden');
+    }
+
+    // Let the Orders tab open the refund flow pre-filled with a receipt number.
+    window.tillOpenRefund = function (orderNumber) {
+        open();
+        if (orderNumber) {
+            document.getElementById('refund-order').value = orderNumber;
+            findOrder();
+        }
+    };
+
+    document.getElementById('till-refund-btn').addEventListener('click', open);
+    document.getElementById('refund-cancel').addEventListener('click', close);
+    document.getElementById('refund-done').addEventListener('click', close);
+    document.getElementById('refund-find').addEventListener('click', findOrder);
+    document.getElementById('refund-order').addEventListener('keydown', e => { if (e.key === 'Enter') findOrder(); });
+
+    async function findOrder() {
+        msgEl.textContent = '';
+        const num = document.getElementById('refund-order').value.trim();
+        if (!num) return;
+        const res = await fetch('/Pos/RefundLookup?orderNumber=' + encodeURIComponent(num));
+        const data = await res.json();
+        if (!data.found) { body.classList.add('hidden'); msgEl.textContent = 'No POS sale with that number.'; return; }
+        orderId = data.orderId;
+        lines = data.items.map(i => ({ ...i, qty: 0 }));
+        itemsEl.innerHTML = lines.map((i, idx) => `
+            <div class="py-2.5 flex items-center gap-2">
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm text-neutral-800 truncate">${i.name}${i.variantName ? ` (${i.variantName})` : ''}</p>
+                    <p class="text-xs text-neutral-500">${fmt(i.unitPrice)} · ${i.refundable} refundable</p>
+                </div>
+                <div class="flex items-center border border-neutral-200 rounded">
+                    <button type="button" data-rdec="${idx}" class="w-7 h-7 text-neutral-500 hover:bg-neutral-50">−</button>
+                    <span id="rq-${idx}" class="w-7 text-center text-sm">0</span>
+                    <button type="button" data-rinc="${idx}" class="w-7 h-7 text-neutral-500 hover:bg-neutral-50">+</button>
+                </div>
+            </div>`).join('');
+        itemsEl.querySelectorAll('[data-rinc]').forEach(b => b.addEventListener('click', () => chg(+b.dataset.rinc, 1)));
+        itemsEl.querySelectorAll('[data-rdec]').forEach(b => b.addEventListener('click', () => chg(+b.dataset.rdec, -1)));
+        body.classList.remove('hidden'); recalc();
+    }
+
+    function chg(i, d) {
+        const l = lines[i];
+        l.qty = Math.max(0, Math.min(l.refundable, l.qty + d));
+        document.getElementById('rq-' + i).textContent = l.qty; recalc();
+    }
+    function recalc() {
+        const total = lines.reduce((s, l) => s + l.unitPrice * l.qty, 0);
+        totalEl.textContent = fmt(total); confirmBtn.disabled = total <= 0;
+    }
+
+    document.querySelectorAll('.refund-method').forEach(b => b.addEventListener('click', () => {
+        method = b.dataset.method;
+        document.querySelectorAll('.refund-method').forEach(x => {
+            const on = x === b;
+            x.classList.toggle('border-2', on); x.classList.toggle('border-brand-500', on); x.classList.toggle('bg-brand-50', on);
+            x.classList.toggle('border', !on); x.classList.toggle('border-neutral-200', !on); x.classList.toggle('text-neutral-600', !on);
+        });
+    }));
+
+    confirmBtn.addEventListener('click', async () => {
+        const items = lines.filter(l => l.qty > 0).map(l => ({ productId: l.productId, variantId: l.variantId, quantity: l.qty }));
+        if (!items.length) return;
+        confirmBtn.disabled = true; confirmBtn.textContent = 'Processing…';
+        try {
+            let managerPin = null, res, data;
+            while (true) {
+                res = await fetch('/Pos/RefundProcess', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
+                    body: JSON.stringify({ orderId, method, reason: document.getElementById('refund-reason').value, items, managerPin })
+                });
+                data = await res.json();
+                // Server asks for a manager PIN (refund approval on) — prompt once and retry.
+                if (data.needsApproval && !managerPin) {
+                    managerPin = prompt('Manager PIN to approve this refund:');
+                    if (!managerPin) { msgEl.textContent = 'Approval cancelled.'; return; } // finally resets the button
+                    continue;
+                }
+                break;
+            }
+            if (data.success) {
+                searchState.classList.add('hidden');
+                document.getElementById('refund-success-detail').textContent = fmt(data.amount) + ' refunded · ' + data.refundNumber;
+                // Wire the "Print receipt" button to this refund's printable receipt (new tab).
+                // __posBase, not a literal "/Pos" — this is a navigation, not a shimmed fetch, so it
+                // resolves under a secret POS prefix instead of 404ing.
+                var printBtn = document.getElementById('refund-print');
+                printBtn.onclick = function () { window.open(window.__posBase + '/RefundReceipt/' + data.refundId, '_blank'); };
+                successState.classList.remove('hidden');
+            } else msgEl.textContent = data.message || 'Refund failed.';
+        } finally { confirmBtn.textContent = 'Process refund'; confirmBtn.disabled = false; }
+    });
+}());
+
+// ── Side menu ────────────────────────────────────────────────────────────────
+(function () {
+    const menu = document.getElementById('till-menu');
+    const overlay = document.getElementById('menu-overlay');
+    function openMenu() { menu.classList.remove('-translate-x-full'); overlay.classList.remove('hidden'); }
+    function closeMenu() { menu.classList.add('-translate-x-full'); overlay.classList.add('hidden'); }
+    document.getElementById('hamburger-btn').addEventListener('click', openMenu);
+    document.getElementById('menu-close-btn').addEventListener('click', closeMenu);
+    overlay.addEventListener('click', closeMenu);
+    menu.addEventListener('click', e => { if (e.target.closest('button, a')) closeMenu(); }, true);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenu(); });
+
+    document.getElementById('menu-changeregister-btn').addEventListener('click', async () => {
+        // Moving the till to another register/branch needs an admin's PIN.
+        const pin = prompt('Admin PIN required to change this till to another register/branch:');
+        if (pin === null || pin.trim() === '') return;
+        const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
+        try {
+            const res = await fetch('/Pos/ChangeRegister', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'RequestVerificationToken': token },
+                body: 'pin=' + encodeURIComponent(pin.trim())
+            });
+            const data = await res.json().catch(() => ({}));
+            if (data.success) location.href = window.__posBase;
+            else showError(data.message || 'Invalid admin PIN.');
+        } catch { showError('Could not change register.'); }
+    });
+
+    document.getElementById('menu-receipts-btn').addEventListener('click', () => {
+        document.querySelector('.till-tab[data-tab="orders"]')?.click();
+    });
+}());
+
+// ── Stock lookup (EPOS-style grid) ───────────────────────────────────────────
+(function () {
+    const fmt = n => '₦' + Number(n || 0).toLocaleString('en-NG', { maximumFractionDigits: 0 });
+    const modal = document.getElementById('till-stocklookup');
+    const input = document.getElementById('stocklookup-search');
+    const locationSelect = document.getElementById('stocklookup-location');
+    const periodSelect = document.getElementById('stocklookup-period');
+    const results = document.getElementById('stocklookup-results');
+    const backBtn = document.getElementById('stocklookup-back');
+    const DASH = '—';
+    const esc = s => (s == null ? '' : String(s)).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    let debounce, lastItems = [], locationsLoaded = false;
+
+    function openModal(prefill) {
+        modal.classList.remove('hidden');
+        if (backBtn) backBtn.classList.add('hidden');
+        loadLocations();
+        if (prefill != null) input.value = prefill;
+        setTimeout(() => input.focus(), 50);
+        if (input.value.trim()) search(); else emptyState();
+    }
+    document.getElementById('menu-stocklookup-btn').addEventListener('click', () => openModal(null));
+    document.getElementById('stocklookup-close').addEventListener('click', () => modal.classList.add('hidden'));
+    // Exposed so the product popup's "Stock info" can open the lookup pre-filtered to a product.
+    window.SGStockLookup = { open: openModal };
+
+    input.addEventListener('input', () => { clearTimeout(debounce); debounce = setTimeout(search, 250); });
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); clearTimeout(debounce); search(); } });
+    locationSelect.addEventListener('change', renderGrid);     // location filter is client-side
+    periodSelect.addEventListener('change', search);           // qty-sold depends on period -> refetch
+
+    async function loadLocations() {
+        if (locationsLoaded) return;
+        locationsLoaded = true;
+        try {
+            const res = await fetch('/Pos/StockLookupStores');
+            const stores = await res.json();
+            locationSelect.insertAdjacentHTML('beforeend', stores.map(s => `<option value="${esc(s.name)}">${esc(s.name)}</option>`).join(''));
+        } catch { locationsLoaded = false; }
+    }
+
+    function emptyState(msg) {
+        results.innerHTML = `<p class="text-center text-neutral-400 py-10 text-xs">${msg || 'Search for a product to see stock levels.'}</p>`;
+    }
+
+    async function search() {
+        const q = input.value.trim();
+        if (!q) { lastItems = []; emptyState(); return; }
+        results.innerHTML = '<p class="text-center text-neutral-400 py-10 text-xs">Searching…</p>';
+        try {
+            const res = await fetch('/Pos/StockLookup?q=' + encodeURIComponent(q) + '&period=' + encodeURIComponent(periodSelect.value));
+            lastItems = await res.json();
+            renderGrid();
+        } catch { emptyState('Could not search.'); }
+    }
+
+    function renderGrid() {
+        if (!lastItems.length) { emptyState('No products found.'); return; }
+        const loc = locationSelect.value;
+        const headers = ['Name', 'Description', 'Colour', 'Size', 'Location', 'In stock', 'On hold', 'On order', 'Sale price', 'Brand', 'Category', 'Barcode', 'Order code', 'Qty sold'];
+        const rightAlign = new Set(['In stock', 'On hold', 'On order', 'Sale price', 'Qty sold']);
+
+        // Flatten products into one row per (product, branch[, variant]) — already deduped server-side.
+        const flat = [];
+        lastItems.forEach(p => {
+            let rows = p.rows || [];
+            if (loc) rows = rows.filter(r => r.location === loc);
+            rows.forEach(r => flat.push({ p, r }));
+        });
+        if (!flat.length) { emptyState(loc ? 'No stock at this location.' : 'No stock records.'); return; }
+
+        const body = flat.map(({ p, r }, ri) => {
+            const cells = {
+                'Name': esc(p.name),
+                'Description': esc(p.description) || DASH,
+                'Colour': esc(r.variant) || DASH,
+                'Size': DASH,
+                'Location': esc(r.location),
+                'In stock': r.inStock,
+                'On hold': r.onHold,
+                'On order': DASH,
+                'Sale price': fmt(p.price),
+                'Brand': DASH,
+                'Category': esc(p.category) || DASH,
+                'Barcode': esc(p.barcode) || DASH,
+                'Order code': esc(p.sku) || DASH,
+                'Qty sold': r.qtySold
+            };
+            const zebra = ri % 2 ? 'bg-neutral-50' : 'bg-white';
+            return `<tr class="${zebra} hover:bg-sky-50 transition-colors">${headers.map(h => {
+                let cls = 'px-3 py-2 text-neutral-700 align-top border border-neutral-100';
+                if (rightAlign.has(h)) cls += ' text-right tabular-nums';
+                if (h === 'In stock') cls += (cells[h] > 0 ? ' font-semibold text-emerald-600' : ' font-semibold text-red-500');
+                if (h === 'Name') cls += ' font-medium text-neutral-900 whitespace-normal min-w-[180px]';
+                if (h === 'Description') cls += ' whitespace-normal text-neutral-400 min-w-[160px]';
+                if (h === 'Barcode' || h === 'Order code') cls += ' font-mono text-[11px]';
+                return `<td class="${cls}">${cells[h]}</td>`;
+            }).join('')}</tr>`;
+        }).join('');
+
+        results.innerHTML = `
+            <div class="overflow-x-auto p-4">
+                <table class="w-full text-xs whitespace-nowrap border-collapse">
+                    <thead class="sticky top-0">
+                        <tr class="text-left bg-neutral-100 text-sky-700 uppercase tracking-wide text-[10px]">
+                            ${headers.map(h => `<th class="px-3 py-2.5 font-semibold border border-neutral-200${rightAlign.has(h) ? ' text-right' : ''}">${h}</th>`).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>${body}</tbody>
+                </table>
+            </div>`;
+    }
+
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape' && !modal.classList.contains('hidden')) modal.classList.add('hidden');
+    });
+}());
+
+// ── Verify pickup (scan the customer's QR pass) ───────────────────────────────
+(function () {
+    const fmt = n => '₦' + Number(n || 0).toLocaleString('en-NG', { maximumFractionDigits: 0 });
+    const modal = document.getElementById('till-pickup');
+    const input = document.getElementById('pickup-code');
+    const result = document.getElementById('pickup-result');
+    const esc = s => (s == null ? '' : String(s)).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    let debounce;
+
+    function open(prefill) {
+        modal.classList.remove('hidden');
+        result.innerHTML = '';
+        input.value = prefill || '';
+        setTimeout(() => input.focus(), 50);
+        if (input.value.trim()) verify(input.value.trim());
+    }
+    window.openPickupVerify = open;
+    document.getElementById('menu-pickup-btn').addEventListener('click', () => open(''));
+    document.getElementById('pickup-close').addEventListener('click', () => modal.classList.add('hidden'));
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && !modal.classList.contains('hidden')) modal.classList.add('hidden'); });
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); clearTimeout(debounce); verify(input.value.trim()); } });
+
+    async function verify(code) {
+        if (!code) return;
+        result.innerHTML = '<p class="text-center text-neutral-400 py-6 text-xs">Looking up…</p>';
+        try {
+            const res = await fetch('/Pos/PickupVerify?code=' + encodeURIComponent(code));
+            const d = await res.json();
+            if (!d.success) { result.innerHTML = `<p class="text-center text-red-500 py-6 text-sm">${esc(d.message)}</p>`; return; }
+            render(d);
+        } catch { result.innerHTML = '<p class="text-center text-red-500 py-6 text-sm">Could not verify — check the connection.</p>'; }
+    }
+
+    function render(d) {
+        const items = (d.items || []).map(i => `<div class="flex justify-between text-sm py-1"><span class="text-neutral-700">${i.qty}× ${esc(i.name)}${i.variant ? ' (' + esc(i.variant) + ')' : ''}</span><span class="text-neutral-800">${fmt(i.lineTotal)}</span></div>`).join('');
+        let banner = '', action = '';
+        if (d.collected) banner = '<div class="text-center text-xs font-semibold uppercase tracking-wide text-amber-700 bg-amber-50 border border-amber-200 rounded-lg py-2 mb-3">Already collected</div>';
+        else if (!d.ready) banner = `<div class="text-center text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-lg py-2 mb-3">Order is ${esc(d.status)} — not ready for pickup</div>`;
+        if (d.ready) action = `<button type="button" id="pickup-confirm" data-token="${esc(d.token)}" class="w-full mt-4 bg-emerald-600 text-white text-sm font-semibold uppercase tracking-wide py-3 rounded-xl hover:bg-emerald-700 transition-colors">Confirm collected</button>`;
+        const storeWarn = d.sameStore ? '' : `<p class="text-[11px] text-amber-600 mt-1">⚠ Pickup branch is <strong>${esc(d.pickupStore)}</strong>, not this till.</p>`;
+        result.innerHTML = `
+            ${banner}
+            <div class="flex justify-between items-start gap-2">
+                <div><p class="text-base font-semibold text-neutral-900">${esc(d.orderNumber)}</p>
+                ${d.customer ? `<p class="text-xs text-neutral-500">${esc(d.customer)}</p>` : ''}
+                <p class="text-xs text-neutral-400">Pickup at ${esc(d.pickupStore) || '—'}</p>${storeWarn}</div>
+                <span class="text-sm font-semibold">${fmt(d.total)}</span>
+            </div>
+            <div class="mt-3 border-t border-neutral-100 pt-2">${items}</div>
+            ${action}`;
+        const btn = document.getElementById('pickup-confirm');
+        if (btn) btn.addEventListener('click', () => complete(btn.dataset.token, btn));
+    }
+
+    async function complete(token, btn) {
+        btn.disabled = true; btn.textContent = 'Confirming…';
+        const tok = document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
+        try {
+            const res = await fetch('/Pos/PickupComplete', { method: 'POST', headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': tok }, body: JSON.stringify({ token }) });
+            const d = await res.json();
+            if (d.success) result.innerHTML = `<div class="text-center py-8"><div class="text-4xl text-emerald-600 mb-2">✓</div><p class="text-base font-semibold text-emerald-700">Collected</p><p class="text-xs text-neutral-500 mt-1">${esc(d.orderNumber)} handed over.</p></div>`;
+            else { btn.disabled = false; btn.textContent = 'Confirm collected'; result.insertAdjacentHTML('afterbegin', `<p class="text-center text-red-500 text-sm mb-2">${esc(d.message)}</p>`); }
+        } catch { btn.disabled = false; btn.textContent = 'Confirm collected'; }
+    }
+}());
+
+// ── Stock transfers: Send (request + mark-sent + print), Receive (scan/edit/reason), History ──
+(function () {
+    var sendPanel = document.getElementById('till-sendstock');
+    var recvPanel = document.getElementById('till-receivestock');
+    if (!sendPanel || !recvPanel) return;
+    var token = document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
+    var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+    var post = function (url, body) { return fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token }, body: JSON.stringify(body) }).then(function (r) { return r.json().catch(function () { return {}; }); }); };
+    var get = function (url) { return fetch(url, { headers: { 'X-Requested-With': 'fetch' } }).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; }); };
+    // Small square product thumbnail (or a placeholder box) so the cashier eyeballs the item, not just its name.
+    var thumb = function (url) { return url
+        ? '<img src="' + esc(url) + '" class="w-10 h-10 rounded object-cover bg-neutral-100 flex-shrink-0" alt="">'
+        : '<div class="w-10 h-10 rounded bg-neutral-100 flex-shrink-0 flex items-center justify-center text-neutral-300"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14M4 6h16M4 6v12a2 2 0 002 2h12a2 2 0 002-2V6"/></svg></div>'; };
+    var openManifest = function (url) { if (url) window.open(url, '_blank'); };
+
+    var destSel = document.getElementById('sendstock-dest');
+    var reasonSel = document.getElementById('sendstock-reason');
+    var searchIn = document.getElementById('sendstock-search');
+    var resultsBox = document.getElementById('sendstock-results');
+    var basketBox = document.getElementById('sendstock-basket');
+    var submitBtn = document.getElementById('sendstock-submit');
+    var sendMsg = document.getElementById('sendstock-msg');
+    var outgoingBox = document.getElementById('sendstock-outgoing');
+    var recvList = document.getElementById('receivestock-list');
+    var basket = [], lastResults = [], branchesLoaded = false;
+
+    function badge(n) { var b = document.getElementById('receivestock-badge'); if (!b) return; if (n > 0) { b.textContent = n; b.classList.remove('hidden'); } else b.classList.add('hidden'); }
+    function loadBranches() {
+        if (branchesLoaded) return Promise.resolve();
+        return get('/Pos/TransferMeta').then(function (d) {
+            branchesLoaded = true;
+            destSel.innerHTML = '<option value="">— Select branch —</option>' + ((d && d.branches) || []).map(function (b) { return '<option value="' + b.id + '">' + esc(b.name) + '</option>'; }).join('');
+            reasonSel.innerHTML = '<option value="">— Select reason —</option>' + ((d && d.reasons) || []).map(function (r) { return '<option value="' + esc(r) + '">' + esc(r) + '</option>'; }).join('');
+        });
+    }
+    function renderBasket() {
+        basketBox.innerHTML = basket.length ? basket.map(function (it, i) {
+            return '<div class="flex items-center gap-2 border border-neutral-200 rounded-lg px-3 py-2">' + thumb(it.image) + '<div class="flex-1 min-w-0"><p class="text-sm text-neutral-800 truncate">' + esc(it.name) + '</p><p class="text-[11px] text-neutral-400">' + it.available + ' available</p></div>'
+                + '<button type="button" data-dec="' + i + '" class="w-7 h-7 rounded border border-neutral-200 text-neutral-600">−</button><span class="w-8 text-center text-sm">' + it.qty + '</span>'
+                + '<button type="button" data-inc="' + i + '" class="w-7 h-7 rounded border border-neutral-200 text-neutral-600">+</button>'
+                + '<button type="button" data-rm="' + i + '" class="ml-1 text-neutral-300 hover:text-red-500">✕</button></div>';
+        }).join('') : '<p class="text-xs text-neutral-400 py-3 text-center">No items yet — search or scan above.</p>';
+        submitBtn.disabled = !(basket.length && destSel.value && reasonSel.value);
+    }
+    function addToBasket(r) {
+        var ex = basket.find(function (x) { return x.productId === r.id; });
+        if (ex) { if (ex.qty < ex.available) ex.qty++; } else basket.push({ productId: r.id, name: r.name, image: r.image, available: r.available, qty: 1 });
+        renderBasket();
+    }
+    basketBox.addEventListener('click', function (e) {
+        var inc = e.target.closest('[data-inc]'), dec = e.target.closest('[data-dec]'), rm = e.target.closest('[data-rm]');
+        if (inc) { var i = +inc.dataset.inc; if (basket[i].qty < basket[i].available) basket[i].qty++; }
+        else if (dec) { var j = +dec.dataset.dec; if (basket[j].qty > 1) basket[j].qty--; }
+        else if (rm) { basket.splice(+rm.dataset.rm, 1); } else return;
+        renderBasket();
+    });
+    destSel.addEventListener('change', renderBasket);
+    reasonSel.addEventListener('change', renderBasket);
+    var sdeb; searchIn.addEventListener('input', function () { clearTimeout(sdeb); sdeb = setTimeout(searchProducts, 250); });
+    // Enter = scanner submit: exact barcode/SKU match (or a lone result) is added straight to the basket.
+    searchIn.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter') return;
+        e.preventDefault();
+        var q = searchIn.value.trim().toLowerCase(); if (!q) return;
+        var exact = lastResults.find(function (r) { return (r.barcode && r.barcode.toLowerCase() === q) || (r.sku && r.sku.toLowerCase() === q); });
+        var pick = exact || (lastResults.length === 1 ? lastResults[0] : null);
+        if (pick) { addToBasket(pick); searchIn.value = ''; resultsBox.classList.add('hidden'); }
+    });
+    function searchProducts() {
+        var q = searchIn.value.trim(); if (!q) { resultsBox.classList.add('hidden'); return; }
+        get('/Pos/TransferSearch?q=' + encodeURIComponent(q)).then(function (rows) {
+            lastResults = rows || [];
+            resultsBox.innerHTML = lastResults.length ? lastResults.map(function (r, i) {
+                return '<button type="button" data-add="' + i + '" class="w-full flex items-center gap-2 text-left px-3 py-2 hover:bg-neutral-50 border-b border-neutral-50">' + thumb(r.image) + '<span class="flex-1 min-w-0"><span class="block text-sm text-neutral-800 truncate">' + esc(r.name) + '</span><span class="block text-[11px] text-neutral-400">' + r.available + ' available' + (r.sku ? ' · ' + esc(r.sku) : '') + '</span></span></button>';
+            }).join('') : '<p class="px-3 py-2 text-xs text-neutral-400">No products with stock here.</p>';
+            resultsBox.classList.remove('hidden');
+        });
+    }
+    resultsBox.addEventListener('click', function (e) {
+        var btn = e.target.closest('[data-add]'); if (!btn) return;
+        var r = lastResults[+btn.dataset.add]; if (!r) return;
+        addToBasket(r);
+        searchIn.value = ''; resultsBox.classList.add('hidden'); searchIn.focus();
+    });
+    submitBtn.addEventListener('click', function () {
+        if (!basket.length || !destSel.value || !reasonSel.value) return;
+        submitBtn.disabled = true; sendMsg.className = 'text-xs text-center h-4 text-neutral-500'; sendMsg.textContent = 'Sending…';
+        post('/Pos/TransferRequest', { toStoreId: +destSel.value, reason: reasonSel.value, items: basket.map(function (b) { return { productId: b.productId, qty: b.qty }; }) }).then(function (d) {
+            if (d.success) { sendMsg.className = 'text-xs text-center h-4 text-emerald-600'; sendMsg.textContent = '✓ Request ' + (d.number || '') + ' sent for approval.'; basket = []; reasonSel.value = ''; renderBasket(); loadLists(); }
+            else { sendMsg.className = 'text-xs text-center h-4 text-red-600'; sendMsg.textContent = d.message || 'Failed.'; submitBtn.disabled = false; }
+        });
+    });
+    outgoingBox.addEventListener('click', function (e) {
+        var mf = e.target.closest('[data-manifest]');
+        if (mf) { openManifest(mf.dataset.manifest); return; }
+        var btn = e.target.closest('[data-dispatch]'); if (!btn) return;
+        if (!confirm('Mark this transfer as sent? Stock leaves this branch.')) return;
+        btn.disabled = true; btn.textContent = 'Sending…';
+        post('/Pos/TransferDispatch', { id: +btn.dataset.dispatch }).then(function (d) { if (!d.success) alert(d.message || 'Could not send.'); loadLists(); });
+    });
+    function loadLists() {
+        return get('/Pos/TransfersList').then(function (d) {
+            var out = (d && d.outgoing) || [], inc = (d && d.incoming) || [];
+            badge(inc.length);
+            outgoingBox.innerHTML = out.length ? out.map(function (t) {
+                var items = t.items.map(function (i) { return esc(i.name) + ' ×' + i.qty; }).join(', ');
+                var b = t.status === 'PendingApproval' ? '<span class="text-[10px] px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">Pending approval</span>' : t.status === 'Approved' ? '<span class="text-[10px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-700">Approved</span>' : '<span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700">In transit</span>';
+                var actions = '<div class="flex gap-2 mt-2">'
+                    + '<button type="button" data-manifest="' + esc(t.manifestUrl) + '" class="flex-1 border border-neutral-200 text-neutral-700 text-xs py-2 rounded-lg hover:bg-neutral-50">Print manifest</button>'
+                    + (t.canDispatch ? '<button type="button" data-dispatch="' + t.id + '" class="flex-1 bg-neutral-900 text-white text-xs py-2 rounded-lg hover:bg-black">Mark as sent</button>' : '')
+                    + '</div>';
+                return '<div class="border border-neutral-200 rounded-lg px-3 py-2"><div class="flex items-center justify-between gap-2 mb-1"><span class="text-xs font-medium text-neutral-700">' + esc(t.number) + ' → ' + esc(t.toStore) + '</span>' + b + '</div><p class="text-[11px] text-neutral-500">' + items + '</p>' + actions + '</div>';
+            }).join('') : '<p class="text-xs text-neutral-400 py-2 text-center">None.</p>';
+            recvList.innerHTML = inc.length ? inc.map(function (t) {
+                var items = t.items.map(function (i) { return esc(i.name) + ' ×' + i.qty; }).join(', ');
+                return '<div class="border border-neutral-200 rounded-lg px-4 py-3"><div class="flex items-center justify-between gap-2 mb-1"><span class="text-sm font-medium text-neutral-800">' + esc(t.number) + '</span><span class="text-[11px] text-neutral-400">from ' + esc(t.fromStore) + '</span></div><p class="text-xs text-neutral-500 mb-2">' + items + '</p><div class="flex gap-2"><button type="button" data-manifest="' + esc(t.manifestUrl) + '" class="border border-neutral-200 text-neutral-700 text-xs px-3 py-2 rounded-lg hover:bg-neutral-50">Manifest</button><button type="button" data-open="' + t.id + '" class="flex-1 bg-emerald-600 text-white text-sm py-2 rounded-lg hover:bg-emerald-700">Check in items</button></div></div>';
+            }).join('') : '<p class="text-sm text-neutral-400 py-8 text-center">No incoming transfers.</p>';
+        });
+    }
+
+    // ── Receive detail: scan items in, edit counts, add a reason when short ──
+    var recvDetailPanel = document.getElementById('till-receive-detail');
+    var recvLinesBox = document.getElementById('recvdetail-lines');
+    var recvScan = document.getElementById('recvdetail-scan');
+    var recvScanMsg = document.getElementById('recvdetail-scanmsg');
+    var recvNotes = document.getElementById('recvdetail-notes');
+    var recvSubmit = document.getElementById('recvdetail-submit');
+    var recvMsg = document.getElementById('recvdetail-msg');
+    var recvState = { id: 0, lines: [] };
+
+    function renderRecvLines() {
+        var short = false;
+        recvLinesBox.innerHTML = recvState.lines.map(function (l, i) {
+            if (l.received < l.expected) short = true;
+            var full = l.received >= l.expected;
+            return '<div class="flex items-center gap-2 border rounded-lg px-3 py-2 ' + (full ? 'border-emerald-200 bg-emerald-50/40' : 'border-neutral-200') + '">' + thumb(l.image)
+                + '<div class="flex-1 min-w-0"><p class="text-sm text-neutral-800 truncate">' + esc(l.name) + '</p><p class="text-[11px] text-neutral-400">expected ' + l.expected + '</p></div>'
+                + '<button type="button" data-rdec="' + i + '" class="w-7 h-7 rounded border border-neutral-200 text-neutral-600">−</button>'
+                + '<input type="number" data-rqty="' + i + '" value="' + l.received + '" min="0" max="' + l.expected + '" class="w-12 text-center text-sm border border-neutral-200 rounded py-1" />'
+                + '<span class="text-[11px] text-neutral-400 w-8">/ ' + l.expected + '</span>'
+                + '<button type="button" data-rinc="' + i + '" class="w-7 h-7 rounded border border-neutral-200 text-neutral-600">+</button></div>';
+        }).join('');
+        recvNotes.parentElement.style.display = short ? '' : 'none';
+    }
+    function openReceiveDetail(id) {
+        recvScanMsg.textContent = ''; recvMsg.textContent = ''; recvNotes.value = '';
+        recvLinesBox.innerHTML = '<p class="text-sm text-neutral-400 py-4 text-center">Loading…</p>';
+        recvPanel.classList.add('hidden'); recvDetailPanel.classList.remove('hidden');
+        get('/Pos/TransferReceiveDetail?id=' + id).then(function (d) {
+            if (!d || !d.ok) { recvLinesBox.innerHTML = '<p class="text-sm text-red-500 py-4 text-center">Could not load this transfer.</p>'; return; }
+            document.getElementById('recvdetail-num').textContent = d.number;
+            document.getElementById('recvdetail-from').textContent = 'from ' + d.fromStore;
+            recvState = { id: d.id, lines: d.lines.map(function (l) { return { itemId: l.itemId, name: l.name, image: l.image, expected: l.expected, codes: l.codes || [], received: l.expected }; }) };
+            renderRecvLines(); recvScan.focus();
+        });
+    }
+    recvLinesBox.addEventListener('click', function (e) {
+        var inc = e.target.closest('[data-rinc]'), dec = e.target.closest('[data-rdec]');
+        if (inc) { var i = +inc.dataset.rinc; if (recvState.lines[i].received < recvState.lines[i].expected) recvState.lines[i].received++; }
+        else if (dec) { var j = +dec.dataset.rdec; if (recvState.lines[j].received > 0) recvState.lines[j].received--; } else return;
+        renderRecvLines();
+    });
+    recvLinesBox.addEventListener('input', function (e) {
+        var el = e.target.closest('[data-rqty]'); if (!el) return;
+        var i = +el.dataset.rqty, v = Math.max(0, Math.min(recvState.lines[i].expected, parseInt(el.value, 10) || 0));
+        recvState.lines[i].received = v; renderRecvLines();
+    });
+    recvScan.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter') return;
+        e.preventDefault();
+        var code = recvScan.value.trim().toLowerCase(); recvScan.value = ''; if (!code) return;
+        var idx = recvState.lines.findIndex(function (l) { return l.codes.indexOf(code) !== -1; });
+        if (idx === -1) { recvScanMsg.className = 'text-xs text-center h-4 mt-1 text-red-500'; recvScanMsg.textContent = 'No item on this transfer matches that barcode.'; return; }
+        var line = recvState.lines[idx];
+        // Start counting from 0 the first time a line is scanned, so scans tally the physical count.
+        if (!line._scanned) { line._scanned = true; line.received = 0; }
+        if (line.received < line.expected) { line.received++; recvScanMsg.className = 'text-xs text-center h-4 mt-1 text-emerald-600'; recvScanMsg.textContent = '✓ ' + line.name + ' (' + line.received + '/' + line.expected + ')'; }
+        else { recvScanMsg.className = 'text-xs text-center h-4 mt-1 text-amber-600'; recvScanMsg.textContent = line.name + ' already at ' + line.expected + '.'; }
+        renderRecvLines();
+    });
+    recvSubmit.addEventListener('click', function () {
+        var short = recvState.lines.some(function (l) { return l.received < l.expected; });
+        if (short && !recvNotes.value.trim()) { recvMsg.className = 'text-xs text-center h-4 text-red-600'; recvMsg.textContent = 'Add a reason — some counts are short.'; recvNotes.focus(); return; }
+        if (!confirm('Confirm receipt? Received units are added to this branch.')) return;
+        recvSubmit.disabled = true; recvMsg.className = 'text-xs text-center h-4 text-neutral-500'; recvMsg.textContent = 'Receiving…';
+        post('/Pos/TransferReceive', { id: recvState.id, notes: recvNotes.value.trim(), items: recvState.lines.map(function (l) { return { itemId: l.itemId, received: l.received }; }) }).then(function (d) {
+            recvSubmit.disabled = false;
+            if (d.success) { recvDetailPanel.classList.add('hidden'); recvPanel.classList.remove('hidden'); loadLists(); }
+            else { recvMsg.className = 'text-xs text-center h-4 text-red-600'; recvMsg.textContent = d.message || 'Could not receive.'; }
+        });
+    });
+    recvList.addEventListener('click', function (e) {
+        var mf = e.target.closest('[data-manifest]'); if (mf) { openManifest(mf.dataset.manifest); return; }
+        var btn = e.target.closest('[data-open]'); if (btn) openReceiveDetail(+btn.dataset.open);
+    });
+    document.getElementById('recvdetail-back').addEventListener('click', function () { recvDetailPanel.classList.add('hidden'); recvPanel.classList.remove('hidden'); });
+
+    // ── Transfer history ──
+    var histPanel = document.getElementById('till-transferhistory');
+    var histList = document.getElementById('transferhistory-list');
+    function loadHistory() {
+        histList.innerHTML = '<p class="text-sm text-neutral-400 py-8 text-center">Loading…</p>';
+        get('/Pos/TransferHistory').then(function (rows) {
+            rows = rows || [];
+            histList.innerHTML = rows.length ? rows.map(function (t) {
+                var badgeCls = t.status === 'Completed' ? 'bg-emerald-50 text-emerald-700' : t.status === 'PartiallyReceived' ? 'bg-amber-50 text-amber-700' : t.status === 'Rejected' ? 'bg-red-50 text-red-600' : 'bg-neutral-100 text-neutral-500';
+                var dir = t.outgoing ? '<span class="text-neutral-400">→</span> ' + esc(t.otherStore) : '<span class="text-neutral-400">←</span> ' + esc(t.otherStore);
+                var mf = t.manifestUrl ? '<button type="button" data-manifest="' + esc(t.manifestUrl) + '" class="text-[11px] text-brand-600 hover:underline">Manifest</button>' : '';
+                var reason = t.reason ? '<span class="text-[10px] text-neutral-400"> · ' + esc(t.reason) + '</span>' : '';
+                return '<div class="border border-neutral-200 rounded-lg px-3 py-2"><div class="flex items-center justify-between gap-2"><span class="text-xs font-medium text-neutral-700">' + esc(t.number) + ' ' + dir + '</span><span class="text-[10px] px-2 py-0.5 rounded-full ' + badgeCls + '">' + esc(t.status) + '</span></div><div class="flex items-center justify-between gap-2 mt-1"><span class="text-[11px] text-neutral-400">' + esc(t.when) + ' · ' + t.lines + ' pcs' + '</span>' + mf + '</div>' + (reason ? '<div class="text-[11px] text-neutral-400 mt-0.5">Reason:' + reason + '</div>' : '') + '</div>';
+            }).join('') : '<p class="text-sm text-neutral-400 py-8 text-center">No past transfers yet.</p>';
+        });
+    }
+    histList.addEventListener('click', function (e) { var mf = e.target.closest('[data-manifest]'); if (mf) openManifest(mf.dataset.manifest); });
+
+    document.getElementById('menu-sendstock-btn').addEventListener('click', function () { sendPanel.classList.remove('hidden'); loadBranches(); renderBasket(); loadLists(); });
+    document.getElementById('sendstock-close').addEventListener('click', function () { sendPanel.classList.add('hidden'); });
+    document.getElementById('menu-receivestock-btn').addEventListener('click', function () { recvPanel.classList.remove('hidden'); loadLists(); });
+    document.getElementById('receivestock-close').addEventListener('click', function () { recvPanel.classList.add('hidden'); });
+    document.getElementById('menu-transferhistory-btn').addEventListener('click', function () { histPanel.classList.remove('hidden'); loadHistory(); });
+    document.getElementById('transferhistory-close').addEventListener('click', function () { histPanel.classList.add('hidden'); });
+    loadLists(); setInterval(loadLists, 60000);   // keep the "receive" badge fresh
+}());
+</script>
+}

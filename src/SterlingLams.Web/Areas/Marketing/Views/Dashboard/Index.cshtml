@@ -1,0 +1,101 @@
+@{
+    ViewData["Title"] = "Marketing";
+    int subscribers = ViewBag.Subscribers ?? 0;
+    int customers = ViewBag.Customers ?? 0;
+    int openCarts = ViewBag.OpenCarts ?? 0;
+    int backInStock = ViewBag.BackInStock ?? 0;
+    var attr = ViewBag.Attribution as SterlingLams.Web.Services.Marketing.AttributionResult;
+}
+
+<div class="mb-6">
+    <h1 class="text-2xl font-light text-neutral-900">Welcome to the Marketing Hub</h1>
+    <p class="text-sm text-neutral-500 mt-1">Campaigns, audiences and customer signals for the Glamstar social &amp; marketing team.</p>
+</div>
+
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+    <div class="bg-white border border-neutral-200 rounded-sm p-5">
+        <div class="text-xs text-neutral-400">Newsletter subscribers</div>
+        <div class="text-2xl font-light text-neutral-900 mt-1">@subscribers.ToString("N0")</div>
+    </div>
+    <div class="bg-white border border-neutral-200 rounded-sm p-5">
+        <div class="text-xs text-neutral-400">Customers (bought)</div>
+        <div class="text-2xl font-light text-neutral-900 mt-1">@customers.ToString("N0")</div>
+    </div>
+    <div class="bg-white border border-neutral-200 rounded-sm p-5">
+        <div class="text-xs text-neutral-400">Open abandoned carts</div>
+        <div class="text-2xl font-light text-amber-600 mt-1">@openCarts.ToString("N0")</div>
+    </div>
+    <div class="bg-white border border-neutral-200 rounded-sm p-5">
+        <div class="text-xs text-neutral-400">Back-in-stock requests</div>
+        <div class="text-2xl font-light text-blue-600 mt-1">@backInStock.ToString("N0")</div>
+    </div>
+</div>
+
+@if (attr != null)
+{
+    <div class="bg-white border border-neutral-200 rounded-sm p-6 mb-8">
+        <div class="flex items-baseline justify-between mb-4">
+            <h2 class="text-sm font-medium text-neutral-700">Email-attributed revenue</h2>
+            <span class="text-xs text-neutral-400">last 90 days · last-touch, ≤@(attr.WindowDays)-day window</span>
+        </div>
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div>
+                <div class="text-xs text-neutral-400">Total revenue</div>
+                <div class="text-2xl font-light text-emerald-600 mt-1">₦@attr.TotalRevenue.ToString("N0")</div>
+                <div class="text-[11px] text-neutral-400 mt-0.5">@attr.TotalOrders.ToString("N0") order@(attr.TotalOrders == 1 ? "" : "s")</div>
+            </div>
+            <div>
+                <div class="text-xs text-neutral-400">From campaigns</div>
+                <div class="text-xl font-light text-neutral-900 mt-1">₦@attr.CampaignRevenue.ToString("N0")</div>
+            </div>
+            <div>
+                <div class="text-xs text-neutral-400">From automations</div>
+                <div class="text-xl font-light text-neutral-900 mt-1">₦@attr.AutomationRevenue.ToString("N0")</div>
+            </div>
+            <div>
+                <div class="text-xs text-neutral-400">Cart recovery</div>
+                <div class="text-xl font-light text-neutral-900 mt-1">₦@attr.CartRevenue.ToString("N0")</div>
+            </div>
+        </div>
+        @if (attr.Campaigns.Any() || attr.Automations.Any())
+        {
+            <div class="grid md:grid-cols-2 gap-6 pt-4 border-t border-neutral-100">
+                <div>
+                    <div class="text-xs uppercase tracking-wide text-neutral-400 mb-2">Top campaigns</div>
+                    @if (attr.Campaigns.Any())
+                    {
+                        foreach (var s in attr.Campaigns.Take(5))
+                        {
+                            <div class="flex justify-between text-sm py-1"><span class="text-neutral-600 truncate pr-2">@s.Name</span><span class="text-neutral-900 font-medium whitespace-nowrap">₦@s.Revenue.ToString("N0") <span class="text-neutral-400 font-normal">· @s.Orders</span></span></div>
+                        }
+                    }
+                    else { <div class="text-sm text-neutral-400">No attributed campaign revenue yet.</div> }
+                </div>
+                <div>
+                    <div class="text-xs uppercase tracking-wide text-neutral-400 mb-2">Top automations</div>
+                    @if (attr.Automations.Any())
+                    {
+                        foreach (var s in attr.Automations.Take(5))
+                        {
+                            <div class="flex justify-between text-sm py-1"><span class="text-neutral-600 truncate pr-2">@s.Name</span><span class="text-neutral-900 font-medium whitespace-nowrap">₦@s.Revenue.ToString("N0") <span class="text-neutral-400 font-normal">· @s.Orders</span></span></div>
+                        }
+                    }
+                    else { <div class="text-sm text-neutral-400">No attributed automation revenue yet.</div> }
+                </div>
+            </div>
+        }
+        else
+        {
+            <p class="text-sm text-neutral-400 pt-2 border-t border-neutral-100">No email-attributed orders in this window yet. Once campaigns/automations go out and recipients buy within @(attr.WindowDays) days, revenue shows here.</p>
+        }
+    </div>
+}
+
+<div class="bg-white border border-neutral-200 rounded-sm p-6">
+    <h2 class="text-sm font-medium text-neutral-700 mb-3">Quick actions</h2>
+    <div class="flex flex-wrap gap-3">
+        <a asp-area="Marketing" asp-controller="Campaigns" asp-action="Create" class="px-4 py-2 text-sm bg-neutral-900 text-white rounded-sm hover:bg-neutral-700">New campaign</a>
+        <a asp-area="Marketing" asp-controller="Audiences" asp-action="Index" class="px-4 py-2 text-sm border border-neutral-200 rounded-sm hover:border-neutral-400">View audiences</a>
+        <a asp-area="Marketing" asp-controller="Signals" asp-action="Index" class="px-4 py-2 text-sm border border-neutral-200 rounded-sm hover:border-neutral-400">Customer signals</a>
+    </div>
+</div>

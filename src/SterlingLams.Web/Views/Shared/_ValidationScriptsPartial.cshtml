@@ -1,0 +1,14 @@
+@*
+    Client-side jQuery unobtrusive validation is intentionally disabled.
+
+    These forms (Login/Register/ResetPassword/ChangePassword) are fully validated
+    server-side via ModelState — they post and re-render with field errors, so they
+    are functionally correct without any JavaScript.
+
+    The previous markup referenced ~/lib/jquery-validation/* which is not vendored
+    (404 + MIME errors), and the CDN fallback can't load because the site CSP is
+    script-src 'self' 'unsafe-inline' (no external origins). jQuery itself is also
+    not loaded anywhere on the site. Re-enabling client-side validation would mean
+    vendoring jquery + jquery-validation + jquery-validation-unobtrusive locally
+    under wwwroot/lib so they satisfy the 'self' CSP. Tracked as a follow-up.
+*@

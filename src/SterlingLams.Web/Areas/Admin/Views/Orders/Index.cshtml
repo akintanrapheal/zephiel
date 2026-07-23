@@ -1,0 +1,204 @@
+@model SterlingLams.Web.Areas.Admin.ViewModels.AdminOrderListViewModel
+@{
+    ViewData["Title"] = "Orders";
+    var statuses = new[] { "", "NeedsAction", "Pending", "Confirmed", "Processing", "ReadyForPickup", "Collected", "Shipped", "Delivered", "Cancelled" };
+}
+
+<!-- Toolbar -->
+@{
+    var selCls = "border border-neutral-200 rounded-sm px-2 py-2 text-xs bg-white focus:outline-none focus:border-neutral-400";
+    bool anyFilter = !string.IsNullOrEmpty(Model.ChannelFilter) || !string.IsNullOrEmpty(Model.PaidFilter)
+                     || !string.IsNullOrEmpty(Model.DateFrom) || !string.IsNullOrEmpty(Model.DateTo)
+                     || !string.IsNullOrEmpty(Model.SearchQuery);
+}
+<form method="get" class="space-y-3 mb-6">
+    <input type="hidden" name="status" value="@Model.StatusFilter" />
+    <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+        <input type="text" name="q" value="@Model.SearchQuery"
+               placeholder="Search order #, name, email or phone…"
+               class="flex-1 border border-neutral-200 rounded-sm px-3 py-2 text-sm focus:outline-none focus:border-neutral-400" />
+        <button type="submit"
+                class="px-4 py-2 bg-neutral-900 text-white text-xs rounded-sm hover:bg-neutral-700 transition-colors">
+            Search
+        </button>
+        <a asp-area="Admin" asp-controller="Orders" asp-action="ExportCsv"
+           asp-route-status="@Model.StatusFilter" asp-route-q="@Model.SearchQuery" asp-route-channel="@Model.ChannelFilter"
+           asp-route-paid="@Model.PaidFilter" asp-route-from="@Model.DateFrom" asp-route-to="@Model.DateTo"
+           class="px-4 py-2 border border-neutral-300 text-neutral-700 text-xs rounded-sm hover:border-neutral-500 transition-colors whitespace-nowrap">
+            ↓ Export CSV
+        </a>
+    </div>
+    <div class="flex flex-wrap items-center gap-2">
+        <select name="channel" onchange="this.form.submit()" class="@selCls">
+            <option value="">All channels</option>
+            <option value="Online" selected="@(Model.ChannelFilter == "Online")">Online</option>
+            <option value="Pos" selected="@(Model.ChannelFilter == "Pos")">In-store (POS)</option>
+        </select>
+        <select name="paid" onchange="this.form.submit()" class="@selCls">
+            <option value="">Any payment</option>
+            <option value="paid" selected="@(Model.PaidFilter == "paid")">Paid</option>
+            <option value="unpaid" selected="@(Model.PaidFilter == "unpaid")">Unpaid</option>
+        </select>
+        <label class="text-xs text-neutral-400">From
+            <input type="date" name="from" value="@Model.DateFrom" onchange="this.form.submit()" class="@selCls ml-1" /></label>
+        <label class="text-xs text-neutral-400">To
+            <input type="date" name="to" value="@Model.DateTo" onchange="this.form.submit()" class="@selCls ml-1" /></label>
+        <noscript><button type="submit" class="@selCls">Apply</button></noscript>
+        @if (anyFilter)
+        {
+            <a asp-area="Admin" asp-controller="Orders" asp-action="Index" asp-route-status="@Model.StatusFilter"
+               class="text-xs text-neutral-500 underline hover:text-neutral-800">Clear filters</a>
+        }
+    </div>
+</form>
+
+<!-- Status tabs with counts -->
+<div class="flex gap-1 mb-4 flex-wrap">
+    @foreach (var s in statuses)
+    {
+        var label = string.IsNullOrEmpty(s) ? "All" : s == "NeedsAction" ? "⚠ Needs action" : s;
+        var isActive = Model.StatusFilter == s;
+        var count = Model.StatusCounts.TryGetValue(s, out var c) ? c : 0;
+        <a asp-area="Admin" asp-controller="Orders" asp-action="Index"
+           asp-route-status="@s" asp-route-q="@Model.SearchQuery" asp-route-channel="@Model.ChannelFilter"
+           asp-route-paid="@Model.PaidFilter" asp-route-from="@Model.DateFrom" asp-route-to="@Model.DateTo"
+           class="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-sm transition-colors @(isActive ? "bg-neutral-900 text-white" : "bg-white text-neutral-600 border border-neutral-200 hover:border-neutral-400")">
+            @label
+            @if (count > 0)
+            {
+                <span class="text-[10px] px-1.5 py-0.5 rounded-full @(isActive ? "bg-white/20" : "bg-neutral-100 text-neutral-500")">@count</span>
+            }
+        </a>
+    }
+</div>
+
+<!-- Bulk action bar (shown when checkboxes selected) -->
+<form id="bulk-form" asp-area="Admin" asp-controller="Orders" asp-action="BulkUpdateStatus" method="post"
+      class="hidden mb-4 flex items-center gap-3 bg-blue-50 border border-blue-100 rounded-sm px-4 py-2">
+    @Html.AntiForgeryToken()
+    <span id="bulk-count" class="text-xs text-blue-700 font-medium"></span>
+    <select name="status" class="border border-blue-200 rounded-sm px-2 py-1 text-xs focus:outline-none ml-auto">
+        @foreach (var s in statuses.Where(s => s != ""))
+        {
+            <option value="@s">→ @s</option>
+        }
+    </select>
+    <button type="submit"
+            class="px-3 py-1.5 bg-neutral-900 text-white text-xs rounded-sm hover:bg-neutral-700 transition-colors">
+        Update Selected
+    </button>
+</form>
+
+<!-- Table -->
+<div class="bg-white rounded-sm border border-neutral-100 overflow-hidden">
+    <table class="w-full text-sm">
+        <thead>
+            <tr class="border-b border-neutral-100 bg-neutral-50">
+                <th class="px-4 py-3 w-8">
+                    <input type="checkbox" id="select-all" class="accent-neutral-900" />
+                </th>
+                <th class="text-left px-4 py-3 text-xs text-neutral-400 font-medium">Order #</th>
+                <th class="text-left px-4 py-3 text-xs text-neutral-400 font-medium">Customer</th>
+                <th class="text-left px-4 py-3 text-xs text-neutral-400 font-medium">Total</th>
+                <th class="text-left px-4 py-3 text-xs text-neutral-400 font-medium">Fulfillment</th>
+                <th class="text-left px-4 py-3 text-xs text-neutral-400 font-medium">Paid</th>
+                <th class="text-left px-4 py-3 text-xs text-neutral-400 font-medium">Status</th>
+                <th class="text-left px-4 py-3 text-xs text-neutral-400 font-medium">Date</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-neutral-50">
+            @if (!Model.Orders.Any())
+            {
+                <tr><td colspan="8" class="px-6 py-12 text-center text-neutral-400 text-sm">No orders found.</td></tr>
+            }
+            @foreach (var o in Model.Orders)
+            {
+                <tr class="hover:bg-neutral-50 transition-colors">
+                    <td class="px-4 py-3">
+                        <input type="checkbox" name="orderIds" value="@o.Id" form="bulk-form"
+                               class="order-checkbox accent-neutral-900" />
+                    </td>
+                    <td class="px-4 py-3">
+                        <a asp-area="Admin" asp-controller="Orders" asp-action="Detail" asp-route-id="@o.Id"
+                           class="font-mono text-xs text-neutral-700 hover:text-neutral-900 hover:underline">@o.OrderNumber</a>
+                    </td>
+                    <td class="px-4 py-3">
+                        <p class="text-xs font-medium text-neutral-800">@o.CustomerName</p>
+                        <p class="text-[10px] text-neutral-400">@o.CustomerEmail</p>
+                    </td>
+                    <td class="px-4 py-3 text-xs font-medium">₦@o.Total.ToString("N0")</td>
+                    <td class="px-4 py-3 text-xs text-neutral-600">@o.FulfillmentType</td>
+                    <td class="px-4 py-3">
+                        @if (o.IsPaid)
+                        {
+                            <span class="text-[10px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full">Paid</span>
+                        }
+                        else
+                        {
+                            <span class="text-[10px] bg-neutral-100 text-neutral-500 px-2 py-0.5 rounded-full">Unpaid</span>
+                        }
+                    </td>
+                    <td class="px-4 py-3">
+                        @{
+                            var bc = o.Status switch
+                            {
+                                "Delivered" or "Collected" => "bg-emerald-50 text-emerald-700",
+                                "Cancelled" => "bg-red-50 text-red-700",
+                                "Processing" or "Confirmed" => "bg-blue-50 text-blue-700",
+                                "AwaitingTransfer" => "bg-amber-50 text-amber-700",
+                                "Shipped" => "bg-violet-50 text-violet-700",
+                                _ => "bg-neutral-100 text-neutral-600"
+                            };
+                        }
+                        <span class="text-[10px] px-2 py-0.5 rounded-full @bc">@(o.Status == "AwaitingTransfer" ? "Awaiting transfer" : o.Status)</span>
+                    </td>
+                    <td class="px-4 py-3 text-xs text-neutral-400">@o.CreatedAt.ToString("dd MMM yy")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<!-- Pagination -->
+@if (Model.TotalPages > 1)
+{
+    <div class="flex items-center justify-end gap-2 mt-4">
+        @for (int p = 1; p <= Model.TotalPages; p++)
+        {
+            <a asp-area="Admin" asp-controller="Orders" asp-action="Index"
+               asp-route-page="@p" asp-route-status="@Model.StatusFilter" asp-route-q="@Model.SearchQuery"
+               asp-route-channel="@Model.ChannelFilter" asp-route-paid="@Model.PaidFilter"
+               asp-route-from="@Model.DateFrom" asp-route-to="@Model.DateTo"
+               class="px-3 py-1.5 text-xs rounded-sm border transition-colors @(p == Model.CurrentPage ? "bg-neutral-900 text-white border-neutral-900" : "border-neutral-200 text-neutral-600 hover:border-neutral-400")">
+                @p
+            </a>
+        }
+    </div>
+}
+
+@section Scripts {
+<script>
+    const checkboxes = document.querySelectorAll('.order-checkbox');
+    const selectAll = document.getElementById('select-all');
+    const bulkForm = document.getElementById('bulk-form');
+    const bulkCount = document.getElementById('bulk-count');
+
+    function updateBulkBar() {
+        const checked = document.querySelectorAll('.order-checkbox:checked');
+        if (checked.length > 0) {
+            bulkForm.classList.remove('hidden');
+            bulkCount.textContent = checked.length + ' order(s) selected';
+        } else {
+            bulkForm.classList.add('hidden');
+        }
+    }
+
+    selectAll.addEventListener('change', () => {
+        checkboxes.forEach(cb => cb.checked = selectAll.checked);
+        updateBulkBar();
+    });
+
+    checkboxes.forEach(cb => cb.addEventListener('change', updateBulkBar));
+</script>
+}
+
