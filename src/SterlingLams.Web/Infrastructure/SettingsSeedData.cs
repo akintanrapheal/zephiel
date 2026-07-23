@@ -63,7 +63,7 @@ public static class SettingsSeedData
     private static List<SiteSetting> GetAllSettings() => new()
     {
         // ── General ──────────────────────────────────────────────────────────
-        new() { Key = "general.logo_url",         Group = "General", Label = "Site Logo",          Type = "image",   Value = "/images/glamstar-logo.svg",                      Description = "Upload your logo (or paste a URL). Shown in the footer. Recommended: transparent PNG.", SortOrder = 0 },
+        new() { Key = "general.logo_url",         Group = "General", Label = "Site Logo",          Type = "image",   Value = "/images/glamstar-logo.png",                      Description = "Upload your logo (or paste a URL). Shown in the footer. Recommended: transparent PNG.", SortOrder = 0 },
         new() { Key = "general.payment_badges_url", Group = "General", Label = "Payment Methods Image", Type = "image", Value = "",                                             Description = "Optional image of accepted/secure payment methods (e.g. Visa, Mastercard, Verve, Paystack). Shown in the footer and at checkout. Leave blank to use the built-in badge strip. Recommended: a wide transparent PNG.", SortOrder = 1 },
         new() { Key = "general.site_name",       Group = "General", Label = "Site Name",          Type = "text",    Value = "Glamstar",                                  Description = "Displayed in the browser tab and emails.",    SortOrder = 1 },
         new() { Key = "general.tagline",          Group = "General", Label = "Tagline",            Type = "text",    Value = "Jewelry That Speaks Before You Do",           Description = "Short brand tagline used in meta descriptions.", SortOrder = 2 },

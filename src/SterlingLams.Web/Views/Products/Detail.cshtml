@@ -221,7 +221,7 @@
             }
             <p id="in-stock-line" class="text-sm text-emerald-700 font-medium mb-6 flex items-center gap-2 @(showInStock ? "" : "hidden")">
                 <span class="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0"></span>
-                <span>In stock@(inStockStores > 1 ? $" — available at {inStockStores} stores" : inStockStores == 1 ? " — ready to collect or ship" : ", ready to ship")</span>
+                <span>In stock — ready to ship</span>
             </p>
 
             @if (!string.IsNullOrEmpty(Model.ShortDescription))
@@ -240,43 +240,6 @@
                 </button>
             }
 
-            <!-- ─── Store Stock (per branch, with counts) ───────────────── -->
-            @if (Model.StoreStock.Any())
-            {
-                <div class="mb-8" id="store-stock">
-                    <p class="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-4">Availability by branch</p>
-                    @if (Model.Variants.Any())
-                    {
-                        @* Variant product: counts are per chosen option, so wait for a selection. *@
-                        <p id="stock-prompt" class="text-sm text-neutral-400">Select an option above to see stock at each branch.</p>
-                        <div id="store-stock-list" class="space-y-2.5 hidden"></div>
-                    }
-                    else
-                    {
-                        <div class="space-y-2.5">
-                            @foreach (var store in Model.StoreStock)
-                            {
-                                var qty = store.Quantity;
-                                var low = qty > 0 && qty <= lowStockThreshold;
-                                <div class="flex items-center justify-between rounded-lg border border-neutral-100 px-4 py-3 transition-colors hover:border-neutral-200">
-                                    <span class="flex items-center gap-2.5 min-w-0">
-                                        <span class="w-2 h-2 rounded-full flex-shrink-0 @(qty == 0 ? "bg-neutral-300" : low ? "bg-amber-500" : "bg-emerald-500")"></span>
-                                        <span class="text-sm text-neutral-700 truncate">@store.StoreName.Replace("Glamstar ", "")</span>
-                                    </span>
-                                    @if (qty > 0)
-                                    {
-                                        <span class="text-xs font-medium px-2.5 py-1 rounded-full whitespace-nowrap @(low ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700")">@qty in stock</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="text-xs px-2.5 py-1 rounded-full bg-neutral-100 text-neutral-400 whitespace-nowrap">Out of stock</span>
-                                    }
-                                </div>
-                            }
-                        </div>
-                    }
-                </div>
-            }
 
             <!-- ─── Variants / Option Selector ───────────────────────── -->
             @if (Model.Variants.Any())

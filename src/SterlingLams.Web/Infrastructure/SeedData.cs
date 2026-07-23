@@ -109,49 +109,22 @@ public static class SeedData
             }
 
             // â”€â”€â”€ Stores â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            // Single online, delivery-only store — Glamstar has no physical branches. This one store is
+            // the stock/fulfilment location the storefront checkout draws from; customers never see it
+            // as a "branch". (Add real warehouse details later in Admin → Stores if needed.)
             var stores = new[]
             {
                 new Store
                 {
-                    Name            = "Glamstar Abuja",
-                    Slug            = "sterlin-glams-abuja",
-                    Address         = "Elboogie Place Adjacent Kilimanjaro, 3rd Avenue, Gwarinpa, Abuja",
-                    City            = "Gwarimpa",
-                    State           = "Abuja",
-                    Phone           = "+234 1 234 5678",
-                    Email           = "abuja@sterlinglams.com",
-                    OpeningHours    = "Mon-Sat: 8am-8pm, Sun: 12pm-8pm",
-                    IsActive        = true,
-                    Latitude        = 9.0563,
-                    Longitude       = 7.4985
-                },
-                new Store
-                {
-                    Name            = "Glamstar Allen",
-                    Slug            = "sterlin-glams-allen",
-                    Address         = "47 Allen Avenue, Studio 24 Building, Opp Item7go Restaurant, Ikeja, Lagos",
-                    City            = "Ikeja",
-                    State           = "Lagos",
-                    Phone           = "+234 1 234 5679",
-                    Email           = "allen@sterlinglams.com",
-                    OpeningHours    = "Mon-Sat: 8am-8pm, Sun: 12pm-8pm",
-                    IsActive        = true,
-                    Latitude        = 6.6085,
-                    Longitude       = 3.3521
-                },
-                new Store
-                {
-                    Name            = "Glamstar Ikota",
-                    Slug            = "sterlin-glams-ikota",
-                    Address         = "Shop J22, Ikota Shopping Complex, Ikota Ajah, Lagos",
-                    City            = "Ajah",
-                    State           = "Lagos",
-                    Phone           = "+234 1 234 5680",
-                    Email           = "ikota@sterlinglams.com",
-                    OpeningHours    = "Mon-Sat: 8am-8pm, Sun: 12pm-8pm",
-                    IsActive        = true,
-                    Latitude        = 6.4369,
-                    Longitude       = 3.5676
+                    Name            = "Glamstar",
+                    Slug            = "glamstar",
+                    Address         = "Online store — nationwide delivery",
+                    City            = "",
+                    State           = "",
+                    Phone           = "",
+                    Email           = "",
+                    OpeningHours    = "",
+                    IsActive        = true
                 }
             };
 
@@ -166,8 +139,9 @@ public static class SeedData
 
             await db.SaveChangesAsync();
 
-            // â”€â”€â”€ Dummy Products â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-            await SeedProductsAsync(db, logger);
+            // Glamstar starts with an EMPTY catalogue — the owner adds their own products in the admin.
+            // (Demo-product seeding intentionally disabled; SeedProductsAsync kept for reference.)
+            // await SeedProductsAsync(db, logger);
 
             logger.LogInformation("Database seeding complete.");
         }

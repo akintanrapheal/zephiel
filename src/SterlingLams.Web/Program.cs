@@ -438,7 +438,8 @@ app.Use(async (ctx, next) =>
     var path = ctx.Request.Path;
     if (path.StartsWithSegments("/Pos", StringComparison.OrdinalIgnoreCase)
         || path.StartsWithSegments("/Till", StringComparison.OrdinalIgnoreCase)
-        || path.StartsWithSegments("/Inventory", StringComparison.OrdinalIgnoreCase))
+        || path.StartsWithSegments("/Inventory", StringComparison.OrdinalIgnoreCase)
+        || path.StartsWithSegments("/Stores", StringComparison.OrdinalIgnoreCase))
     {
         ctx.Response.StatusCode = StatusCodes.Status404NotFound;
         return;
