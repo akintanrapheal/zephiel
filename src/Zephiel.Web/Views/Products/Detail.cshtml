@@ -983,7 +983,7 @@
             const data = res.ok ? await res.json().catch(() => null) : null;
             if (data && data.success) {
                 updateCartBadge(data.cartCount);
-                showToast(`Added to bag — ${qty > 1 ? qty + ' items' : '@Model.Name'}`);
+                if (window.openCartDrawer) window.openCartDrawer(); else showToast('Added to bag');
             } else {
                 showToast((data && data.message) || 'Sorry, we couldn’t add this to your bag.');
             }

@@ -1,0 +1,85 @@
+@model CartViewModel
+@*
+    Slide-out shopping-cart drawer body. Injected into #cart-drawer-body (a flex-col h-full
+    container) by openCartDrawer() in app.js, and re-fetched from /Cart/MiniCart after every add.
+*@
+
+<!-- Header -->
+<div class="flex-shrink-0 px-6 pt-6 pb-4">
+    <button type="button" data-cart-close aria-label="Close cart"
+            class="w-11 h-11 rounded-full bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center transition-colors">
+        <svg class="w-5 h-5 text-neutral-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+    </button>
+    <h2 class="mt-5 font-bodoni text-3xl font-light text-neutral-900">
+        Shopping Cart <sup class="align-super text-base text-neutral-400">@Model.TotalItems</sup>
+    </h2>
+</div>
+
+@if (Model.IsEmpty)
+{
+    <div class="flex-1 flex flex-col items-center justify-center px-6 text-center gap-6">
+        <p class="text-neutral-500">Your shopping bag is empty.</p>
+        <button type="button" data-cart-close
+                class="border border-neutral-900 text-neutral-900 text-xs tracking-[0.2em] uppercase px-8 py-4 hover:bg-neutral-50 transition-colors">
+            Continue Shopping
+        </button>
+    </div>
+}
+else
+{
+    <!-- Items -->
+    <div class="flex-1 overflow-y-auto px-6">
+        @foreach (var item in Model.Items)
+        {
+            <div class="flex gap-4 py-6 border-b border-neutral-100">
+                <a asp-controller="Products" asp-action="Detail" asp-route-slug="@item.Slug" data-cart-close class="flex-shrink-0">
+                    <img src="@Img.Cld(item.ImageUrl, 220)" alt="@item.ProductName" class="w-24 h-24 object-cover bg-neutral-100" />
+                </a>
+                <div class="min-w-0 flex-1">
+                    <div class="flex items-start justify-between gap-3">
+                        <a asp-controller="Products" asp-action="Detail" asp-route-slug="@item.Slug" data-cart-close
+                           class="font-bodoni text-xl leading-tight text-neutral-900 hover:text-brand-600 transition-colors">@item.ProductName</a>
+                        <span class="font-bodoni text-lg text-neutral-900 whitespace-nowrap">@item.FormattedLineTotal</span>
+                    </div>
+                    @if (!string.IsNullOrEmpty(item.VariantName))
+                    {
+                        <p class="mt-1.5 text-sm text-neutral-500">@item.VariantName</p>
+                    }
+                    <p class="mt-2 text-sm text-neutral-400">Qty @item.Quantity</p>
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- Footer -->
+    <div class="flex-shrink-0 border-t border-neutral-200 px-6 py-6">
+        <p class="mb-5 text-center text-sm text-neutral-500">Complimentary Delivery &amp; Returns</p>
+
+        @if (Model.HasDiscount)
+        {
+            <div class="mb-3 flex items-center justify-between text-sm text-emerald-600">
+                <span>@(Model.DiscountDescription ?? "Discount")</span>
+                <span>@Model.FormattedDiscount</span>
+            </div>
+        }
+
+        <div class="mb-6 flex items-baseline justify-between">
+            <span class="font-bodoni text-xl text-neutral-900">Estimated Total</span>
+            <span class="font-bodoni text-xl text-neutral-900">@Model.FormattedTotal</span>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+            <a asp-controller="Checkout" asp-action="Index"
+               class="bg-neutral-900 text-center text-xs tracking-[0.2em] uppercase text-white py-4 hover:bg-neutral-800 transition-colors">Checkout</a>
+            <a asp-controller="Cart" asp-action="Index"
+               class="border border-neutral-900 text-center text-xs tracking-[0.2em] uppercase text-neutral-900 py-4 hover:bg-neutral-50 transition-colors">View Shopping Bag</a>
+        </div>
+
+        <div class="mt-5 text-center">
+            <button type="button" data-cart-close
+                    class="text-sm text-neutral-600 underline underline-offset-4 hover:text-neutral-900 transition-colors">Continue Shopping</button>
+        </div>
+    </div>
+}

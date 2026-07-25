@@ -270,7 +270,7 @@ async function addToBag(productId, variantId, qty, btn) {
         const data = res.ok ? await res.json().catch(() => null) : null;
         if (data && data.success) {
             updateCartBadge(data.cartCount);
-            showToast('Added to bag');
+            openCartDrawer();
             return true;
         }
         showToast((data && data.message) || 'Sorry, we couldn’t add this to your bag.');
@@ -282,6 +282,58 @@ async function addToBag(productId, variantId, qty, btn) {
     }
     return false;
 }
+
+// ─── Slide-out cart drawer ─────────────────────────────────────────────────
+// Fetches the current bag as HTML and slides the panel in from the right. Called after
+// every add-to-bag (product page, cards, quick-view) and when the nav bag icon is clicked.
+async function openCartDrawer() {
+    const root = document.getElementById('cart-drawer-root');
+    const body = document.getElementById('cart-drawer-body');
+    const panel = document.getElementById('cart-drawer-panel');
+    const backdrop = document.getElementById('cart-drawer-backdrop');
+    if (!root || !body || !panel) { window.location.href = '/Cart'; return; }  // graceful fallback
+    try {
+        const res = await fetch('/Cart/MiniCart', { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        if (res.ok) body.innerHTML = await res.text();
+    } catch { /* keep whatever was there */ }
+    root.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+    requestAnimationFrame(() => {
+        panel.classList.remove('translate-x-full');
+        if (backdrop) backdrop.classList.remove('opacity-0');
+    });
+}
+function closeCartDrawer() {
+    const root = document.getElementById('cart-drawer-root');
+    const panel = document.getElementById('cart-drawer-panel');
+    const backdrop = document.getElementById('cart-drawer-backdrop');
+    if (!root || !panel) return;
+    panel.classList.add('translate-x-full');
+    if (backdrop) backdrop.classList.add('opacity-0');
+    document.body.style.overflow = '';
+    setTimeout(() => root.classList.add('hidden'), 300);
+}
+window.openCartDrawer = openCartDrawer;
+window.closeCartDrawer = closeCartDrawer;
+
+// Close on X / backdrop / "Continue Shopping" ([data-cart-close]); product links inside the
+// drawer are <a> — let them navigate, just close the panel too. Esc also closes.
+document.addEventListener('click', function (e) {
+    const closer = e.target.closest('[data-cart-close]');
+    if (closer) {
+        if (closer.tagName !== 'A') e.preventDefault();
+        closeCartDrawer();
+    }
+});
+document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closeCartDrawer();
+});
+
+// Nav bag icon opens the drawer instead of navigating to the full cart page.
+(function () {
+    const link = document.getElementById('cart-link');
+    if (link) link.addEventListener('click', function (e) { e.preventDefault(); openCartDrawer(); });
+})();
 
 // ─── Card CTAs: "Add to Cart" (simple) and "Select Options" (variants) ─────
 document.querySelectorAll('.add-to-cart-btn').forEach(btn => {

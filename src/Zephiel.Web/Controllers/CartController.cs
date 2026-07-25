@@ -321,10 +321,11 @@ public class CartController : Controller
         }
     }
 
-    // Partial for mini-cart in nav dropdown
+    // Body for the slide-out cart drawer (fetched by openCartDrawer() after every add and
+    // when the nav bag icon is clicked).
     public IActionResult MiniCart()
     {
-        return PartialView("_MiniCart", GetCart());
+        return PartialView("_CartDrawer", GetCart());
     }
 
     // ─── Helpers ─────────────────────────────────────────────────────────────

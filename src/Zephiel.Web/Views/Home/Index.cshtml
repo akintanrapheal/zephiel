@@ -94,16 +94,16 @@
                     </a>
                     <a asp-controller="Home" asp-action="Collections"
                        class="inline-flex items-center justify-center border border-white/25 text-white text-[11px] tracking-[0.25em] uppercase px-9 py-4 hover:border-white hover:bg-white hover:text-neutral-950 transition-colors duration-300">
-                        Explore Lookbook
+                        Discover Zephiel
                     </a>
                 </div>
             </div>
 
             <!-- Footline / scroll cue -->
             <div class="flex items-center justify-between text-[10px] tracking-[0.35em] uppercase text-white/40">
-                <span>Est. @siteName — Fine Jewellery</span>
+                <span>@siteName — Fine Jewellery, Crafted in Nigeria</span>
                 <span class="hidden sm:flex items-center gap-3">
-                    Scroll
+                    Explore
                     <span class="w-10 h-px bg-white/30"></span>
                 </span>
             </div>
@@ -113,10 +113,24 @@
         <div class="relative order-1 lg:order-2 @(hasHeroImage ? "min-h-[46vh]" : "hidden lg:block") lg:min-h-0 overflow-hidden">
             @if (hasHeroImage)
             {
-                <img src="@Img.Cld(heroImage, 1400)" alt="@(siteName) campaign" decoding="async"
-                     loading="eager" fetchpriority="high"
-                     class="absolute inset-0 w-full h-full object-cover object-center" />
-                <div class="absolute inset-0 bg-gradient-to-t from-neutral-950/50 via-transparent to-transparent lg:bg-gradient-to-r lg:from-neutral-950/60 lg:via-neutral-950/5 lg:to-transparent"></div>
+                <div id="hero-slider" class="absolute inset-0" data-hero-count="@heroImages.Count" data-hero-interval="5000">
+                    @for (var hi = 0; hi < heroImages.Count; hi++)
+                    {
+                        <img src="@Img.Cld(heroImages[hi], 1400)" alt="@(siteName) campaign @(hi + 1)" decoding="async"
+                             loading="@(hi == 0 ? "eager" : "lazy")" fetchpriority="@(hi == 0 ? "high" : "auto")"
+                             class="hero-slide absolute inset-0 w-full h-full object-cover object-center transition-opacity duration-[1200ms] ease-in-out @(hi == 0 ? "opacity-100" : "opacity-0")" />
+                    }
+                </div>
+                <div class="pointer-events-none absolute inset-0 bg-gradient-to-t from-neutral-950/50 via-transparent to-transparent lg:bg-gradient-to-r lg:from-neutral-950/60 lg:via-neutral-950/5 lg:to-transparent"></div>
+                @if (heroImages.Count > 1)
+                {
+                    <div id="hero-dots" class="absolute bottom-6 left-6 lg:bottom-10 lg:left-1/2 lg:-translate-x-1/2 flex gap-2 z-10">
+                        @for (var hi = 0; hi < heroImages.Count; hi++)
+                        {
+                            <button type="button" class="hero-dot h-1.5 rounded-full transition-all duration-500 @(hi == 0 ? "w-6 bg-white" : "w-1.5 bg-white/40")" data-hero-go="@hi" aria-label="Show campaign image @(hi + 1)"></button>
+                        }
+                    </div>
+                }
             }
             else
             {
@@ -423,6 +437,30 @@
 
 @section Scripts {
 <script nonce="@Context.Items["csp-nonce"]">
+// Hero campaign slider — crossfades between the configured hero images.
+(function () {
+    const slider = document.getElementById('hero-slider');
+    if (!slider) return;
+    const slides = Array.from(slider.querySelectorAll('.hero-slide'));
+    const dots = Array.from(document.querySelectorAll('.hero-dot'));
+    if (slides.length < 2) return;
+    const interval = parseInt(slider.dataset.heroInterval, 10) || 5000;
+    let i = 0, timer = null;
+    function show(n) {
+        i = (n + slides.length) % slides.length;
+        slides.forEach((s, k) => { s.classList.toggle('opacity-100', k === i); s.classList.toggle('opacity-0', k !== i); });
+        dots.forEach((d, k) => {
+            d.classList.toggle('w-6', k === i); d.classList.toggle('bg-white', k === i);
+            d.classList.toggle('w-1.5', k !== i); d.classList.toggle('bg-white/40', k !== i);
+        });
+    }
+    function next() { show(i + 1); }
+    function start() { stop(); if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) timer = setInterval(next, interval); }
+    function stop() { if (timer) { clearInterval(timer); timer = null; } }
+    dots.forEach(d => d.addEventListener('click', () => { show(parseInt(d.dataset.heroGo, 10)); start(); }));
+    start();
+})();
+
 // Newsletter signup
 (function () {
     const form = document.getElementById('newsletter-form');

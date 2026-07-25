@@ -131,8 +131,7 @@ public class ProductsController : Controller
         // Category navigation with live product counts (sidebar on desktop, top nav on mobile).
         // Counts respect the hide-out-of-stock toggle so they match what the listing shows.
         filters.Categories = await _db.Categories
-            .Where(c => c.IsActive && c.Products.Any(p => p.IsActive
-                && (!hideOos || p.StoreInventories.Any(si => si.QuantityOnHand > 0))))
+            .Where(c => c.IsActive)
             .OrderBy(c => c.Name)
             .Select(c => new CategoryFilterOption
             {
