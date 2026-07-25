@@ -321,7 +321,10 @@ if (!app.Environment.IsDevelopment())
 // error page instead of an empty body. Runs in all environments so it's testable locally too.
 app.UseStatusCodePagesWithReExecute("/Home/PageNotFound", "?code={0}");
 
-app.UseHttpsRedirection();
+// Skip HTTPS redirection in Development so the site is reachable over plain HTTP
+// from a phone/other device on the LAN (dev has no trusted HTTPS listener there).
+if (!app.Environment.IsDevelopment())
+    app.UseHttpsRedirection();
 
 // ─── Security headers ───────────────────────────────────────────────────────
 // Reject verbs the app has no endpoints for. Without this, MVC answers DELETE/PUT on any GET

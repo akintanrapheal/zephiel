@@ -57,7 +57,7 @@
 
 <!-- ═══ Hero — asymmetric editorial split ═══════════════════════════════════ -->
 <section class="relative bg-neutral-950 text-white overflow-hidden">
-    <div class="grid lg:grid-cols-[1.05fr_0.95fr] min-h-[92vh] lg:min-h-screen">
+    <div class="grid lg:grid-cols-[1.05fr_0.95fr] lg:min-h-screen">
 
         <!-- Editorial column -->
         <div class="relative z-10 flex flex-col justify-between px-6 sm:px-10 lg:px-16 pt-10 pb-14 lg:py-20 order-2 lg:order-1">
@@ -109,8 +109,8 @@
             </div>
         </div>
 
-        <!-- Image column -->
-        <div class="relative order-1 lg:order-2 min-h-[52vh] lg:min-h-0 overflow-hidden">
+        <!-- Image column (hidden on mobile when there's no real hero image — avoids a tall empty gradient) -->
+        <div class="relative order-1 lg:order-2 @(hasHeroImage ? "min-h-[46vh]" : "hidden lg:block") lg:min-h-0 overflow-hidden">
             @if (hasHeroImage)
             {
                 <img src="@Img.Cld(heroImage, 1400)" alt="@(siteName) campaign" decoding="async"
@@ -173,7 +173,36 @@
                 </a>
             </div>
 
-            <div class="grid lg:grid-cols-[1fr_26rem] gap-10 lg:gap-16 items-start">
+            <!-- Mobile: tappable image cards (desktop uses the numbered list + hover preview below) -->
+            <div class="grid grid-cols-2 gap-3 sm:gap-4 lg:hidden">
+                @{ var mi = 0; }
+                @foreach (var cat in shopCategories)
+                {
+                    mi++;
+                    var mImg = string.IsNullOrWhiteSpace(cat.ImageUrl) ? "" : Img.Cld(cat.ImageUrl, 500, 620);
+                    <a asp-controller="Products" asp-action="Index" asp-route-category="@cat.Slug"
+                       class="group relative block aspect-[4/5] overflow-hidden bg-neutral-200">
+                        @if (!string.IsNullOrEmpty(mImg))
+                        {
+                            <img src="@mImg" alt="@cat.Name" loading="lazy" decoding="async"
+                                 class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-active:scale-105" />
+                            <div class="absolute inset-0 bg-gradient-to-t from-neutral-950/75 via-neutral-950/10 to-transparent"></div>
+                        }
+                        else
+                        {
+                            <div class="absolute inset-0 bg-gradient-to-br from-brand-100 via-neutral-100 to-stone-100"></div>
+                        }
+                        <span class="absolute top-2.5 left-3 font-bodoni text-xs tabular-nums @(string.IsNullOrEmpty(mImg) ? "text-neutral-400" : "text-white/70")">@mi.ToString("00")</span>
+                        <span class="absolute bottom-3 left-3 right-3 font-bodoni text-lg font-light leading-tight @(string.IsNullOrEmpty(mImg) ? "text-neutral-800" : "text-white")">@cat.Name</span>
+                    </a>
+                }
+            </div>
+            <a asp-controller="Products" asp-action="Index"
+               class="lg:hidden mt-5 flex items-center justify-center gap-2 border border-neutral-900/20 py-4 text-[11px] tracking-[0.25em] uppercase text-neutral-700">
+                View All Categories &rarr;
+            </a>
+
+            <div class="hidden lg:grid lg:grid-cols-[1fr_26rem] gap-10 lg:gap-16 items-start">
                 <!-- Numbered list -->
                 <ul id="cat-index" class="border-t border-neutral-900/15">
                     @{ var ci = 0; }
