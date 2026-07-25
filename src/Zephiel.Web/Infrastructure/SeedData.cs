@@ -35,19 +35,19 @@ public static class SeedData
             // â”€â”€â”€ Categories â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             var categories = new[]
             {
-                new { Name = "Rings",        Slug = "rings",        Description = "Engagement, wedding, and fashion rings" },
-                new { Name = "Necklaces",    Slug = "necklaces",    Description = "Pendants, chains, and statement necklaces" },
-                new { Name = "Earrings",     Slug = "earrings",     Description = "Studs, hoops, and drop earrings" },
-                new { Name = "Bracelet & Bangle", Slug = "bracelets", Description = "Bangles, cuffs, and tennis bracelets" },
-                new { Name = "Brooches",     Slug = "brooches",     Description = "Lapel pins and decorative brooches" },
-                new { Name = "Watches",      Slug = "watches",      Description = "Luxury timepieces and watch collections" },
-                new { Name = "Bracelet Watches", Slug = "bracelet-watches", Description = "Watches with a metal bracelet band" },
-                new { Name = "Strap Watches",    Slug = "strap-watches",    Description = "Watches with a leather or fabric strap" },
-                new { Name = "Bracelet",         Slug = "mens-bracelets",   Description = "Wrist bracelets" },
-                new { Name = "Sets",         Slug = "sets",         Description = "Matching jewellery sets and gift collections" },
-                new { Name = "Clutches",     Slug = "clutches",     Description = "Evening clutches and stoned bags" },
-                new { Name = "Sunglasses",   Slug = "sunglasses",   Description = "Fashion and crystal sunglasses" },
-                new { Name = "Accessories",  Slug = "accessories",  Description = "Hair accessories, waist chains, scarfs, and more" },
+                new { Name = "Rings",        Slug = "rings",        Description = "Engagement, wedding, and fashion rings", Image = "https://images.unsplash.com/photo-1603561591411-07134e71a2a9?w=800&q=80" },
+                new { Name = "Necklaces",    Slug = "necklaces",    Description = "Pendants, chains, and statement necklaces", Image = "https://images.unsplash.com/photo-1608042314453-ae338d80c427?w=800&q=80" },
+                new { Name = "Earrings",     Slug = "earrings",     Description = "Studs, hoops, and drop earrings", Image = "https://images.unsplash.com/photo-1629224316810-9d8805b95e76?w=800&q=80" },
+                new { Name = "Bracelet & Bangle", Slug = "bracelets", Description = "Bangles, cuffs, and tennis bracelets", Image = "https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=800&q=80" },
+                new { Name = "Brooches",     Slug = "brooches",     Description = "Lapel pins and decorative brooches", Image = "https://images.unsplash.com/photo-1535556116002-6281ff3e9f36?w=800&q=80" },
+                new { Name = "Watches",      Slug = "watches",      Description = "Luxury timepieces and watch collections", Image = "https://images.unsplash.com/photo-1508057198894-247b23fe5ade?w=800&q=80" },
+                new { Name = "Bracelet Watches", Slug = "bracelet-watches", Description = "Watches with a metal bracelet band", Image = "https://images.unsplash.com/photo-1523170335258-f5ed11844a49?w=800&q=80" },
+                new { Name = "Strap Watches",    Slug = "strap-watches",    Description = "Watches with a leather or fabric strap", Image = "https://images.unsplash.com/photo-1434493789847-2f02dc6ca35d?w=800&q=80" },
+                new { Name = "Bracelet",         Slug = "mens-bracelets",   Description = "Wrist bracelets", Image = "https://images.unsplash.com/photo-1602173574767-37ac01994b2a?w=800&q=80" },
+                new { Name = "Sets",         Slug = "sets",         Description = "Matching jewellery sets and gift collections", Image = "https://images.unsplash.com/photo-1620656798579-1984d9e87df7?w=800&q=80" },
+                new { Name = "Clutches",     Slug = "clutches",     Description = "Evening clutches and stoned bags", Image = "https://images.unsplash.com/photo-1594223274512-ad4803739b7c?w=800&q=80" },
+                new { Name = "Sunglasses",   Slug = "sunglasses",   Description = "Fashion and crystal sunglasses", Image = "https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=800&q=80" },
+                new { Name = "Accessories",  Slug = "accessories",  Description = "Hair accessories, waist chains, scarfs, and more", Image = "https://images.unsplash.com/photo-1630019852942-f89202989a59?w=800&q=80" },
             };
 
             foreach (var cat in categories)
@@ -59,6 +59,7 @@ public static class SeedData
                         Name = cat.Name,
                         Slug = cat.Slug,
                         Description = cat.Description,
+                        ImageUrl = cat.Image,
                         IsActive = true
                     });
                 }
