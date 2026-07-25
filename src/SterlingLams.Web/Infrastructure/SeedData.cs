@@ -117,7 +117,7 @@ public static class SeedData
                 new Store
                 {
                     Name            = "Zephiel",
-                    Slug            = "glamstar",
+                    Slug            = "zephiel",
                     Address         = "Online store — nationwide delivery",
                     City            = "",
                     State           = "",

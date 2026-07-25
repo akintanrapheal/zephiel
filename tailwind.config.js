@@ -32,7 +32,7 @@ module.exports = {
           800: '#6d4411',
           900: '#5a3812',
         },
-        // Glamstar brand — soft/light purple.
+        // Zephiel brand — soft/light purple.
         brand: {
           50:  '#faf5ff',
           100: '#f3e8ff',
