@@ -23,7 +23,7 @@ public class JournalPostGenerator
     private const string Accent = "#9333ea";
     private const string AccentLight = "#a855f7";
 
-    public const string Author = "The Glamstar Atelier";
+    public const string Author = "The Zephiel Atelier";
 
     /// <summary>Editorial angles. Passing a null/blank theme to <see cref="Generate"/> picks one by seed.</summary>
     public static readonly string[] Themes =
@@ -45,7 +45,7 @@ public class JournalPostGenerator
 
     private static readonly string[] Intros =
     {
-        "There is a particular kind of quiet confidence that comes from jewellery chosen with intention &mdash; not the loudest piece in the room, but the one that lingers in memory. This season, the Glamstar atelier gathers {0} pieces designed to be worn together, or drawn apart and made entirely your own.",
+        "There is a particular kind of quiet confidence that comes from jewellery chosen with intention &mdash; not the loudest piece in the room, but the one that lingers in memory. This season, the Zephiel atelier gathers {0} pieces designed to be worn together, or drawn apart and made entirely your own.",
         "The finest looks are built from a few deliberate choices. We&rsquo;ve gathered {0} pieces from the collection &mdash; each one a small act of glamour, ready to slip into your everyday or carry you through the evening.",
         "Adornment is a language, and gold is its softest word. Here are {0} of our favourites this season: pieces to layer, to gift, and to make unmistakably your own.",
         "Some pieces announce themselves; others simply feel like you. In this edit we&rsquo;ve set {0} of them side by side &mdash; a small collection with a lot to say, and nothing to prove.",
@@ -108,20 +108,20 @@ public class JournalPostGenerator
 
     private static readonly string[] Closings =
     {
-        "Discover the full collection in-store and online at Glamstar.",
-        "Find these pieces &mdash; and the ones still to become your favourites &mdash; at Glamstar.",
+        "Discover the full collection in-store and online at Zephiel.",
+        "Find these pieces &mdash; and the ones still to become your favourites &mdash; at Zephiel.",
         "Visit us in-store or online to make any of these your own.",
-        "Explore the edit in full at Glamstar, in-store and online.",
-        "See these and more at any Glamstar store, or shop the collection online."
+        "Explore the edit in full at Zephiel, in-store and online.",
+        "See these and more at any Zephiel store, or shop the collection online."
     };
 
     private static readonly string[] Excerpts =
     {
         "An intimate edit of {0} pieces chosen to be worn together &mdash; or drawn apart and made entirely your own.",
-        "A curated look at {0} of the season&rsquo;s most-loved pieces, from the Glamstar atelier.",
-        "{0} favourites to layer, to gift, and to wear your way &mdash; curated by the Glamstar atelier.",
+        "A curated look at {0} of the season&rsquo;s most-loved pieces, from the Zephiel atelier.",
+        "{0} favourites to layer, to gift, and to wear your way &mdash; curated by the Zephiel atelier.",
         "The pieces we can&rsquo;t stop reaching for: {0} favourites, styled and ready to be made your own.",
-        "{0} considered pieces, one elegant edit &mdash; a little inspiration from the Glamstar atelier."
+        "{0} considered pieces, one elegant edit &mdash; a little inspiration from the Zephiel atelier."
     };
 
     private static string Pick(string[] pool, int seed, int salt) => pool[Math.Abs(seed + salt * 97) % pool.Length];
@@ -201,7 +201,7 @@ public class JournalPostGenerator
             AuthorName: Author,
             CoverImageUrl: cover,
             BodyHtml: body.ToString(),
-            MetaTitle: $"{System.Net.WebUtility.HtmlDecode(title)} | Glamstar Journal",
+            MetaTitle: $"{System.Net.WebUtility.HtmlDecode(title)} | Zephiel Journal",
             MetaDescription: plainExcerpt);
     }
 

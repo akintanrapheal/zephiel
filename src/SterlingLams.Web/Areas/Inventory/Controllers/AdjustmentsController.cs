@@ -45,7 +45,7 @@ public class AdjustmentsController : InventoryAreaController
             {
                 Id = a.Id,
                 Number = a.AdjustmentNumber,
-                Store = a.Store.Name.Replace("Glamstar ", ""),
+                Store = a.Store.Name.Replace("Zephiel ", ""),
                 Reason = a.Reason,
                 Source = a.Source,
                 Lines = a.Lines.Count,
@@ -228,7 +228,7 @@ public class AdjustmentsController : InventoryAreaController
         var stores = await _db.Stores.Where(s => s.IsActive).OrderBy(s => s.Name).ToListAsync();
         // Only branches the user can write to are selectable.
         ViewBag.Stores = stores.Where(s => writable.Contains(s.Id))
-            .Select(s => new SelectListItem(s.Name.Replace("Glamstar ", ""), s.Id.ToString())).ToList();
+            .Select(s => new SelectListItem(s.Name.Replace("Zephiel ", ""), s.Id.ToString())).ToList();
         ViewBag.Reasons = AdjustmentReasons.All;
     }
 

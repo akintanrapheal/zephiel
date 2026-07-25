@@ -259,7 +259,7 @@ public class CheckoutController : Controller
                 if (await _stock.GetAvailableAsync(pid, vid, pickupStoreId.Value) >= need) continue; // ready at chosen branch
                 var src = await NearestWithStockAsync(pid, vid, need);
                 result.Add(new DelayedItemDto { ProductId = pid, VariantId = vid, ProductName = name,
-                    SourceStore = src?.Name.Replace("Glamstar ", "") ?? "another branch", Eta = crossEta });
+                    SourceStore = src?.Name.Replace("Zephiel ", "") ?? "another branch", Eta = crossEta });
             }
             else // delivery: "near" = covered by a branch inside the customer's delivery zone
             {
@@ -274,7 +274,7 @@ public class CheckoutController : Controller
                 if (nearAvail >= need) continue;
                 var src = await NearestWithStockAsync(pid, vid, need);
                 result.Add(new DelayedItemDto { ProductId = pid, VariantId = vid, ProductName = name,
-                    SourceStore = src?.Name.Replace("Glamstar ", "") ?? "another branch", Eta = crossEta });
+                    SourceStore = src?.Name.Replace("Zephiel ", "") ?? "another branch", Eta = crossEta });
             }
         }
         return result;

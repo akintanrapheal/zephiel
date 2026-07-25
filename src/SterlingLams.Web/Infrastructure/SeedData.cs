@@ -6,7 +6,7 @@ using SterlingLams.Web.Models.Domain;
 namespace SterlingLams.Web.Infrastructure;
 
 /// <summary>
-/// Seeds the database with the 3 Glamstar Lagos stores,
+/// Seeds the database with the 3 Zephiel Lagos stores,
 /// product categories, and the Admin role.
 /// Safe to run repeatedly â€” checks for existing data before inserting.
 /// </summary>
@@ -109,14 +109,14 @@ public static class SeedData
             }
 
             // â”€â”€â”€ Stores â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-            // Single online, delivery-only store — Glamstar has no physical branches. This one store is
+            // Single online, delivery-only store — Zephiel has no physical branches. This one store is
             // the stock/fulfilment location the storefront checkout draws from; customers never see it
             // as a "branch". (Add real warehouse details later in Admin → Stores if needed.)
             var stores = new[]
             {
                 new Store
                 {
-                    Name            = "Glamstar",
+                    Name            = "Zephiel",
                     Slug            = "glamstar",
                     Address         = "Online store — nationwide delivery",
                     City            = "",
@@ -139,7 +139,7 @@ public static class SeedData
 
             await db.SaveChangesAsync();
 
-            // Glamstar starts with an EMPTY catalogue — the owner adds their own products in the admin.
+            // Zephiel starts with an EMPTY catalogue — the owner adds their own products in the admin.
             // (Demo-product seeding intentionally disabled; SeedProductsAsync kept for reference.)
             // await SeedProductsAsync(db, logger);
 

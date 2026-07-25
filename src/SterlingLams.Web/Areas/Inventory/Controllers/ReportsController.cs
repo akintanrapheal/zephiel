@@ -31,7 +31,7 @@ public class ReportsController : InventoryAreaController
 
         var sb = new StringBuilder();
         sb.Append("Product,SKU");
-        foreach (var s in stores) sb.Append(',').Append(Csv(s.Name.Replace("Glamstar ", "")));
+        foreach (var s in stores) sb.Append(',').Append(Csv(s.Name.Replace("Zephiel ", "")));
         sb.AppendLine(",Total,Threshold,Suggested reorder");
         foreach (var r in rows)
         {
@@ -154,7 +154,7 @@ public class ReportsController : InventoryAreaController
                 Product = m.Product.Name,
                 Variant = m.ProductVariantId == null ? null
                     : _db.ProductVariants.Where(v => v.Id == m.ProductVariantId).Select(v => v.Name).FirstOrDefault(),
-                Store = m.Store.Name.Replace("Glamstar ", ""),
+                Store = m.Store.Name.Replace("Zephiel ", ""),
                 Type = m.Type.ToString(),
                 Change = m.QuantityChange,
                 BalanceAfter = m.BalanceAfter,
@@ -421,7 +421,7 @@ public class ReportsController : InventoryAreaController
             {
                 Product = l.ProductName,
                 Variant = l.VariantName,
-                Branch = l.StockAdjustment.Store.Name.Replace("Glamstar ", ""),
+                Branch = l.StockAdjustment.Store.Name.Replace("Zephiel ", ""),
                 Qty = l.QtyDelta,
                 Expiry = l.ExpiryDate!.Value,
                 Reference = l.StockAdjustment.AdjustmentNumber
@@ -527,7 +527,7 @@ public class ReportsController : InventoryAreaController
 
         return stores.Select(s => new BranchValue
         {
-            Store = s.Name.Replace("Glamstar ", ""),
+            Store = s.Name.Replace("Zephiel ", ""),
             Units = raw.TryGetValue(s.Id, out var b) ? b.Units : 0,
             Value = raw.TryGetValue(s.Id, out var b2) ? b2.Value : 0
         }).ToList();

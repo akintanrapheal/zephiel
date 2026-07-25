@@ -285,7 +285,7 @@ public class MyAccountController : Controller
             key = await _users.GetAuthenticatorKeyAsync(user);
         }
         var email = await _users.GetEmailAsync(user) ?? user.UserName ?? "user";
-        const string issuer = "Glamstar";
+        const string issuer = "Zephiel";
         var uri = $"otpauth://totp/{Uri.EscapeDataString(issuer)}:{Uri.EscapeDataString(email)}"
                 + $"?secret={key}&issuer={Uri.EscapeDataString(issuer)}&digits=6";
 

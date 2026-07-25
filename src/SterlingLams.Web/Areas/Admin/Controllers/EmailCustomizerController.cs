@@ -48,7 +48,7 @@ public class EmailCustomizerController : AdminBaseController
             Types = Types.Select(t => (t.Key, t.Label)).ToList(),
             Subject = await _settings.GetAsync($"email.{type}.subject", def.DefaultSubject),
             Intro = await _settings.GetAsync($"email.{type}.intro", def.DefaultIntro),
-            FromName = await _settings.GetAsync("email.from_name", "Glamstar"),
+            FromName = await _settings.GetAsync("email.from_name", "Zephiel"),
             ReplyTo = await _settings.GetAsync("email.reply_to", ""),
             HeaderColor = await _settings.GetAsync("email.header_color", "#0a0a0a"),
             FooterText = await _settings.GetAsync("email.footer_text", "This is an automated message — please don't reply."),
@@ -80,7 +80,7 @@ public class EmailCustomizerController : AdminBaseController
         {
             [$"email.{type}.subject"] = subject?.Trim() ?? "",
             [$"email.{type}.intro"]   = intro?.Trim() ?? "",
-            ["email.from_name"]       = string.IsNullOrWhiteSpace(fromName) ? "Glamstar" : fromName.Trim(),
+            ["email.from_name"]       = string.IsNullOrWhiteSpace(fromName) ? "Zephiel" : fromName.Trim(),
             ["email.reply_to"]        = replyTo?.Trim() ?? "",
             ["email.header_color"]    = string.IsNullOrWhiteSpace(headerColor) ? "#0a0a0a" : headerColor.Trim(),
             ["email.footer_text"]     = footerText?.Trim() ?? "",

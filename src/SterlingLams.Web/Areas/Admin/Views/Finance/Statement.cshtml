@@ -3,7 +3,7 @@
 @inject ISettingsService Settings
 @{
     Layout = null;
-    var siteName = await Settings.GetAsync("general.site_name", "Glamstar");
+    var siteName = await Settings.GetAsync("general.site_name", "Zephiel");
     var logoUrl = await Settings.GetAsync("general.logo_url", "");
     if (string.IsNullOrWhiteSpace(logoUrl)) logoUrl = "/images/sg-logo.png";
     string Money(decimal v) => "₦" + v.ToString("N0");

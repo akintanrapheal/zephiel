@@ -471,7 +471,7 @@ public class OrderFulfilmentService : IOrderFulfilmentService
         List<(Store Source, string Ref, List<(string Name, int Qty, string? Img)> Items)> notices)
     {
         if (!await _settings.GetBoolAsync("notifications.branch_fulfilment", true)) return;
-        var dest = fulfilStore.Name.Replace("Glamstar ", "");
+        var dest = fulfilStore.Name.Replace("Zephiel ", "");
         // Subject + intro are editable in Admin → Emails ("Transfer request (to branch)"); {branch}/{order} filled here.
         var subjT = await _settings.GetAsync("email.branch_transfer_request.subject", "Send stock to {branch} — order {order}");
         var introT = await _settings.GetAsync("email.branch_transfer_request.intro", "Please pack and send the stock below to {branch} so order {order} can be fulfilled.");
@@ -491,7 +491,7 @@ public class OrderFulfilmentService : IOrderFulfilmentService
     private async Task NotifyReadyToDispatchAsync(Order order, Store fulfilStore)
     {
         if (!await _settings.GetBoolAsync("notifications.branch_fulfilment", true)) return;
-        var branch = fulfilStore.Name.Replace("Glamstar ", "");
+        var branch = fulfilStore.Name.Replace("Zephiel ", "");
         // Editable in Admin → Emails ("Order dispatch (to branch)"); {branch}/{order} filled here.
         var subjT = await _settings.GetAsync("email.branch_dispatch.subject", "Dispatch order {order}");
         var introT = await _settings.GetAsync("email.branch_dispatch.intro", "All stock for order {order} is now at your branch — please pack and fulfil it.");
@@ -565,7 +565,7 @@ public class OrderFulfilmentService : IOrderFulfilmentService
         {
             var email = await _db.Users.Where(u => u.Id == order.UserId).Select(u => u.Email).FirstOrDefaultAsync();
             if (!string.IsNullOrEmpty(email))
-                await _email.SendAsync(email, "Your Glamstar order could not be completed",
+                await _email.SendAsync(email, "Your Zephiel order could not be completed",
                     $"<p>We're so sorry — an item in your order <strong>{order.OrderNumber}</strong> sold out just before your payment completed, so we couldn't fulfil it.</p>"
                   + $"<p>Your payment of ₦{order.Total:N0} has been refunded in full. Refunds typically settle within a few business days.</p>"
                   + "<p>Please accept our apologies — you're welcome to reorder if it comes back in stock.</p>");

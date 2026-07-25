@@ -75,7 +75,7 @@ public class LowStockAlertService : BackgroundService
         {
             var thr = x.LowStockThreshold < 1 ? 1 : x.LowStockThreshold;
             var status = x.OnHand < 0 ? "Negative" : x.OnHand == 0 ? "Out" : x.OnHand <= thr ? "Low" : null;
-            return new { Branch = x.StoreName.Replace("Glamstar ", ""), x.Name, x.Sku, x.OnHand, Threshold = thr, Status = status };
+            return new { Branch = x.StoreName.Replace("Zephiel ", ""), x.Name, x.Sku, x.OnHand, Threshold = thr, Status = status };
         }).Where(x => x.Status != null).ToList();
 
         if (items.Count == 0) return; // nothing to flag → no email

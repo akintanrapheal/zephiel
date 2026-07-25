@@ -2,7 +2,7 @@
 @inject ISettingsService SettingsService
 @{
     ViewData["Title"] = "Our Story";
-    ViewData["Description"] = "Discover the story behind Glamstar — luxury jewellery crafted for the discerning Nigerian woman.";
+    ViewData["Description"] = "Discover the story behind Zephiel — luxury jewellery crafted for the discerning Nigerian woman.";
     Layout = "_Layout";
     var bodyOverride = await SettingsService.GetAsync("pages.about_body", "");
 }
@@ -30,7 +30,7 @@ else
         </h2>
         <div class="space-y-6 text-neutral-600 font-light text-sm leading-relaxed">
             <p>
-                Glamstar was founded with a singular vision: to bring world-class luxury jewellery to the discerning Nigerian woman.
+                Zephiel was founded with a singular vision: to bring world-class luxury jewellery to the discerning Nigerian woman.
                 Each piece in our collection is thoughtfully curated and crafted to celebrate femininity, power and grace.
             </p>
             <p>
@@ -39,7 +39,7 @@ else
             </p>
             <p>
                 We believe jewellery is not just an accessory — it is a story, an emotion, a legacy.
-                That is the Glamstar promise.
+                That is the Zephiel promise.
             </p>
         </div>
     </div>

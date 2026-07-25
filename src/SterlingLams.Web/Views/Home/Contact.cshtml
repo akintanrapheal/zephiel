@@ -5,7 +5,7 @@
 @inject ApplicationDbContext Db
 @{
     ViewData["Title"] = "Contact Us";
-    ViewData["Description"] = "Get in touch with Glamstar. Reach us by phone and email. Nationwide delivery across Nigeria.";
+    ViewData["Description"] = "Get in touch with Zephiel. Reach us by phone and email. Nationwide delivery across Nigeria.";
     Layout = "_Layout";
 
     var contactEmail = await SettingsService.GetAsync("general.contact_email", "info@sterlinglams.com");
@@ -85,7 +85,7 @@
             <div class="border border-neutral-100 p-6">
                 <h3 class="font-cormorant text-xl font-light text-neutral-900 mb-3">Nationwide Delivery</h3>
                 <div class="space-y-1.5 text-xs text-neutral-500 font-light">
-                    <p>Glamstar is an online store — every order is delivered to your doorstep anywhere in Nigeria.</p>
+                    <p>Zephiel is an online store — every order is delivered to your doorstep anywhere in Nigeria.</p>
                     <p class="text-neutral-400">Track your order any time from the Track Order page.</p>
                 </div>
             </div>

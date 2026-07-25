@@ -32,7 +32,7 @@
             <option value="">— Branch —</option>
             @foreach (var s in stores)
             {
-                <option value="@s.Id">@s.Name.Replace("Glamstar ", "")</option>
+                <option value="@s.Id">@s.Name.Replace("Zephiel ", "")</option>
             }
         </select>
         <button type="submit" class="px-4 py-2 bg-emerald-600 text-white text-sm rounded-lg hover:bg-emerald-700 transition-colors">Add register</button>
@@ -68,7 +68,7 @@
                                 <button type="button" onclick="document.getElementById('rename-@r.Id').classList.add('hidden')" class="text-xs text-neutral-500">Cancel</button>
                             </form>
                         </td>
-                        <td class="px-4 py-3 text-neutral-600">@r.Store?.Name.Replace("Glamstar ", "")</td>
+                        <td class="px-4 py-3 text-neutral-600">@r.Store?.Name.Replace("Zephiel ", "")</td>
                         <td class="px-4 py-3"><span class="px-2 py-0.5 rounded-sm text-[11px] @(r.IsActive ? "bg-emerald-50 text-emerald-700" : "bg-neutral-100 text-neutral-500")">@(r.IsActive ? "Active" : "Inactive")</span></td>
                         <td class="px-4 py-3">
                             @if (open.Contains(r.Id))

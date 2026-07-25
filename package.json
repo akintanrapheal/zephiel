@@ -1,7 +1,7 @@
 {
   "name": "sterlinglams-web",
   "version": "1.0.0",
-  "description": "Glamstar luxury jewellery e-commerce",
+  "description": "Zephiel luxury jewellery e-commerce",
   "author": "Dev Rapheal",
   "scripts": {
     "build:css": "tailwindcss -i ./src/SterlingLams.Web/wwwroot/css/input.css -o ./src/SterlingLams.Web/wwwroot/css/app.css --minify",

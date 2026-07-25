@@ -3,7 +3,7 @@
 @inject ISettingsService Settings
 @{
     Layout = null;
-    var siteName     = await Settings.GetAsync("general.site_name", "Glamstar");
+    var siteName     = await Settings.GetAsync("general.site_name", "Zephiel");
     var receiptHeader = await Settings.GetAsync("pos.receipt_header", "");
     var receiptFooter = await Settings.GetAsync("pos.receipt_footer", "NO EXCHANGE OF GOODS, NO REFUND OF CASH");
     var contactEmail  = await Settings.GetAsync("general.contact_email", "");

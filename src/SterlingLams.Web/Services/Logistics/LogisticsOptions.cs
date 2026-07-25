@@ -1,7 +1,7 @@
 namespace SterlingLams.Web.Services.Logistics;
 
 /// <summary>
-/// Config for the Glamstar Logistics (Lagos delivery) integration — bound from the
+/// Config for the Zephiel Logistics (Lagos delivery) integration — bound from the
 /// "Logistics" section. Inert until <see cref="Enabled"/> + <see cref="SharedSecret"/> are set
 /// (set them as Render env vars: Logistics__Enabled, Logistics__SharedSecret, Logistics__PushUrl).
 /// The same <see cref="SharedSecret"/> signs the outbound order push and verifies the inbound
@@ -18,7 +18,7 @@ public class LogisticsOptions
     /// Empty = no state filter (push every delivery order).</summary>
     public List<string> DeliveryStates { get; set; } = new() { "Lagos" };
     /// <summary>Display name + pickup address sent with each pushed order.</summary>
-    public string PickupName { get; set; } = "Glamstar";
-    public string PickupAddress { get; set; } = "Glamstar – Ikota Ajah Lagos";
+    public string PickupName { get; set; } = "Zephiel";
+    public string PickupAddress { get; set; } = "Zephiel – Ikota Ajah Lagos";
     public string PickupPhone { get; set; } = "+234 9160009893";
 }

@@ -169,6 +169,31 @@
                                         <option value="@o.Value" selected="@(s.Value == o.Value)">@o.Label</option>
                                     }
                                 </select>
+
+                                @* Live font preview — updates as the dropdown changes; Save applies it. *@
+                                @if (s.Key == "appearance.display_font")
+                                {
+                                    <link href="@SterlingLams.Web.Infrastructure.DisplayFonts.GoogleLinkAll()" rel="stylesheet">
+                                    <div class="mt-3 border border-neutral-200 rounded-lg p-5 bg-white">
+                                        <p class="text-[11px] uppercase tracking-[0.15em] text-neutral-400 mb-3">Live preview</p>
+                                        <div id="font-preview" style="--fp: @Html.Raw(SterlingLams.Web.Infrastructure.DisplayFonts.Get(s.Value).Stack);">
+                                            <div style="font-family:var(--fp);font-size:2.4rem;line-height:1;letter-spacing:0.14em;text-transform:uppercase;color:#111;">Zephiel</div>
+                                            <div style="font-family:var(--fp);font-size:2rem;line-height:1.1;margin-top:0.6rem;color:#111;">Effortless <em>Glamour</em></div>
+                                        </div>
+                                        <p class="text-xs text-neutral-400 mt-3">Choose a font above to preview it here, then click <strong>Save</strong> to apply it across the store.</p>
+                                    </div>
+                                    <script>
+                                    (function () {
+                                        var stacks = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+                                            SterlingLams.Web.Infrastructure.DisplayFonts.All.ToDictionary(f => f.Value, f => f.Stack)));
+                                        var sel = document.querySelector('select[name="appearance.display_font"]');
+                                        var prev = document.getElementById('font-preview');
+                                        if (sel && prev) sel.addEventListener('change', function () {
+                                            prev.style.setProperty('--fp', stacks[sel.value] || 'serif');
+                                        });
+                                    })();
+                                    </script>
+                                }
                             }
                             else if (s.Type == "color")
                             {

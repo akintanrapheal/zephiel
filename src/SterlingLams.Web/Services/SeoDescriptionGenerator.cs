@@ -74,7 +74,7 @@ public class SeoDescriptionGenerator
     // ══════════════════════════════════════════════════════════════════════════
     private const string JewelleryCare =
         "<h3>Jewellery Care Instructions</h3>"
-      + "<p>Your Glamstar piece is crafted from high-grade, gold/platinum-plated brass set with "
+      + "<p>Your Zephiel piece is crafted from high-grade, gold/platinum-plated brass set with "
       + "semi-precious cubic zirconia stones &mdash; beautifully made costume jewellery designed to be treasured.</p>"
       + "<ul>"
       + "<li>Like all fine costume jewellery, <strong>keep away from harsh liquids</strong> such as perfume, lotion, hand sanitiser and water.</li>"
@@ -86,11 +86,11 @@ public class SeoDescriptionGenerator
 
     private static readonly string[] JewelleryIntros =
     {
-        "Turn heads with the <strong>{0}</strong> from Glamstar &mdash; {1} {2} handcrafted to add instant glamour to any look.",
-        "Meet the <strong>{0}</strong> by Glamstar: {1} {2} designed to elevate everything from workwear to evening outfits.",
+        "Turn heads with the <strong>{0}</strong> from Zephiel &mdash; {1} {2} handcrafted to add instant glamour to any look.",
+        "Meet the <strong>{0}</strong> by Zephiel: {1} {2} designed to elevate everything from workwear to evening outfits.",
         "Effortlessly chic, the <strong>{0}</strong> is {1} {2} that brings a polished, put-together finish to your style.",
-        "Make a statement with the <strong>{0}</strong> from Glamstar &mdash; beautifully crafted {1} {2} that catches the light with every move.",
-        "The <strong>{0}</strong> is {1} {2} from Glamstar, blending modern design with handmade quality for a standout finish.",
+        "Make a statement with the <strong>{0}</strong> from Zephiel &mdash; beautifully crafted {1} {2} that catches the light with every move.",
+        "The <strong>{0}</strong> is {1} {2} from Zephiel, blending modern design with handmade quality for a standout finish.",
         "Add a touch of luxe to your jewellery box with the <strong>{0}</strong> &mdash; {1} {2} made to be noticed.",
     };
 
@@ -142,9 +142,9 @@ public class SeoDescriptionGenerator
 
     private static readonly string[] JewelleryShorts =
     {
-        "Handmade {0} {1}{2} from Glamstar — nickel & lead free, perfect for gifting.",
-        "Elegant {0} {1}{2}, handcrafted by Glamstar. Lightweight and nickel & lead free.",
-        "{0} {1}{2} — a handmade Glamstar statement piece, gentle on sensitive skin.",
+        "Handmade {0} {1}{2} from Zephiel — nickel & lead free, perfect for gifting.",
+        "Elegant {0} {1}{2}, handcrafted by Zephiel. Lightweight and nickel & lead free.",
+        "{0} {1}{2} — a handmade Zephiel statement piece, gentle on sensitive skin.",
     };
 
     private string BuildJewelleryShort(int seed, string name, string category)
@@ -166,10 +166,10 @@ public class SeoDescriptionGenerator
     // ══════════════════════════════════════════════════════════════════════════
     private static readonly string[] AccessoryIntros =
     {
-        "Complete your look with the <strong>{0}</strong> from Glamstar &mdash; {1} designed to add instant polish to any outfit.",
-        "Meet the <strong>{0}</strong> by Glamstar: {1} that blends everyday practicality with standout style.",
+        "Complete your look with the <strong>{0}</strong> from Zephiel &mdash; {1} designed to add instant polish to any outfit.",
+        "Meet the <strong>{0}</strong> by Zephiel: {1} that blends everyday practicality with standout style.",
         "Make a statement with the <strong>{0}</strong> &mdash; {1} crafted to elevate your everyday and occasion looks.",
-        "The <strong>{0}</strong> from Glamstar is {1}, combining quality craftsmanship with a refined, modern finish.",
+        "The <strong>{0}</strong> from Zephiel is {1}, combining quality craftsmanship with a refined, modern finish.",
     };
 
     private sealed class AccSpec
@@ -251,7 +251,7 @@ public class SeoDescriptionGenerator
                     "Store in a dust bag, out of direct sunlight, to keep it looking new.",
                 };
                 if (embellished) s.Care.Add("Handle the embellishments with care to keep every stone in place.");
-                s.ShortLine = $"A {(embellished ? "crystal-embellished" : "chic")} {noun} from Glamstar &mdash; roomy, secure and perfect for special occasions.";
+                s.ShortLine = $"A {(embellished ? "crystal-embellished" : "chic")} {noun} from Zephiel &mdash; roomy, secure and perfect for special occasions.";
                 break;
             }
 
@@ -281,7 +281,7 @@ public class SeoDescriptionGenerator
                     "Keep away from prolonged moisture and direct heat.",
                     "Store rolled or hung to keep its shape.",
                 };
-                s.ShortLine = $"A versatile {(leather ? "genuine leather" : "faux-leather")} belt from Glamstar &mdash; adjustable, sturdy and made to last.";
+                s.ShortLine = $"A versatile {(leather ? "genuine leather" : "faux-leather")} belt from Zephiel &mdash; adjustable, sturdy and made to last.";
                 break;
             }
 
@@ -309,8 +309,8 @@ public class SeoDescriptionGenerator
                     "Air dry and reshape while damp.",
                 };
                 s.ShortLine = scarf
-                    ? "A soft, versatile scarf from Glamstar &mdash; lightweight and easy to style."
-                    : "A comfortable, adjustable cap from Glamstar &mdash; a casual everyday staple.";
+                    ? "A soft, versatile scarf from Zephiel &mdash; lightweight and easy to style."
+                    : "A comfortable, adjustable cap from Zephiel &mdash; a casual everyday staple.";
                 break;
             }
 
@@ -338,7 +338,7 @@ public class SeoDescriptionGenerator
                     "Store in the protective case when not in use.",
                     "Avoid leaving them in extreme heat, such as a hot car.",
                 };
-                s.ShortLine = "Stylish UV-protective sunglasses from Glamstar &mdash; lightweight, on-trend and case included.";
+                s.ShortLine = "Stylish UV-protective sunglasses from Zephiel &mdash; lightweight, on-trend and case included.";
                 break;
             }
 
@@ -368,7 +368,7 @@ public class SeoDescriptionGenerator
                     "Avoid strong magnets and knocks.",
                     "Wipe the case and band with a soft, dry cloth.",
                 };
-                s.ShortLine = $"An elegant {band} watch from Glamstar &mdash; reliable quartz movement and a versatile, everyday design.";
+                s.ShortLine = $"An elegant {band} watch from Zephiel &mdash; reliable quartz movement and a versatile, everyday design.";
                 break;
             }
 
@@ -393,7 +393,7 @@ public class SeoDescriptionGenerator
                     "Wipe clean and keep dry.",
                     "Store flat, away from direct heat.",
                 };
-                s.ShortLine = $"A chic {noun} from Glamstar &mdash; a secure, gentle finishing touch for any hairstyle.";
+                s.ShortLine = $"A chic {noun} from Zephiel &mdash; a secure, gentle finishing touch for any hairstyle.";
                 break;
             }
 
@@ -413,7 +413,7 @@ public class SeoDescriptionGenerator
                 s.Details = new() { ("Material", $"durable metal{(charm ? " with a decorative charm" : "")}") };
                 s.CareTitle = "Care Instructions";
                 s.Care = new() { "Wipe with a soft cloth.", "Keep dry to avoid tarnishing." };
-                s.ShortLine = "A handy decorative keyring from Glamstar &mdash; sturdy, stylish and a great little gift.";
+                s.ShortLine = "A handy decorative keyring from Zephiel &mdash; sturdy, stylish and a great little gift.";
                 break;
             }
 
@@ -433,7 +433,7 @@ public class SeoDescriptionGenerator
                 s.Details = new() { ("Material", "quality materials") };
                 s.CareTitle = "Care Instructions";
                 s.Care = new() { "Keep dry and wipe clean with a soft cloth.", "Store away from direct sunlight." };
-                s.ShortLine = $"A beautifully presented {s.Noun} from Glamstar &mdash; practical, elegant and ready to gift.";
+                s.ShortLine = $"A beautifully presented {s.Noun} from Zephiel &mdash; practical, elegant and ready to gift.";
                 break;
             }
 
@@ -441,7 +441,7 @@ public class SeoDescriptionGenerator
             {
                 s.Noun = "jewellery care product";
                 s.Descriptor = "an easy-to-use jewellery care product";
-                s.IntroTail = "Keep your Glamstar pieces looking their sparkling best.";
+                s.IntroTail = "Keep your Zephiel pieces looking their sparkling best.";
                 s.Bullets = new()
                 {
                     "Gentle on plated and costume jewellery",
@@ -457,7 +457,7 @@ public class SeoDescriptionGenerator
                     "Use gently and avoid over-rubbing plated finishes.",
                     "Store in a cool, dry place.",
                 };
-                s.ShortLine = "An easy-to-use jewellery care product from Glamstar &mdash; keeps your pieces sparkling.";
+                s.ShortLine = "An easy-to-use jewellery care product from Zephiel &mdash; keeps your pieces sparkling.";
                 break;
             }
 
@@ -476,7 +476,7 @@ public class SeoDescriptionGenerator
                 s.Details = new() { ("Material", "quality materials") };
                 s.CareTitle = "Care Instructions";
                 s.Care = new() { "Wipe clean with a soft, dry cloth.", "Keep away from moisture and direct heat.", "Store in a cool, dry place." };
-                s.ShortLine = "A stylish, quality-made accessory from Glamstar &mdash; versatile and perfect for gifting.";
+                s.ShortLine = "A stylish, quality-made accessory from Zephiel &mdash; versatile and perfect for gifting.";
                 break;
             }
         }

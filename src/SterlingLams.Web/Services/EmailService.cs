@@ -17,7 +17,7 @@ public class EmailOptions
     public string Username { get; set; } = "";
     public string Password { get; set; } = "";
     public string FromAddress { get; set; } = "";
-    public string FromName { get; set; } = "Glamstar";
+    public string FromName { get; set; } = "Zephiel";
     public bool EnableSsl { get; set; } = true;
 
     /// <summary>When SMTP isn't configured, write emails here as .html files instead of sending

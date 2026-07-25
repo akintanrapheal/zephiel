@@ -17,8 +17,8 @@
         ["image"] = string.IsNullOrEmpty(Model.CoverImageUrl) ? null : Model.CoverImageUrl,
         ["datePublished"] = Model.PublishedAt?.ToString("yyyy-MM-dd"),
         ["dateModified"] = Model.UpdatedAt.ToString("yyyy-MM-dd"),
-        ["author"] = new Dictionary<string, object?> { ["@type"] = "Organization", ["name"] = string.IsNullOrWhiteSpace(Model.AuthorName) ? "Glamstar" : Model.AuthorName },
-        ["publisher"] = new Dictionary<string, object?> { ["@type"] = "Organization", ["name"] = "Glamstar" },
+        ["author"] = new Dictionary<string, object?> { ["@type"] = "Organization", ["name"] = string.IsNullOrWhiteSpace(Model.AuthorName) ? "Zephiel" : Model.AuthorName },
+        ["publisher"] = new Dictionary<string, object?> { ["@type"] = "Organization", ["name"] = "Zephiel" },
         ["mainEntityOfPage"] = $"{baseUrl}/journal/{Model.Slug}",
     }, new System.Text.Json.JsonSerializerOptions { DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull });
 }

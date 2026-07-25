@@ -202,7 +202,7 @@ public class WebhooksController : ControllerBase
     }
 
     /// <summary>
-    /// Inbound from Glamstar Logistics: a driver marked a delivery complete. Verifies the
+    /// Inbound from Zephiel Logistics: a driver marked a delivery complete. Verifies the
     /// HMAC-SHA256 signature (x-sg-signature, shared secret), then marks the matching order
     /// Delivered. Idempotent — re-delivery of the same event is a no-op. The logistics app already
     /// notifies the customer, so we don't re-email here.
@@ -252,7 +252,7 @@ public class WebhooksController : ControllerBase
         var old = order.Status;
         order.Status = OrderStatus.Delivered;
         order.UpdatedAt = DateTime.UtcNow;
-        var note = $"Marked Delivered via Glamstar Logistics{(string.IsNullOrWhiteSpace(signerName) ? "" : $" (signed by {signerName})")}.";
+        var note = $"Marked Delivered via Zephiel Logistics{(string.IsNullOrWhiteSpace(signerName) ? "" : $" (signed by {signerName})")}.";
         SterlingLams.Web.Services.OrderNotes.AddSystem(_db, order.Id, note);
         await _db.SaveChangesAsync();
         try { await _audit.LogAsync("Delivery", "Order", order.Id.ToString(), $"Order {order.OrderNumber} delivered (logistics): {old} → Delivered"); } catch { }

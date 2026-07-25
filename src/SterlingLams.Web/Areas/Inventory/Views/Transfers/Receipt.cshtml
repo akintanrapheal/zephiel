@@ -47,7 +47,7 @@
     <div class="noprint"><button onclick="window.print()">Print this receipt</button></div>
 
     <div class="head">
-        <div class="brand">GLAMSTAR<small>STOCK TRANSFER</small></div>
+        <div class="brand">ZEPHIEL<small>STOCK TRANSFER</small></div>
         <div class="doc">
             <h1>Transfer Receipt</h1>
             <div class="ref">@Model.TransferNumber</div>
@@ -122,7 +122,7 @@
         <div class="sig">Received by — @Who(Model.ReceivedByUserId)</div>
     </div>
 
-    <div class="foot">Generated @DateTime.UtcNow.ToLocalTime().ToString("dd MMM yyyy, HH:mm") · Glamstar Inventory System</div>
+    <div class="foot">Generated @DateTime.UtcNow.ToLocalTime().ToString("dd MMM yyyy, HH:mm") · Zephiel Inventory System</div>
 </div>
 <script>window.addEventListener('load', () => { setTimeout(() => window.print(), 300); });</script>
 </body>

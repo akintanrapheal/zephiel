@@ -6,7 +6,7 @@
     var mode = (string)(ViewBag.Mode ?? "invoice");
     var isInvoice = mode == "invoice";
     var title = isInvoice ? "Invoice" : "Packing Slip";
-    var siteName = await Settings.GetAsync("general.site_name", "Glamstar");
+    var siteName = await Settings.GetAsync("general.site_name", "Zephiel");
     var logoUrl = await Settings.GetAsync("general.logo_url", "");
     if (string.IsNullOrWhiteSpace(logoUrl)) logoUrl = "/images/sg-logo.png";
     var addr = Model.DeliveryAddress;

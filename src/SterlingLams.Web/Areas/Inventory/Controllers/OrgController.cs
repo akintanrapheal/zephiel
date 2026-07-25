@@ -166,7 +166,7 @@ public class OrgController : InventoryAreaController
             Name = (c.FirstName + " " + c.LastName).Trim(),
             Phone = c.PhoneNumber,
             StoreId = storeMap.Where(m => m.UserId == c.Id).Select(m => (int?)m.StoreId).FirstOrDefault(),
-            Branches = storeMap.Where(m => m.UserId == c.Id).Select(m => m.Name.Replace("Glamstar ", "")).ToList(),
+            Branches = storeMap.Where(m => m.UserId == c.Id).Select(m => m.Name.Replace("Zephiel ", "")).ToList(),
             LastLogin = c.LastLoginAt
         }).OrderBy(c => c.Name).ToList();
         ViewBag.Stores = await _db.Stores.Where(s => s.IsActive).OrderBy(s => s.Name).ToListAsync();

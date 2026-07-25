@@ -57,7 +57,7 @@ public class OverviewController : InventoryAreaController
             .ToListAsync();
         vm.PerBranch = stores.Select(s => new BranchUnitsRow
         {
-            Store = s.Name.Replace("Glamstar ", ""),
+            Store = s.Name.Replace("Zephiel ", ""),
             Units = byStore.FirstOrDefault(b => b.StoreId == s.Id)?.Units ?? 0
         }).ToList();
 
@@ -128,7 +128,7 @@ public class OverviewController : InventoryAreaController
             .Select(m => new MovementRow
             {
                 Product = m.Product.Name,
-                Store = m.Store.Name.Replace("Glamstar ", ""),
+                Store = m.Store.Name.Replace("Zephiel ", ""),
                 Change = m.QuantityChange,
                 Type = m.Type.ToString(),
                 When = m.CreatedAt

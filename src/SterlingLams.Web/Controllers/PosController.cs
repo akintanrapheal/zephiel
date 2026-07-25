@@ -152,9 +152,9 @@ public class PosController : Controller
         var basePath = "/" + SterlingLams.Web.Infrastructure.StaffPaths.Pos;
         var manifest = new
         {
-            name = "Glamstar POS",
+            name = "Zephiel POS",
             short_name = "SG POS",
-            description = "Glamstar point of sale — works offline.",
+            description = "Zephiel point of sale — works offline.",
             id = basePath,
             start_url = basePath,
             scope = basePath,
@@ -1185,7 +1185,7 @@ public class PosController : Controller
             .ToListAsync();
 
         // Receipt branding (so an offline receipt matches the server-rendered one).
-        var siteName = await _settings.GetAsync("general.site_name", "Glamstar");
+        var siteName = await _settings.GetAsync("general.site_name", "Zephiel");
         var logoUrl = await _settings.GetAsync("general.logo_url", "");
         if (string.IsNullOrWhiteSpace(logoUrl)) logoUrl = "/images/sg-logo.png";
         var receiptHeader = await _settings.GetAsync("pos.receipt_header", "");
@@ -1938,7 +1938,7 @@ public class PosController : Controller
             }
         }
 
-        var siteName = await _settings.GetAsync("general.site_name", "Glamstar");
+        var siteName = await _settings.GetAsync("general.site_name", "Zephiel");
         var footer = await _settings.GetAsync("pos.receipt_footer", "Thank you for shopping with us!");
         string Enc(string? s) => System.Net.WebUtility.HtmlEncode(s ?? "");
         var rows = string.Join("", order.Items.Select(i =>

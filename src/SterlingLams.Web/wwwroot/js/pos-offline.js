@@ -1,5 +1,5 @@
 /*
- * Glamstar POS — offline data layer + sale queue (Phase 1 + 2).
+ * Zephiel POS — offline data layer + sale queue (Phase 1 + 2).
  *
  * Phase 1: caches a /Pos/Snapshot (catalogue + store stock + categories + discount reasons +
  *   customers) in IndexedDB and shims window.fetch so the read endpoints fall back to it offline.
@@ -132,7 +132,7 @@
     var cust = sale.customerUserId && mem ? mem.customers.find(function (c) { return c.id === sale.customerUserId; }) : null;
     var receipt = {
       number: number, offline: true,
-      siteName: (mem && mem.siteName) || 'Glamstar',
+      siteName: (mem && mem.siteName) || 'Zephiel',
       storeName: (mem && mem.storeName) || '',
       registerName: (mem && mem.registerName) || '',
       cashierName: (mem && mem.cashierName) || '',

@@ -10,6 +10,7 @@
     var tiktok     = await SettingsService.GetAsync("general.tiktok_url");
     var tagline    = await SettingsService.GetAsync("general.tagline", "Timeless luxury jewellery crafted with the finest materials.");
     var logoUrl    = await SettingsService.GetAsync("general.logo_url");
+    var siteName   = await SettingsService.GetAsync("general.site_name", "Zephiel");
 
     var activeStores = await Db.Stores
         .Where(s => s.IsActive)
@@ -30,12 +31,12 @@
                 <a asp-controller="Home" asp-action="Index">
                     @if (!string.IsNullOrEmpty(logoUrl))
                     {
-                        <img src="@logoUrl" alt="Glamstar" class="h-24 w-auto" />
+                        <img src="@logoUrl" alt="@siteName" class="h-24 w-auto" />
                     }
                     else
                     {
                         <span class="font-cormorant text-2xl font-light tracking-[0.3em] uppercase">
-                            Glamstar
+                            @siteName
                         </span>
                     }
                 </a>
@@ -122,7 +123,7 @@
         {
             <div class="border-t border-neutral-200 mt-12 pt-10 flex justify-center">
                 <a asp-controller="Home" asp-action="Index">
-                    <img src="@logoUrl" alt="Glamstar" class="h-52 w-auto mx-auto" />
+                    <img src="@logoUrl" alt="@siteName" class="h-52 w-auto mx-auto" />
                 </a>
             </div>
         }
@@ -132,7 +133,7 @@
         </div>
 
         <div class="mt-8 pt-8 border-t border-neutral-200 flex flex-col md:flex-row justify-between items-center gap-4">
-            <p class="text-xs text-neutral-500">&copy; @DateTime.UtcNow.Year Glamstar. All rights reserved.</p>
+            <p class="text-xs text-neutral-500">&copy; @DateTime.UtcNow.Year @siteName. All rights reserved.</p>
             <div class="flex gap-6">
                 <a asp-controller="Home" asp-action="Privacy"        class="text-xs text-neutral-500 hover:text-brand-500 transition-colors">Privacy Policy</a>
                 <a asp-controller="Home" asp-action="Terms"          class="text-xs text-neutral-500 hover:text-brand-500 transition-colors">Terms of Service</a>

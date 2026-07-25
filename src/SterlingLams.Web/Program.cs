@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-//  Glamstar Platform — storefront, admin back office & in-house inventory/POS
+//  Zephiel Platform — storefront, admin back office & in-house inventory/POS
 //  Developed by Dev Rapheal.
 // ─────────────────────────────────────────────────────────────────────────────
 using Microsoft.AspNetCore.DataProtection;
@@ -429,7 +429,7 @@ if (StaffPaths.PosIsSecret)
     });
 }
 
-// Glamstar is a storefront + admin-only, delivery-only online store — the POS till and the
+// Zephiel is a storefront + admin-only, delivery-only online store — the POS till and the
 // multi-branch Inventory System are disabled. Their routes 404 (the stock/store engine stays,
 // because storefront checkout depends on it; only the operator UIs are hidden). Keep this ahead
 // of routing so the requests never reach those controllers/areas.

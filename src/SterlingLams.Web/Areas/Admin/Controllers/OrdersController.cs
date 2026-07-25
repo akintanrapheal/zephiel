@@ -526,7 +526,7 @@ namespace SterlingLams.Web.Areas.Admin.Controllers
                 + $"<p>Here's a summary of your order <strong>{Enc(order.OrderNumber)}</strong> (status: {Enc(order.Status.ToString())}).</p>"
                 + $"<table style=\"width:100%;border-collapse:collapse;margin-top:12px;font-size:14px\">{rows}"
                 + $"<tr><td style=\"padding-top:8px;border-top:1px solid #eee;font-weight:700\">Total</td><td style=\"padding-top:8px;border-top:1px solid #eee;text-align:right;font-weight:700\">₦{order.Total:N0}</td></tr></table>"
-                + "<p style=\"color:#6b7280;font-size:13px;margin-top:16px\">Thank you for shopping with Glamstar.</p>";
+                + "<p style=\"color:#6b7280;font-size:13px;margin-top:16px\">Thank you for shopping with Zephiel.</p>";
 
             var sent = await _email.SendAsync(to!, $"Your order {order.OrderNumber}", body,
                 order.User?.FullName ?? order.Customer?.FullName);

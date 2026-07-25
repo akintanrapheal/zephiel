@@ -436,7 +436,7 @@ public class ProductsController : InventoryAreaController
             .Select(m => new MovementHistoryRow
             {
                 Date = m.CreatedAt,
-                Store = m.Store.Name.Replace("Glamstar ", ""),
+                Store = m.Store.Name.Replace("Zephiel ", ""),
                 Type = m.Type.ToString(),
                 Change = m.QuantityChange,
                 Balance = m.BalanceAfter,
@@ -686,7 +686,7 @@ public class ProductsController : InventoryAreaController
 
         // For a detailed audit line: branch names + the before→after change per branch.
         var storeNames = await _db.Stores.Where(s => locs.Select(x => x.StoreId).Contains(s.Id))
-            .ToDictionaryAsync(s => s.Id, s => s.Name.Replace("Glamstar ", ""));
+            .ToDictionaryAsync(s => s.Id, s => s.Name.Replace("Zephiel ", ""));
         var changeDescs = new List<string>();
 
         p.TrackStock = req.TrackStock;

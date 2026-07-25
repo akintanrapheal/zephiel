@@ -9,6 +9,8 @@ public static class SettingsSelectOptions
     public static readonly IReadOnlyDictionary<string, (string Value, string Label)[]> Map =
         new Dictionary<string, (string Value, string Label)[]>
         {
+            // Display-font choices come from the DisplayFonts catalogue (single source of truth).
+            ["appearance.display_font"] = DisplayFonts.Options,
             ["home.diamond.animation"] = new[]
             {
                 ("glow",      "Glow & Sparkle"),

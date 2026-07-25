@@ -69,7 +69,7 @@ public class SalesController : InventoryAreaController
         ViewData["Title"] = "Saved carts";
         var qy = _db.ParkedSales.AsQueryable();
         var total = await qy.CountAsync();
-        var stores = await _db.Stores.ToDictionaryAsync(s => s.Id, s => s.Name.Replace("Glamstar ", ""));
+        var stores = await _db.Stores.ToDictionaryAsync(s => s.Id, s => s.Name.Replace("Zephiel ", ""));
         var rows = await qy.OrderByDescending(s => s.Id)
             .Skip((page - 1) * PageSize).Take(PageSize).ToListAsync();
         ViewBag.Stores = stores;

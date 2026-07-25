@@ -673,3 +673,32 @@ function bindProductCards(root) {
         }
     });
 }());
+
+// ─── Auto-hide header on scroll ───────────────────────────────────────────
+// Hide the fixed header when scrolling down, reveal it when scrolling up.
+// Always visible near the very top of the page.
+(function () {
+    var header = document.getElementById('site-header');
+    if (!header) return;
+    var last = window.pageYOffset || 0;
+    var ticking = false;
+    var THRESHOLD = 6;   // ignore tiny jitters
+    var TOP_ZONE = 80;   // always show within this many px of the top
+
+    function update() {
+        var y = window.pageYOffset || 0;
+        if (y <= TOP_ZONE) {
+            header.style.transform = '';               // fully shown near the top
+        } else if (Math.abs(y - last) > THRESHOLD) {
+            header.style.transform = y > last          // scrolling down → hide, up → show
+                ? 'translateY(-100%)'
+                : 'translateY(0)';
+        }
+        last = y;
+        ticking = false;
+    }
+
+    window.addEventListener('scroll', function () {
+        if (!ticking) { window.requestAnimationFrame(update); ticking = true; }
+    }, { passive: true });
+}());

@@ -183,7 +183,7 @@ public class WhatsAppService : IWhatsAppService
             var name  = string.IsNullOrWhiteSpace(buyer?.FirstName) ? "there" : buyer!.FirstName.Trim();
             var total = $"₦{order.Total:N0}";
             var store = string.IsNullOrWhiteSpace(order.PickupStore?.Name) ? "our store" : order.PickupStore!.Name;
-            var site  = await _settings.GetAsync("general.site_name", "Glamstar");
+            var site  = await _settings.GetAsync("general.site_name", "Zephiel");
 
             var templateSid = await Get(templateKey);
             if (templateSid.Length > 0)

@@ -15,6 +15,7 @@
     var bestBranchQty = Model.StoreStock.Any() ? Model.StoreStock.Max(s => s.Quantity) : 0;
     var isLowStock = Model.IsAvailableAnywhere && bestBranchQty <= lowStockThreshold;
 
+    var siteName = await SettingsService.GetAsync("general.site_name", "Zephiel");
     var fullDescription = !string.IsNullOrWhiteSpace(Model.Description)
         ? Model.Description
         : (Model.ShortDescription ?? "");
@@ -51,7 +52,7 @@
         ["image"] = Model.ImageUrls.Select(SdAbs).ToArray(),
         ["description"] = string.IsNullOrWhiteSpace(fullDescription) ? Model.Name : SterlingLams.Web.Services.ProductHtml.ToPlainText(fullDescription),
         ["sku"] = string.IsNullOrWhiteSpace(Model.Sku) ? null : Model.Sku,
-        ["brand"] = new Dictionary<string, object?> { ["@type"] = "Brand", ["name"] = "Glamstar" },
+        ["brand"] = new Dictionary<string, object?> { ["@type"] = "Brand", ["name"] = siteName },
         ["category"] = Model.CategoryName,
         ["aggregateRating"] = Model.ReviewCount > 0 ? new Dictionary<string, object?>
         {
@@ -119,6 +120,9 @@
         .prod-rich-desc h2, .prod-rich-desc h3, .prod-rich-desc h4 { font-weight: 500; color: #1f2937; margin: 0.75rem 0 0.4rem; }
         .prod-rich-desc strong, .prod-rich-desc b { font-weight: 600; color: #374151; }
         .prod-rich-desc blockquote { border-left: 2px solid #e5e7eb; padding-left: 1rem; color: #6b7280; margin: 0.5rem 0; }
+        /* Pinned info rail scrolls internally (when taller than the viewport) without a visible bar. */
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 }
 
@@ -127,37 +131,67 @@
    [ValidateAntiForgeryToken] requires. *@
 @Html.AntiForgeryToken()
 
-<div class="max-w-7xl mx-auto px-6 py-12">
-    <!-- Breadcrumb -->
-    <nav class="text-xs text-neutral-400 tracking-wider mb-10 flex gap-2 items-center">
-        <a asp-controller="Home" asp-action="Index" class="hover:text-neutral-700 transition-colors">Home</a>
-        <span>/</span>
-        <a asp-controller="Products" asp-action="Index" asp-route-category="@Model.CategorySlug" class="hover:text-neutral-700 transition-colors">@Model.CategoryName</a>
-        <span>/</span>
-        <span class="text-neutral-700">@Model.Name</span>
-    </nav>
+@{
+    // Gallery images — first is the zoom/main image (keeps hover-zoom + variant image swap);
+    // the rest stack below it on the right and scroll past the pinned left rail (Tiffany-style).
+    var galleryImages = (Model.ImageUrls != null && Model.ImageUrls.Count > 0)
+        ? Model.ImageUrls.ToList()
+        : new List<string> { Model.PrimaryImageUrl };
+}
+<div class="max-w-[96rem] mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-16">
+    <!-- Back to results + breadcrumb -->
+    <div class="mb-6 flex items-center gap-4">
+        <a asp-controller="Products" asp-action="Index" asp-route-category="@Model.CategorySlug"
+           class="w-11 h-11 rounded-full bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center text-neutral-700 transition-colors flex-shrink-0"
+           aria-label="Back to @Model.CategoryName">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 19l-7-7 7-7"/></svg>
+        </a>
+        <nav class="hidden sm:flex text-xs text-neutral-400 tracking-wider gap-2 items-center">
+            <a asp-controller="Home" asp-action="Index" class="hover:text-neutral-700 transition-colors">Home</a>
+            <span>/</span>
+            <a asp-controller="Products" asp-action="Index" asp-route-category="@Model.CategorySlug" class="hover:text-neutral-700 transition-colors">@Model.CategoryName</a>
+            <span>/</span>
+            <span class="text-neutral-700">@Model.Name</span>
+        </nav>
+    </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-16 lg:gap-24">
+    <div class="grid lg:grid-cols-[minmax(0,29rem)_minmax(0,1fr)] gap-8 lg:gap-14 xl:gap-20 items-start">
 
-        <!-- ─── Image Gallery ─────────────────────────────────────────── -->
-        <div class="space-y-3">
-            <!-- Zoom container: hover to zoom, click to toggle pinned zoom -->
+        <!-- ─── Image Gallery (scrolls past the pinned info rail) ──────── -->
+        @* On mobile the info (title / price / options / add-to-bag) comes first; the gallery follows.
+           On desktop the grid places info left (order-1) and this gallery right (order-2). *@
+        <div class="order-2">
+            <!-- First image = zoom container (hover to zoom) + variant-swap target -->
             <div class="aspect-square bg-neutral-50 overflow-hidden zoom-container cursor-zoom-in relative" id="zoom-container">
-                <img id="main-image" src="@Img.Cld(Model.PrimaryImageUrl, 1000)" alt="@Model.Name" width="800" height="800"
+                <img id="main-image" src="@Img.Cld(galleryImages[0], 1400)" alt="@Model.Name" width="1000" height="1000"
                      class="w-full h-full object-cover object-center transition-transform duration-300 will-change-transform" />
                 <partial name="_DiscountBadge" model="Model.DiscountPercent" />
             </div>
-            @if (Model.ImageUrls.Count > 1)
+
+            @* Description sits under the first image; the remaining photos follow below it (Tiffany layout). *@
+            @if (!string.IsNullOrWhiteSpace(fullDescription))
             {
-                @* Mobile: a single swipeable row (many-image products would otherwise stack into a
-                   tall grid and push the buy box off-screen). md+: the 4-column grid. *@
-                <div class="flex md:grid md:grid-cols-4 gap-2 overflow-x-auto pb-1 snap-x">
-                    @foreach (var (url, i) in Model.ImageUrls.Select((u, i) => (u, i)))
+                <div class="py-10 lg:py-14 max-w-2xl">
+                    @if (SterlingLams.Web.Services.ProductHtml.LooksLikeHtml(fullDescription))
                     {
-                        <button type="button" data-img-url="@Img.Cld(url, 1000)"
-                                class="thumb-btn shrink-0 w-16 md:w-auto aspect-square bg-neutral-50 overflow-hidden border-2 @(i == 0 ? "border-brand-500" : "border-transparent") hover:border-brand-300 transition-colors snap-start">
-                            <img src="@Img.Cld(url, 150, 150)" alt="@Model.Name view @(i+1)" loading="lazy" width="150" height="150" class="w-full h-full object-cover" />
-                        </button>
+                        <div class="prod-rich-desc text-[15px] text-neutral-600 leading-relaxed font-light break-words">@Html.Raw(SterlingLams.Web.Services.ProductHtml.Sanitize(fullDescription))</div>
+                    }
+                    else
+                    {
+                        <div class="text-[15px] text-neutral-600 leading-relaxed font-light break-words" style="white-space: pre-line;">@fullDescription</div>
+                    }
+                </div>
+            }
+
+            @if (galleryImages.Count > 1)
+            {
+                <div class="space-y-2 lg:space-y-3">
+                    @for (var gi = 1; gi < galleryImages.Count; gi++)
+                    {
+                        <div class="aspect-square bg-neutral-50 overflow-hidden">
+                            <img src="@Img.Cld(galleryImages[gi], 1400)" alt="@Model.Name view @(gi + 1)" loading="lazy" decoding="async"
+                                 width="1000" height="1000" class="w-full h-full object-cover object-center" />
+                        </div>
                     }
                 </div>
             }
@@ -183,10 +217,10 @@
             }
         </div>
 
-        <!-- ─── Product Info ──────────────────────────────────────────── -->
-        <div class="flex flex-col">
+        <!-- ─── Product Info (pinned while the gallery scrolls) ───────── -->
+        <div class="order-1 flex flex-col lg:sticky lg:top-[130px] lg:self-start lg:max-h-[calc(100vh-140px)] lg:overflow-y-auto lg:pr-2 no-scrollbar">
             <p class="text-xs tracking-[0.3em] uppercase text-neutral-400 mb-2">@Model.CategoryName</p>
-            <h1 class="font-cormorant text-4xl font-light text-neutral-900 mb-2">@Model.Name</h1>
+            <h1 class="font-bodoni text-4xl lg:text-5xl font-light text-neutral-900 mb-3">@Model.Name</h1>
             @if (Model.ReviewsEnabled && Model.ReviewCount > 0)
             {
                 <a href="#product-tabs" data-tab-jump="reviews" class="inline-flex items-center gap-2 mb-4 text-sm w-fit">
@@ -257,14 +291,41 @@
                             .Select(g => g.First())
                             .ToList();
 
+                        // A representative variant image per option value → shown as a swatch thumbnail.
+                        string? RepImage(string value) => Model.Variants
+                            .Where(v => !string.IsNullOrEmpty(v.ImageUrl) &&
+                                        v.AttributeLabels.Any(a => a.AttributeName == attrName && a.Value == value))
+                            .Select(v => v.ImageUrl).FirstOrDefault();
+                        var attrHasImages = distinctValues.Any(val => !string.IsNullOrEmpty(RepImage(val.Value)));
                         <div>
-                            <label class="block text-xs tracking-[0.2em] uppercase text-neutral-500 mb-2">
+                            <label class="block text-xs tracking-[0.2em] uppercase text-neutral-500 mb-3">
                                 @attrName
                             </label>
-                            <select class="attr-select w-full border border-neutral-300 px-4 py-3 text-sm text-neutral-700
-                                           focus:outline-none focus:border-neutral-900 bg-white transition-colors appearance-none
-                                           cursor-pointer"
-                                    data-attr="@attrName">
+                            <div class="flex flex-wrap @(attrHasImages ? "gap-4" : "gap-2.5")">
+                                @foreach (var val in distinctValues)
+                                {
+                                    var repImg = RepImage(val.Value);
+                                    if (!string.IsNullOrEmpty(repImg))
+                                    {
+                                        <!-- Image swatch (click loads this variant's photo on the right) -->
+                                        <button type="button" class="variant-swatch text-center" data-attr="@attrName" data-value="@val.Value">
+                                            <span class="sw-tile block w-20 h-20 bg-neutral-50 overflow-hidden border border-transparent transition-colors">
+                                                <img src="@Img.Cld(repImg, 220, 220)" alt="@val.Value" loading="lazy" class="w-full h-full object-cover" />
+                                            </span>
+                                            <span class="sw-label block mt-2 text-sm text-neutral-600">@val.Value</span>
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <!-- Text pill (attributes without images, e.g. size) -->
+                                        <button type="button" class="variant-pill px-5 py-2.5 text-sm border border-neutral-300 text-neutral-700 hover:border-neutral-900 transition-colors" data-attr="@attrName" data-value="@val.Value">
+                                            @val.Value
+                                        </button>
+                                    }
+                                }
+                            </div>
+                            @* Hidden select keeps the existing pricing / stock / validation logic working. *@
+                            <select class="attr-select sr-only" data-attr="@attrName" tabindex="-1" aria-hidden="true">
                                 <option value="">— Select @attrName —</option>
                                 @foreach (var val in distinctValues)
                                 {
@@ -291,7 +352,7 @@
                         lowStock = v.Available > 0 && v.Available <= lowStockThreshold,
                         // Per-branch stock for this variant, shown once the customer picks the option.
                         stores = v.StoreStock.Select(s => new {
-                            name = s.StoreName.Replace("Glamstar ", ""),
+                            name = s.StoreName.Replace("Zephiel ", ""),
                             qty = s.Quantity,
                             low = s.Quantity > 0 && s.Quantity <= lowStockThreshold
                         }),
@@ -319,7 +380,7 @@
                         <button id="add-to-cart"
                                 data-product-id="@Model.Id"
                                 data-has-variants="@(Model.Variants.Any() ? "true" : "false")"
-                                class="flex-1 bg-brand-500 text-white text-xs tracking-[0.2em] uppercase py-4 px-8 rounded-md hover:bg-brand-600 transition-colors duration-300">
+                                class="flex-1 bg-neutral-900 text-white text-xs tracking-[0.25em] uppercase py-4 px-8 hover:bg-brand-500 transition-colors duration-300">
                             Add to Bag
                         </button>
                         <button id="wishlist-btn"
@@ -454,12 +515,8 @@
     <!-- ─── Product Tabs ──────────────────────────────────────────────────── -->
     <div class="mt-20 border-t border-neutral-100 pt-10" id="product-tabs">
         <div class="flex justify-center gap-8 border-b border-neutral-100 mb-8">
-            <button type="button" data-tab="description"
-                    class="prod-tab-btn pb-3 text-xs tracking-[0.15em] uppercase border-b-2 border-brand-500 text-neutral-900 transition-colors">
-                Description
-            </button>
             <button type="button" data-tab="reviews"
-                    class="prod-tab-btn pb-3 text-xs tracking-[0.15em] uppercase border-b-2 border-transparent text-neutral-400 hover:text-neutral-700 transition-colors">
+                    class="prod-tab-btn pb-3 text-xs tracking-[0.15em] uppercase border-b-2 border-brand-500 text-neutral-900 transition-colors">
                 Reviews (@Model.ReviewCount)
             </button>
             <button type="button" data-tab="shipping"
@@ -469,27 +526,8 @@
         </div>
 
         <div class="max-w-3xl mx-auto">
-            <!-- Description -->
-            <div class="prod-tab-panel" data-panel="description">
-                @if (!string.IsNullOrWhiteSpace(fullDescription))
-                {
-                    if (SterlingLams.Web.Services.ProductHtml.LooksLikeHtml(fullDescription))
-                    {
-                        <div class="prod-rich-desc text-sm text-neutral-600 leading-relaxed font-light break-words">@Html.Raw(SterlingLams.Web.Services.ProductHtml.Sanitize(fullDescription))</div>
-                    }
-                    else
-                    {
-                        <div class="text-sm text-neutral-600 leading-relaxed font-light break-words" style="white-space: pre-line;">@fullDescription</div>
-                    }
-                }
-                else
-                {
-                    <p class="text-sm text-neutral-400">No description available for this product.</p>
-                }
-            </div>
-
             <!-- Reviews -->
-            <div class="prod-tab-panel hidden" data-panel="reviews">
+            <div class="prod-tab-panel" data-panel="reviews">
                 @if (TempData["ReviewSuccess"] != null)
                 {
                     <div class="mb-6 px-4 py-3 bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm rounded-md">@TempData["ReviewSuccess"]</div>
@@ -590,7 +628,7 @@
                                 @if (!string.IsNullOrWhiteSpace(r.AdminReply))
                                 {
                                     <div class="mt-3 ml-4 bg-stone-50 border-l-2 border-brand-300 p-3 rounded">
-                                        <span class="text-xs font-medium text-neutral-500">Glamstar replied</span>
+                                        <span class="text-xs font-medium text-neutral-500">@siteName replied</span>
                                         <p class="text-sm text-neutral-600 mt-1">@r.AdminReply</p>
                                     </div>
                                 }
@@ -624,7 +662,7 @@
         <div class="mt-24">
             <div class="text-center mb-12">
                 <p class="text-xs tracking-[0.3em] uppercase text-neutral-400 mb-3">Pairs well with</p>
-                <h2 class="font-cormorant text-3xl font-light">Frequently Bought Together</h2>
+                <h2 class="font-bodoni text-3xl font-light">Frequently Bought Together</h2>
             </div>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
                 @foreach (var p in Model.FrequentlyBoughtTogether)
@@ -653,28 +691,25 @@
     <!-- ─── Related Products ──────────────────────────────────────────────── -->
     @if (Model.RelatedProducts.Any())
     {
-        <div class="mt-24">
-            <div class="text-center mb-12">
-                <p class="text-xs tracking-[0.3em] uppercase text-neutral-400 mb-3">You may also like</p>
-                <h2 class="font-cormorant text-3xl font-light">Related Pieces</h2>
-            </div>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+        <div class="mt-28">
+            <h2 class="font-bodoni text-4xl lg:text-5xl font-light text-neutral-900 text-center mb-14">You May Also Like</h2>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-10 lg:gap-x-8">
                 @foreach (var p in Model.RelatedProducts)
                 {
-                    <a asp-controller="Products" asp-action="Detail" asp-route-slug="@p.Slug" class="group">
-                        <div class="aspect-square bg-neutral-50 mb-3 overflow-hidden">
-                            <img src="@Img.Cld(p.PrimaryImageUrl, 400, 400)" alt="@p.Name"
-                                 loading="lazy" decoding="async" width="400" height="400"
-                                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                    <a asp-controller="Products" asp-action="Detail" asp-route-slug="@p.Slug" class="group text-center">
+                        <div class="aspect-square bg-neutral-50 mb-4 overflow-hidden">
+                            <img src="@Img.Cld(p.PrimaryImageUrl, 500, 500)" alt="@p.Name"
+                                 loading="lazy" decoding="async" width="500" height="500"
+                                 class="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-700" />
                         </div>
-                        <h3 class="text-sm font-light text-neutral-700 group-hover:text-neutral-900 transition-colors">@p.Name</h3>
+                        <h3 class="font-bodoni text-lg font-normal text-neutral-900 group-hover:text-brand-600 transition-colors px-2">@p.Name</h3>
                         @if (p.IsOnSale)
                         {
-                            <p class="text-xs mt-1"><span class="text-brand-600">@p.FormattedPrice</span> <span class="text-neutral-400 line-through ml-1">@p.FormattedRegularPrice</span></p>
+                            <p class="text-sm mt-1"><span class="text-brand-600">@p.FormattedPrice</span> <span class="text-neutral-400 line-through ml-1">@p.FormattedRegularPrice</span></p>
                         }
                         else
                         {
-                            <p class="text-xs text-neutral-400 mt-1">@p.FormattedPrice</p>
+                            <p class="text-sm text-neutral-500 mt-1">@p.FormattedPrice</p>
                         }
                     </a>
                 }
@@ -1046,6 +1081,32 @@
         t.addEventListener('click', () => window.switchMainImage(t.dataset.imgUrl, t)));
     document.querySelectorAll('.attr-select').forEach(s =>
         s.addEventListener('change', () => window.onAttrSelectChange(s.dataset.attr, s.value)));
+
+    // ── Variant image swatches / text pills → drive the hidden <select> ───────────
+    // Clicking a swatch selects that option (which swaps the right-hand image via
+    // applyVariantImage) and updates price / stock / validation through the same path.
+    document.querySelectorAll('.variant-swatch, .variant-pill').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var attr = btn.dataset.attr, val = btn.dataset.value;
+            var sel = document.querySelector('.attr-select[data-attr="' + (window.CSS && CSS.escape ? CSS.escape(attr) : attr) + '"]');
+            if (!sel) return;
+            sel.value = val;
+            // Active styling among the same attribute's options.
+            document.querySelectorAll('.variant-swatch[data-attr="' + attr.replace(/"/g, '\\"') + '"]').forEach(function (s) {
+                var on = s === btn;
+                var tile = s.querySelector('.sw-tile'), label = s.querySelector('.sw-label');
+                if (tile) { tile.classList.toggle('border-neutral-900', on); tile.classList.toggle('border-transparent', !on); }
+                if (label) { label.classList.toggle('text-neutral-900', on); label.classList.toggle('underline', on); label.classList.toggle('underline-offset-4', on); }
+            });
+            document.querySelectorAll('.variant-pill[data-attr="' + attr.replace(/"/g, '\\"') + '"]').forEach(function (p) {
+                var on = p === btn;
+                p.classList.toggle('border-neutral-900', on);
+                p.classList.toggle('bg-neutral-50', on);
+                p.classList.toggle('text-neutral-900', on);
+            });
+            sel.dispatchEvent(new Event('change'));   // → onAttrSelectChange → image swap + price + stock
+        });
+    });
 
     // ── Sticky mobile buy bar ──────────────────────────────────────────────
     (function () {

@@ -2,7 +2,7 @@
 @inject ISettingsService SettingsService
 @{
     ViewData["Title"] = "Payment & Returns";
-    ViewData["Description"] = "Glamstar payment methods, returns, refunds, and exchange policy.";
+    ViewData["Description"] = "Zephiel payment methods, returns, refunds, and exchange policy.";
     Layout = "_Layout";
     var bodyOverride = await SettingsService.GetAsync("pages.payment_returns_body", "");
 }
@@ -31,10 +31,10 @@ else
 
             <div class="text-sm text-neutral-500 font-light leading-relaxed space-y-6">
                 <p>
-                    Glamstar accepts payments through <strong class="font-normal text-neutral-700">Paystack</strong> using major credit and debit cards, including Visa, Mastercard, and Verve.
+                    Zephiel accepts payments through <strong class="font-normal text-neutral-700">Paystack</strong> using major credit and debit cards, including Visa, Mastercard, and Verve.
                 </p>
                 <p>
-                    All payment transactions are processed securely through Paystack using industry-standard encryption and security protocols designed to protect your personal and financial information. Glamstar does not store your complete payment card details on its servers.
+                    All payment transactions are processed securely through Paystack using industry-standard encryption and security protocols designed to protect your personal and financial information. Zephiel does not store your complete payment card details on its servers.
                 </p>
                 <p>
                     Payment must be successfully authorized and received before an order can be processed and shipped. If a payment is declined, cancelled, or otherwise unsuccessful, the order will not be confirmed.
@@ -67,7 +67,7 @@ else
             <div class="bg-neutral-900 text-white p-6 mb-10">
                 <p class="text-xs tracking-[0.2em] uppercase text-neutral-400 mb-2">Important Notice</p>
                 <p class="text-sm font-light leading-relaxed">
-                    Due to the nature of our products and for hygiene and quality assurance reasons, Glamstar does <strong class="font-normal">not</strong> currently accept returns or exchanges once an order has been delivered.
+                    Due to the nature of our products and for hygiene and quality assurance reasons, Zephiel does <strong class="font-normal">not</strong> currently accept returns or exchanges once an order has been delivered.
                 </p>
             </div>
 
@@ -90,14 +90,14 @@ else
             <div class="text-sm text-neutral-500 font-light leading-relaxed space-y-4">
                 <p>
                     If you receive an incorrect item or an item with a manufacturing defect, please contact our Customer Service team <strong class="font-normal text-neutral-700">within 48 hours of delivery</strong> at
-                    <a href="mailto:info@Glamstar.com" class="text-neutral-900 hover:underline underline-offset-2">info@Glamstar.com</a>,
+                    <a href="mailto:info@Zephiel.com" class="text-neutral-900 hover:underline underline-offset-2">info@Zephiel.com</a>,
                     providing your order number and supporting photographs where applicable.
                 </p>
                 <p>
-                    Claims will be reviewed on a case-by-case basis, and where a claim is verified, Glamstar may, at its sole discretion, offer a replacement, store credit, or other appropriate remedy.
+                    Claims will be reviewed on a case-by-case basis, and where a claim is verified, Zephiel may, at its sole discretion, offer a replacement, store credit, or other appropriate remedy.
                 </p>
                 <p>
-                    Glamstar is not responsible for delays, loss, or damage caused by third-party shipping or courier services after the order has been dispatched, except where required by applicable law.
+                    Zephiel is not responsible for delays, loss, or damage caused by third-party shipping or courier services after the order has been dispatched, except where required by applicable law.
                 </p>
             </div>
         </div>

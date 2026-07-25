@@ -337,7 +337,7 @@ public class StockController : InventoryAreaController
 
         var sb = new StringBuilder();
         sb.Append("Product,SKU,Barcode");
-        foreach (var s in stores) sb.Append(',').Append(Csv(s.Name.Replace("Glamstar ", "")));
+        foreach (var s in stores) sb.Append(',').Append(Csv(s.Name.Replace("Zephiel ", "")));
         sb.AppendLine(",Total");
 
         foreach (var p in all)

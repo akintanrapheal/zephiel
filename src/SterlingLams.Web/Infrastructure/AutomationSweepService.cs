@@ -185,7 +185,7 @@ public class AutomationSweepService : BackgroundService
         var token = Uri.EscapeDataString(marketing.MakeUnsubscribeToken(email));
         var url = $"{baseUrl}/unsubscribe?t={token}";
         return $"<p style=\"margin-top:24px;font-size:11px;color:#9ca3af;text-align:center\">" +
-               $"You're receiving this from Glamstar. " +
+               $"You're receiving this from Zephiel. " +
                $"<a href=\"{url}\" style=\"color:#9ca3af;text-decoration:underline\">Unsubscribe</a>.</p>";
     }
 }

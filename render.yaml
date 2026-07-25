@@ -1,20 +1,20 @@
 # ─────────────────────────────────────────────────────────────────────────────
-#  Render Blueprint — Glamstar (online, delivery-only jewellery store).
-#  Deploy: Render Dashboard -> New -> Blueprint -> pick the akintanrapheal/glamstar repo.
+#  Render Blueprint — Zephiel (online, delivery-only jewellery store).
+#  Deploy: Render Dashboard -> New -> Blueprint -> pick the akintanrapheal/zephiel repo.
 #  Starts on the free tier to get live cheaply. IMPORTANT: before taking real orders,
 #  upgrade the DATABASE off "free" (free Postgres has limited retention + no proper backups)
 #  and consider a paid web plan to remove cold starts. Region = frankfurt (closest to Nigeria).
 # ─────────────────────────────────────────────────────────────────────────────
 databases:
-  - name: glamstar-db
+  - name: zephiel-db
     plan: free
-    databaseName: glamstar
-    user: glamstar
+    databaseName: zephiel
+    user: zephiel
     region: frankfurt
 
 services:
   - type: web
-    name: glamstar
+    name: zephiel
     runtime: docker
     plan: free                 # free = spins down after ~15 min idle (cold start). Upgrade to
                                # 'starter' to remove cold starts when the store goes live.
@@ -41,15 +41,15 @@ services:
       # Database connection, injected by Render as a postgres:// URL.
       - key: DATABASE_URL
         fromDatabase:
-          name: glamstar-db
+          name: zephiel-db
           property: connectionString
-      # Paystack (Glamstar's OWN account). sync:false → set the VALUES in the Render
+      # Paystack (Zephiel's OWN account). sync:false → set the VALUES in the Render
       # Dashboard (Environment tab), never committed here. Needed for checkout payments.
       - key: Payment__Paystack__SecretKey
         sync: false
       - key: Payment__Paystack__PublicKey
         sync: false
-      # Cloudinary (Glamstar's OWN account) — persistent product-image hosting. Without
+      # Cloudinary (Zephiel's OWN account) — persistent product-image hosting. Without
       # these, uploads fall back to local disk which is wiped on every redeploy.
       - key: Cloudinary__CloudName
         sync: false

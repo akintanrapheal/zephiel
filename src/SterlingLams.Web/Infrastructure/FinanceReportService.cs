@@ -69,7 +69,7 @@ public class FinanceReportService : IFinanceReportService
             + $"<p style=\"color:#57534e;font-size:13px;margin:16px 0 0;\">{count} transaction(s) · POS {Money(posGross)} · Online {Money(gross - posGross)}</p>"
             + "<p style=\"color:#a8a29e;font-size:12px;margin:20px 0 0;\">Automated by the Finance module. Open the Finance dashboard for the full breakdown.</p>";
 
-        var subject = $"Glamstar — {freqLabel} finance summary ({f:dd MMM}–{t:dd MMM})";
+        var subject = $"Zephiel — {freqLabel} finance summary ({f:dd MMM}–{t:dd MMM})";
 
         var sent = 0;
         foreach (var to in recipients)

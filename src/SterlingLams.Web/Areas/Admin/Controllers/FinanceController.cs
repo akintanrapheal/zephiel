@@ -268,7 +268,7 @@ public class FinanceController : AdminBaseController
         void Row(params string[] cells) => sb.AppendLine(string.Join(",", cells.Select(Q)));
 
         var periodName = vm.Period switch { "week" => "Weekly", "month" => "Monthly", "quarter" => "Quarterly", "year" => "Yearly", _ => "Daily" };
-        Row("Glamstar — Finance report");
+        Row("Zephiel — Finance report");
         Row("Range", $"{vm.From:yyyy-MM-dd} to {vm.To:yyyy-MM-dd}");
         Row("Branch", storeName);
         Row("Channel", channelName);

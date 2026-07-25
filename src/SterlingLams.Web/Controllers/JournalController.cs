@@ -18,7 +18,7 @@ public class JournalController : Controller
     {
         if (page < 1) page = 1;
         ViewData["Title"] = "Journal";
-        ViewData["Description"] = "Styling notes, lookbooks and stories from Glamstar.";
+        ViewData["Description"] = "Styling notes, lookbooks and stories from Zephiel.";
 
         var published = _db.BlogPosts.AsNoTracking().Where(b => b.IsPublished);
         var total = await published.CountAsync();

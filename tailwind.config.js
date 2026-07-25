@@ -9,6 +9,10 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
+        // Editorial display / masthead. The actual family is admin-selectable (Settings → Homepage →
+        // Display font) and injected as the --display-font CSS variable by _Layout. The `bodoni` name
+        // is kept so existing `font-bodoni` markup keeps working regardless of the chosen font.
+        bodoni: ['var(--display-font)', 'Georgia', 'serif'],
         cormorant: ['"Cormorant Garamond"', 'Georgia', 'serif'],
         inter: ['Inter', 'system-ui', 'sans-serif'],
       },

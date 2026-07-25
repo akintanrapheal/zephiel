@@ -52,7 +52,7 @@ public class StripePaymentService : IPaymentService
                     ["order_number"] = request.OrderNumber,
                     ["customer_name"] = request.CustomerName
                 },
-                Description = $"Glamstar Order {request.OrderNumber}",
+                Description = $"Zephiel Order {request.OrderNumber}",
                 AutomaticPaymentMethods = new PaymentIntentAutomaticPaymentMethodsOptions
                 {
                     Enabled = true
@@ -106,7 +106,7 @@ public class StripePaymentService : IPaymentService
                             UnitAmount = (long)(request.Amount * 100),
                             ProductData = new Stripe.Checkout.SessionLineItemPriceDataProductDataOptions
                             {
-                                Name = $"Glamstar Order {request.OrderNumber}"
+                                Name = $"Zephiel Order {request.OrderNumber}"
                             }
                         },
                         Quantity = 1

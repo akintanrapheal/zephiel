@@ -29,7 +29,7 @@ public class MaintenanceModeMiddleware
             return;
         }
 
-        var siteName = await settings.GetAsync("general.site_name", "Glamstar");
+        var siteName = await settings.GetAsync("general.site_name", "Zephiel");
         var tagline = await settings.GetAsync("general.tagline", "");
         var email = await settings.GetAsync("general.contact_email", "");
         var logoUrl = await settings.GetAsync("general.logo_url", "");
@@ -85,7 +85,7 @@ public class MaintenanceModeMiddleware
         // tel: links must be digits/+ only
         static string TelHref(string s) => new string((s ?? string.Empty).Where(c => char.IsDigit(c) || c == '+').ToArray());
 
-        var name = Enc(string.IsNullOrWhiteSpace(siteName) ? "Glamstar" : siteName);
+        var name = Enc(string.IsNullOrWhiteSpace(siteName) ? "Zephiel" : siteName);
 
         // ── Logo / wordmark at the top ───────────────────────────────────────
         // Use the uploaded logo image when set (general.logo_url); otherwise fall back to a large

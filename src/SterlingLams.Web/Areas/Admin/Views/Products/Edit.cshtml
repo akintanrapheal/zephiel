@@ -646,7 +646,7 @@
                         var thr = sb.LowStockThreshold < 1 ? 1 : sb.LowStockThreshold;
                         var low = b.OnHand > 0 && b.OnHand < thr;
                         <div class="flex items-center justify-between text-xs">
-                            <span class="text-neutral-500">@b.Store.Replace("Glamstar ", "")</span>
+                            <span class="text-neutral-500">@b.Store.Replace("Zephiel ", "")</span>
                             <span class="font-medium @(b.OnHand == 0 ? "text-red-500" : low ? "text-amber-600" : "text-neutral-800")">
                                 @b.OnHand@(b.OnHand == 0 ? " · out" : low ? " · low" : "")
                             </span>

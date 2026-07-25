@@ -127,7 +127,7 @@ public class LogisticsDispatchService : ILogisticsDispatchService
             {
                 order.LogisticsPushedAt = DateTime.UtcNow;
                 await _db.SaveChangesAsync();
-                SterlingLams.Web.Services.OrderNotes.AddSystem(_db, order.Id, "Sent to Glamstar Logistics for delivery.");
+                SterlingLams.Web.Services.OrderNotes.AddSystem(_db, order.Id, "Sent to Zephiel Logistics for delivery.");
                 await _db.SaveChangesAsync();
                 _log.LogInformation("Pushed order {OrderNumber} to logistics.", order.OrderNumber);
             }

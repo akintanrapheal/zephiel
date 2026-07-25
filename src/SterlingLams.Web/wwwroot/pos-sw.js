@@ -1,5 +1,5 @@
 /*
- * Glamstar POS — service worker.
+ * Zephiel POS — service worker.
  * Scope: /Pos. Makes the till load instantly and survive a flaky/lost connection:
  *  - app shell + static assets cached (so the page loads offline),
  *  - product & logo images cached (so cards and the receipt logo show offline),

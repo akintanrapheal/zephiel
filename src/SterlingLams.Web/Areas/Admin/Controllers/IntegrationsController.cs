@@ -71,7 +71,7 @@ public class IntegrationsController : AdminBaseController
             SmtpUsername    = Plain("email.smtp.username", "Email:Username"),
             SmtpPasswordSet = Set("email.smtp.password", "Email:Password"),
             SmtpFromAddress = Plain("email.smtp.from_address", "Email:FromAddress"),
-            SmtpFromName    = string.IsNullOrWhiteSpace(Plain("email.smtp.from_name", null)) ? "Glamstar" : Plain("email.smtp.from_name", null),
+            SmtpFromName    = string.IsNullOrWhiteSpace(Plain("email.smtp.from_name", null)) ? "Zephiel" : Plain("email.smtp.from_name", null),
             SmtpSsl         = await _settings.GetBoolAsync("email.smtp.ssl", true),
 
             WaEnabled       = await _settings.GetBoolAsync("whatsapp.enabled", false),
@@ -104,7 +104,7 @@ public class IntegrationsController : AdminBaseController
             return Json(new { ok = false, message = "Enter a phone number to send the test to." });
 
         var (ok, message) = await _whatsapp.SendAsync(toPhone,
-            "✅ Test from Glamstar — your WhatsApp integration is working.");
+            "✅ Test from Zephiel — your WhatsApp integration is working.");
         await LogAsync("Update", "Setting", null, $"Sent test WhatsApp to {toPhone}: {(ok ? "ok" : "failed")}");
         return Json(new { ok, message });
     }
@@ -170,7 +170,7 @@ public class IntegrationsViewModel
     public string SmtpUsername { get; set; } = "";
     public bool SmtpPasswordSet { get; set; }
     public string SmtpFromAddress { get; set; } = "";
-    public string SmtpFromName { get; set; } = "Glamstar";
+    public string SmtpFromName { get; set; } = "Zephiel";
     public bool SmtpSsl { get; set; } = true;
 
     // WhatsApp
