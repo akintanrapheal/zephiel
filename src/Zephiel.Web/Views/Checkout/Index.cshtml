@@ -60,38 +60,12 @@
                     </section>
                 }
 
-                <!-- Step 1: Fulfillment Type -->
-                <section>
-                    <h2 class="font-cormorant text-2xl font-light mb-6">How would you like to receive your order?</h2>
-                    <div class="grid @(Model.PickupAvailable ? "grid-cols-2" : "grid-cols-1") gap-3">
-                        <label class="fulfillment-option border border-neutral-300 p-5 cursor-pointer hover:border-neutral-900 transition-colors has-[:checked]:border-neutral-900 has-[:checked]:bg-neutral-50">
-                            <input type="radio" name="FulfillmentType" value="Delivery" class="sr-only"
-                                   @(Model.FulfillmentType == FulfillmentChoice.Delivery ? "checked" : "") />
-                            <svg class="w-5 h-5 text-neutral-500 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8l1 12h12l1-12"/>
-                            </svg>
-                            <p class="text-sm font-medium text-neutral-800">Home Delivery</p>
-                            <p class="text-xs text-neutral-400 mt-1 font-light">Lagos, Abuja & Nationwide</p>
-                        </label>
+                @* Store pickup removed — every order ships. Bind delivery so the model/validation runs the delivery path. *@
+                <input type="hidden" name="FulfillmentType" value="Delivery" />
 
-                        @if (Model.PickupAvailable)
-                        {
-                            <label class="fulfillment-option border border-neutral-300 p-5 cursor-pointer hover:border-neutral-900 transition-colors has-[:checked]:border-neutral-900 has-[:checked]:bg-neutral-50">
-                                <input type="radio" name="FulfillmentType" value="StorePickup" class="sr-only"
-                                       @(Model.FulfillmentType == FulfillmentChoice.StorePickup ? "checked" : "") />
-                                <svg class="w-5 h-5 text-neutral-500 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 00-1-1h-2a1 1 0 00-1 1v5m4 0H9"/>
-                                </svg>
-                                <p class="text-sm font-medium text-neutral-800">Store Pickup</p>
-                                <p class="text-xs text-neutral-400 mt-1 font-light">Ready within 2 hours</p>
-                            </label>
-                        }
-                    </div>
-                </section>
-
-                <!-- Step 2a: Delivery Address -->
-                <section id="delivery-section" class="@(Model.FulfillmentType == FulfillmentChoice.StorePickup ? "hidden" : "")">
-                    <h2 class="font-cormorant text-2xl font-light mb-6">Delivery Address</h2>
+                <!-- Shipping -->
+                <section id="delivery-section">
+                    <h2 class="font-cormorant text-2xl font-light mb-6">Shipping Address</h2>
 
                     @if (Model.SavedAddresses.Any())
                     {
@@ -176,6 +150,17 @@
                             </div>
                         </div>
 
+                        <div>
+                            <label class="block text-xs tracking-[0.15em] uppercase text-neutral-500 mb-2">Country</label>
+                            <select asp-for="DeliveryAddress.Country" class="form-input bg-white">
+                                @foreach (var country in Zephiel.Web.Infrastructure.Countries.All)
+                                {
+                                    <option value="@country" selected="@(Model.DeliveryAddress.Country == country)">@country</option>
+                                }
+                            </select>
+                            <span asp-validation-for="DeliveryAddress.Country" class="text-xs text-red-500 mt-1 block"></span>
+                        </div>
+
                         <label class="flex items-center gap-2 text-sm text-neutral-500">
                             <input asp-for="DeliveryAddress.SaveAddress" type="checkbox" class="rounded-none border-neutral-300 text-neutral-900" />
                             Save this address for future orders
@@ -190,28 +175,7 @@
                     </div>
                 </section>
 
-                <!-- Step 2b: Store Pickup -->
-                <section id="pickup-section" class="@(Model.FulfillmentType == FulfillmentChoice.Delivery ? "hidden" : "")">
-                    <h2 class="font-cormorant text-2xl font-light mb-6">Select a Store</h2>
-                    <div class="space-y-3">
-                        @foreach (var store in Model.AvailableStores)
-                        {
-                            <label class="flex gap-4 border border-neutral-200 p-5 cursor-pointer hover:border-neutral-900 transition-colors has-[:checked]:border-neutral-900 has-[:checked]:bg-neutral-50">
-                                <input type="radio" name="SelectedStoreId" value="@store.StoreId" class="mt-1 text-neutral-900 focus:ring-0" />
-                                <div>
-                                    <p class="text-sm font-medium text-neutral-800">@store.StoreName</p>
-                                    <p class="text-xs text-neutral-400 font-light mt-0.5">@store.Address</p>
-                                    @if (!string.IsNullOrEmpty(store.OpeningHours))
-                                    {
-                                        <p class="text-xs text-neutral-400 font-light">@store.OpeningHours</p>
-                                    }
-                                </div>
-                            </label>
-                        }
-                    </div>
-                </section>
-
-                <!-- Step 3: Order notes + newsletter -->
+                <!-- Order notes + newsletter -->
                 <section>
                     <h2 class="font-cormorant text-2xl font-light mb-6">Additional details</h2>
                     <label asp-for="OrderNotes" class="block text-xs tracking-[0.2em] uppercase text-neutral-500 mb-2">
@@ -366,8 +330,9 @@ let CURRENT_FEE = 0;
 
 // ── Fulfillment toggle ────────────────────────────────────────────────────
 function toggleFulfillment(type) {
-    document.getElementById('delivery-section').classList.toggle('hidden', type !== 'delivery');
-    document.getElementById('pickup-section').classList.toggle('hidden', type !== 'pickup');
+    // Store pickup was removed — this only ever runs for delivery, but stay null-safe.
+    document.getElementById('delivery-section')?.classList.toggle('hidden', type !== 'delivery');
+    document.getElementById('pickup-section')?.classList.toggle('hidden', type !== 'pickup');
     if (type === 'pickup') {
         updateSummary(0);
     }
