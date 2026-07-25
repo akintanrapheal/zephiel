@@ -11,6 +11,13 @@ public static class SettingsSelectOptions
         {
             // Display-font choices come from the DisplayFonts catalogue (single source of truth).
             ["appearance.display_font"] = DisplayFonts.Options,
+            ["homepage.theme"] = new[]
+            {
+                ("editorial", "Editorial — refined serif, dark & spacious"),
+                ("minimal",   "Minimal — clean sans, light & airy"),
+                ("boutique",  "Boutique — warm, soft & rounded"),
+                ("classic",   "Classic — big hero, 4 collections, gold accents"),
+            },
             ["home.diamond.animation"] = new[]
             {
                 ("glow",      "Glow & Sparkle"),

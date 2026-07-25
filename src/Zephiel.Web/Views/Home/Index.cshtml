@@ -51,27 +51,122 @@
     if (tickerLabels.Count == 0) tickerLabels.Add("Fine Jewellery");
 
     var shopCategories = ViewBag.ShopCategories as List<Zephiel.Web.Models.Domain.Category> ?? new();
+
+    // ─── Homepage theme (Admin → Settings → Homepage → Homepage Theme) ───────
+    var theme      = SettingsSelectOptions.Coerce("homepage.theme", await SettingsService.GetAsync("homepage.theme", "editorial"));
+    var isMinimal  = theme == "minimal";
+    var isBoutique = theme == "boutique";
+    var isClassic  = theme == "classic";
+    var lightHero  = isMinimal || isBoutique;
+
+    // Classic-theme gold accents
+    var goldText = "text-[#cbaa72]";
+    var goldBtn  = "bg-[#b0895a] hover:bg-[#c19a63]";
+    // Classic theme shows exactly four collection tiles (Rings/Necklaces/Earrings/Bracelets,
+    // falling back to the first four) and a static trust bar.
+    var classicCats = new[] { "rings", "necklaces", "earrings", "bracelets" }
+        .Select(s => shopCategories.FirstOrDefault(c => c.Slug == s))
+        .Where(c => c != null).Select(c => c!).ToList();
+    if (classicCats.Count < 4) classicCats = shopCategories.Take(4).ToList();
+    var classicTrust = tickerLabels.Take(4).ToList();
+
+    // Shared tokens
+    var tHead    = isMinimal ? "font-sans" : "font-bodoni";
+    var tEyebrow = isMinimal ? "text-neutral-400" : isBoutique ? "text-brand-400" : "text-brand-500";
+    var tCanvas  = isMinimal ? "bg-white" : isBoutique ? "bg-stone-50" : "bg-canvas";
+    var tImgRad  = isBoutique ? "rounded-2xl" : "";
+    var tBtn     = isMinimal ? "bg-neutral-900 hover:bg-neutral-800" : "bg-brand-500 hover:bg-brand-400";
+
+    // Hero tokens
+    var tHeroWrap  = isMinimal  ? "bg-white text-neutral-900"
+                   : isBoutique ? "bg-gradient-to-br from-stone-100 via-stone-50 to-white text-neutral-900"
+                   :              "bg-neutral-950 text-white";
+    var tHeroMuted = lightHero ? "text-neutral-500" : "text-white/60";
+    var tHeroFaint = lightHero ? "text-neutral-400" : "text-white/40";
+    var tHeroLine  = lightHero ? "bg-neutral-300"   : "bg-white/20";
+    var tHeroEye   = isMinimal ? "text-neutral-400" : isBoutique ? "text-brand-400" : "text-brand-300";
+    var tHeroTail  = isMinimal ? "text-neutral-900" : "text-brand-300";
+    var tHeroBtn2  = lightHero ? "border-neutral-300 text-neutral-900 hover:bg-neutral-900 hover:text-white"
+                               : "border-white/25 text-white hover:bg-white hover:text-neutral-950";
+
+    // Ticker tokens
+    var tTicker      = isMinimal  ? "bg-neutral-50 text-neutral-800 border-neutral-200"
+                     : isBoutique ? "bg-stone-100 text-neutral-800 border-stone-200"
+                     :              "bg-neutral-950 text-white border-white/10";
+    var tTickerLabel = isMinimal ? "font-sans uppercase tracking-[0.25em] text-sm lg:text-lg text-neutral-700"
+                                 : "font-bodoni italic font-light text-3xl lg:text-5xl";
+    var tTickerStar  = isMinimal ? "text-neutral-300 text-lg lg:text-xl" : "text-brand-400 text-2xl lg:text-3xl";
 }
 
 <partial name="_QuickViewModal" />
 
+@if (isClassic)
+{
+    <!-- ═══ Classic hero — full-bleed image, left headline, gold CTA ═════════ -->
+    <section class="relative bg-neutral-950 text-white overflow-hidden">
+        <div class="relative min-h-[78vh] lg:min-h-[88vh] flex items-center">
+            @if (hasHeroImage)
+            {
+                <div id="hero-slider" class="absolute inset-0" data-hero-count="@heroImages.Count" data-hero-interval="5000">
+                    @for (var hi = 0; hi < heroImages.Count; hi++)
+                    {
+                        <img src="@Img.Cld(heroImages[hi], 1800)" alt="@(siteName) campaign @(hi + 1)" decoding="async"
+                             loading="@(hi == 0 ? "eager" : "lazy")" fetchpriority="@(hi == 0 ? "high" : "auto")"
+                             class="hero-slide absolute inset-0 w-full h-full object-cover object-center transition-opacity duration-[1200ms] ease-in-out @(hi == 0 ? "opacity-100" : "opacity-0")" />
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="absolute inset-0 bg-gradient-to-br from-neutral-900 via-neutral-950 to-black"></div>
+            }
+            <div class="pointer-events-none absolute inset-0 bg-gradient-to-r from-neutral-950/85 via-neutral-950/45 to-neutral-950/10"></div>
+            <div class="relative w-full max-w-7xl mx-auto px-6 lg:px-12">
+                <div class="max-w-xl">
+                    <h1 class="font-bodoni font-light leading-[1.05] text-4xl sm:text-5xl lg:text-6xl @goldText">@heroHeadline</h1>
+                    <p class="mt-6 max-w-md text-sm sm:text-base font-light leading-relaxed text-white/70">@heroSubtext</p>
+                    <a asp-controller="Products" asp-action="Index"
+                       class="group mt-9 inline-flex items-center gap-3 @goldBtn text-white text-[11px] tracking-[0.25em] uppercase px-9 py-4 transition-colors duration-300">
+                        @heroCta
+                        <span class="transition-transform duration-300 group-hover:translate-x-1">&rarr;</span>
+                    </a>
+                </div>
+            </div>
+            @if (hasHeroImage && heroImages.Count > 1)
+            {
+                <div id="hero-dots" class="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+                    @for (var hi = 0; hi < heroImages.Count; hi++)
+                    {
+                        <button type="button" class="hero-dot h-1.5 rounded-full transition-all duration-500 @(hi == 0 ? "w-6 bg-white" : "w-1.5 bg-white/40")" data-hero-go="@hi" aria-label="Show campaign image @(hi + 1)"></button>
+                    }
+                </div>
+            }
+        </div>
+    </section>
+}
+
+@if (!isClassic)
+{
 <!-- ═══ Hero — asymmetric editorial split ═══════════════════════════════════ -->
-<section class="relative bg-neutral-950 text-white overflow-hidden">
+<section class="relative @tHeroWrap overflow-hidden">
     <div class="grid lg:grid-cols-[1.05fr_0.95fr] lg:min-h-screen">
 
         <!-- Editorial column -->
         <div class="relative z-10 flex flex-col justify-between px-6 sm:px-10 lg:px-16 pt-10 pb-14 lg:py-20 order-2 lg:order-1">
-            <!-- Masthead line -->
-            <div class="hidden lg:flex items-center gap-4 text-[10px] tracking-[0.4em] uppercase text-white/50">
-                <span>Volume 01</span>
-                <span class="flex-1 h-px bg-white/20"></span>
-                <span>@siteName</span>
-            </div>
+            <!-- Masthead line (editorial / boutique only) -->
+            @if (!isMinimal)
+            {
+                <div class="hidden lg:flex items-center gap-4 text-[10px] tracking-[0.4em] uppercase @tHeroFaint">
+                    <span>Volume 01</span>
+                    <span class="flex-1 h-px @tHeroLine"></span>
+                    <span>@siteName</span>
+                </div>
+            }
 
             <!-- Display headline -->
             <div class="py-12 lg:py-0">
-                <p class="text-[11px] tracking-[0.45em] uppercase text-brand-300 mb-6">@heroEyebrow</p>
-                <h1 class="font-bodoni font-light leading-[0.92] tracking-tight text-6xl sm:text-7xl lg:text-8xl xl:text-[8.5rem]">
+                <p class="text-[11px] tracking-[0.45em] uppercase @tHeroEye mb-6">@heroEyebrow</p>
+                <h1 class="@tHead font-light leading-[0.92] tracking-tight text-6xl sm:text-7xl lg:text-8xl xl:text-[8.5rem]">
                     @{
                         var words = heroHeadline.Split(' ');
                         var lead  = words.Length > 1 ? string.Join(' ', words.Take(words.Length - 1)) : heroHeadline;
@@ -80,31 +175,31 @@
                     <span class="block">@lead</span>
                     @if (!string.IsNullOrEmpty(tail))
                     {
-                        <span class="block italic text-brand-300">@tail</span>
+                        <span class="block italic @tHeroTail">@tail</span>
                     }
                 </h1>
-                <p class="mt-8 max-w-md text-sm sm:text-base font-light leading-relaxed text-white/60">
+                <p class="mt-8 max-w-md text-sm sm:text-base font-light leading-relaxed @tHeroMuted">
                     @heroSubtext
                 </p>
                 <div class="mt-10 flex flex-col sm:flex-row gap-4">
                     <a asp-controller="Products" asp-action="Index"
-                       class="group inline-flex items-center justify-center gap-3 bg-brand-500 text-white text-[11px] tracking-[0.25em] uppercase px-9 py-4 hover:bg-brand-400 transition-colors duration-300">
+                       class="group inline-flex items-center justify-center gap-3 @tBtn text-white text-[11px] tracking-[0.25em] uppercase px-9 py-4 transition-colors duration-300">
                         @heroCta
                         <span class="transition-transform duration-300 group-hover:translate-x-1">&rarr;</span>
                     </a>
                     <a asp-controller="Home" asp-action="Collections"
-                       class="inline-flex items-center justify-center border border-white/25 text-white text-[11px] tracking-[0.25em] uppercase px-9 py-4 hover:border-white hover:bg-white hover:text-neutral-950 transition-colors duration-300">
+                       class="inline-flex items-center justify-center border @tHeroBtn2 text-[11px] tracking-[0.25em] uppercase px-9 py-4 transition-colors duration-300">
                         Discover Zephiel
                     </a>
                 </div>
             </div>
 
             <!-- Footline / scroll cue -->
-            <div class="flex items-center justify-between text-[10px] tracking-[0.35em] uppercase text-white/40">
-                <span>@siteName — Fine Jewellery, Crafted in Nigeria</span>
+            <div class="flex items-center justify-between text-[10px] tracking-[0.35em] uppercase @tHeroFaint">
+                <span>@siteName — Fine Jewellery</span>
                 <span class="hidden sm:flex items-center gap-3">
                     Explore
-                    <span class="w-10 h-px bg-white/30"></span>
+                    <span class="w-10 h-px @tHeroLine"></span>
                 </span>
             </div>
         </div>
@@ -136,18 +231,24 @@
             {
                 <div class="absolute inset-0 bg-gradient-to-br from-brand-900 via-neutral-900 to-neutral-950"></div>
             }
-            <!-- Oversized index number -->
-            <span class="pointer-events-none absolute bottom-6 right-6 lg:bottom-10 lg:right-10 font-bodoni text-7xl lg:text-9xl leading-none text-white/15 select-none"
-                  style="-webkit-text-stroke:1px rgba(255,255,255,.35);color:transparent;">01</span>
-            <!-- Vertical label -->
-            <span class="hidden lg:block absolute top-1/2 -translate-y-1/2 left-6 text-[10px] tracking-[0.5em] uppercase text-white/50"
-                  style="writing-mode:vertical-rl;">The New Collection</span>
+            @if (!isMinimal)
+            {
+                <!-- Oversized index number -->
+                <span class="pointer-events-none absolute bottom-6 right-6 lg:bottom-10 lg:right-10 font-bodoni text-7xl lg:text-9xl leading-none text-white/15 select-none"
+                      style="-webkit-text-stroke:1px rgba(255,255,255,.35);color:transparent;">01</span>
+                <!-- Vertical label -->
+                <span class="hidden lg:block absolute top-1/2 -translate-y-1/2 left-6 text-[10px] tracking-[0.5em] uppercase text-white/50"
+                      style="writing-mode:vertical-rl;">The New Collection</span>
+            }
         </div>
     </div>
 </section>
+}
 
+@if (!isClassic)
+{
 <!-- ═══ Oversized running statement (editorial ticker) ══════════════════════ -->
-<section class="bg-neutral-950 text-white border-t border-white/10 overflow-hidden py-6 lg:py-8" aria-label="Why shop with us">
+<section class="@tTicker border-t overflow-hidden py-6 lg:py-8" aria-label="Why shop with us">
     <div class="ed-marquee flex w-max items-center">
         @for (var g = 0; g < 2; g++)
         {
@@ -156,8 +257,8 @@
                 {
                     @foreach (var label in tickerLabels)
                     {
-                        <span class="font-bodoni italic font-light text-3xl lg:text-5xl whitespace-nowrap px-8 text-white/85">@label</span>
-                        <span class="text-brand-400 text-2xl lg:text-3xl px-2">&#10022;</span>
+                        <span class="@tTickerLabel whitespace-nowrap px-8">@label</span>
+                        <span class="@tTickerStar px-2">&#10022;</span>
                     }
                 }
             </div>
@@ -170,85 +271,102 @@
     .ed-marquee:hover { animation-play-state: paused; }
     @@media (prefers-reduced-motion: reduce) { .ed-marquee { animation: none; } }
 </style>
+}
 
-<!-- ═══ Category index — numbered magazine list w/ hover preview ════════════ -->
-@if (shopCategories.Any())
+@if (shopCategories.Any() && isClassic)
 {
-    <section class="bg-canvas py-20 lg:py-28">
-        <div class="max-w-7xl mx-auto px-6 lg:px-16">
-            <div class="flex items-end justify-between mb-12 lg:mb-16">
+    <!-- ═══ Classic — "Our Collections" (4 tiles) ══════════════════════════════ -->
+    <section class="bg-white py-16 lg:py-24">
+        <div class="max-w-7xl mx-auto px-6 lg:px-12">
+            <div class="text-center mb-10 lg:mb-14">
+                <h2 class="font-bodoni text-4xl lg:text-5xl font-light text-neutral-900">Our Collections</h2>
+                <p class="mt-3 text-sm text-neutral-500 font-light">Discover our exquisite jewellery selection</p>
+            </div>
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+                @foreach (var cat in classicCats)
+                {
+                    var cImg = string.IsNullOrWhiteSpace(cat.ImageUrl) ? "" : Img.Cld(cat.ImageUrl, 600, 760);
+                    <a asp-controller="Products" asp-action="Index" asp-route-category="@cat.Slug"
+                       class="group relative block aspect-[3/4] overflow-hidden bg-neutral-900">
+                        @if (!string.IsNullOrEmpty(cImg))
+                        {
+                            <img src="@cImg" alt="@cat.Name" loading="lazy" decoding="async"
+                                 class="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                        }
+                        <div class="absolute inset-0 bg-gradient-to-t from-neutral-950/80 via-neutral-950/10 to-transparent"></div>
+                        <span class="absolute bottom-4 left-4 right-4 font-bodoni text-lg lg:text-xl font-light text-white">@cat.Name</span>
+                    </a>
+                }
+            </div>
+        </div>
+    </section>
+
+    <!-- Static trust bar (no motion) -->
+    <section class="bg-stone-50 border-t border-neutral-200 py-8 lg:py-10">
+        <div class="max-w-7xl mx-auto px-6 lg:px-12 grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
+            @{
+                var trustIcons = new[]
+                {
+                    "M3 7.5h11v7H3zM14 10h3.5L20 12.5v2H14z M6.5 16.5a1.5 1.5 0 103 0 M15 16.5a1.5 1.5 0 103 0",
+                    "M12 3l7 3v5c0 4-3 6.7-7 8-4-1.3-7-4-7-8V6z",
+                    "M12 2.5l2.3 4.7 5.2.8-3.8 3.7.9 5.2L12 14.4l-4.6 2.4.9-5.2L4.5 8l5.2-.8z",
+                    "M6.5 10.5V8a5.5 5.5 0 1111 0v2.5 M5 10.5h14v9H5z"
+                };
+            }
+            @for (var ti = 0; ti < classicTrust.Count; ti++)
+            {
+                <div class="flex items-center gap-3">
+                    <svg class="w-6 h-6 flex-shrink-0 @goldText" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="@trustIcons[ti % trustIcons.Length]" />
+                    </svg>
+                    <span class="text-sm font-medium text-neutral-800">@classicTrust[ti]</span>
+                </div>
+            }
+        </div>
+    </section>
+}
+
+<!-- ═══ Shop by Category — compact image-card grid (non-classic) ════════════ -->
+@if (shopCategories.Any() && !isClassic)
+{
+    <section class="@tCanvas py-16 lg:py-24">
+        <div class="max-w-7xl mx-auto px-6 lg:px-12">
+            <div class="flex items-end justify-between mb-8 lg:mb-12">
                 <div>
-                    <p class="text-[11px] tracking-[0.4em] uppercase text-brand-500 mb-3">The Index</p>
-                    <h2 class="font-bodoni text-5xl lg:text-7xl font-light text-neutral-900 leading-none">Shop by Category</h2>
+                    <p class="text-[11px] tracking-[0.35em] uppercase @tEyebrow mb-3">Shop by</p>
+                    <h2 class="@tHead text-3xl sm:text-4xl lg:text-5xl font-light text-neutral-900 leading-none">Category</h2>
                 </div>
                 <a asp-controller="Products" asp-action="Index"
-                   class="hidden md:inline-block text-[11px] tracking-[0.25em] uppercase text-neutral-500 hover:text-brand-600 transition-colors border-b border-neutral-300 pb-1">
+                   class="hidden sm:inline-block text-[11px] tracking-[0.25em] uppercase text-neutral-500 hover:text-brand-600 transition-colors border-b border-neutral-300 pb-1">
                     View All &rarr;
                 </a>
             </div>
 
-            <!-- Mobile: tappable image cards (desktop uses the numbered list + hover preview below) -->
-            <div class="grid grid-cols-2 gap-3 sm:gap-4 lg:hidden">
-                @{ var mi = 0; }
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-5">
                 @foreach (var cat in shopCategories)
                 {
-                    mi++;
-                    var mImg = string.IsNullOrWhiteSpace(cat.ImageUrl) ? "" : Img.Cld(cat.ImageUrl, 500, 620);
+                    var cImg = string.IsNullOrWhiteSpace(cat.ImageUrl) ? "" : Img.Cld(cat.ImageUrl, 500, 500);
                     <a asp-controller="Products" asp-action="Index" asp-route-category="@cat.Slug"
-                       class="group relative block aspect-[4/5] overflow-hidden bg-neutral-200">
-                        @if (!string.IsNullOrEmpty(mImg))
+                       class="group relative block aspect-square overflow-hidden bg-neutral-100 @tImgRad">
+                        @if (!string.IsNullOrEmpty(cImg))
                         {
-                            <img src="@mImg" alt="@cat.Name" loading="lazy" decoding="async"
-                                 class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-active:scale-105" />
-                            <div class="absolute inset-0 bg-gradient-to-t from-neutral-950/75 via-neutral-950/10 to-transparent"></div>
+                            <img src="@cImg" alt="@cat.Name" loading="lazy" decoding="async"
+                                 class="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 group-active:scale-105" />
+                            <div class="absolute inset-0 bg-gradient-to-t from-neutral-950/65 via-neutral-950/5 to-transparent"></div>
                         }
                         else
                         {
                             <div class="absolute inset-0 bg-gradient-to-br from-brand-100 via-neutral-100 to-stone-100"></div>
                         }
-                        <span class="absolute top-2.5 left-3 font-bodoni text-xs tabular-nums @(string.IsNullOrEmpty(mImg) ? "text-neutral-400" : "text-white/70")">@mi.ToString("00")</span>
-                        <span class="absolute bottom-3 left-3 right-3 font-bodoni text-lg font-light leading-tight @(string.IsNullOrEmpty(mImg) ? "text-neutral-800" : "text-white")">@cat.Name</span>
+                        <span class="absolute bottom-2.5 left-3 right-3 @tHead text-sm sm:text-base font-light leading-tight @(string.IsNullOrEmpty(cImg) ? "text-neutral-800" : "text-white")">@cat.Name</span>
                     </a>
                 }
             </div>
+
             <a asp-controller="Products" asp-action="Index"
-               class="lg:hidden mt-5 flex items-center justify-center gap-2 border border-neutral-900/20 py-4 text-[11px] tracking-[0.25em] uppercase text-neutral-700">
+               class="sm:hidden mt-5 flex items-center justify-center gap-2 border border-neutral-900/20 py-3.5 text-[11px] tracking-[0.25em] uppercase text-neutral-700">
                 View All Categories &rarr;
             </a>
-
-            <div class="hidden lg:grid lg:grid-cols-[1fr_26rem] gap-10 lg:gap-16 items-start">
-                <!-- Numbered list -->
-                <ul id="cat-index" class="border-t border-neutral-900/15">
-                    @{ var ci = 0; }
-                    @foreach (var cat in shopCategories)
-                    {
-                        ci++;
-                        var catImg = string.IsNullOrWhiteSpace(cat.ImageUrl) ? "" : Img.Cld(cat.ImageUrl, 800, 1000);
-                        <li>
-                            <a asp-controller="Products" asp-action="Index" asp-route-category="@cat.Slug"
-                               class="cat-row group flex items-baseline justify-between gap-6 border-b border-neutral-900/15 py-5 lg:py-7"
-                               data-cat-img="@catImg" data-cat-name="@cat.Name">
-                                <span class="flex items-baseline gap-5 lg:gap-8 min-w-0">
-                                    <span class="font-bodoni text-base lg:text-lg text-neutral-400 tabular-nums">@ci.ToString("00")</span>
-                                    <span class="font-bodoni text-3xl sm:text-4xl lg:text-6xl font-light text-neutral-900 group-hover:text-brand-600 transition-colors truncate">@cat.Name</span>
-                                </span>
-                                <span class="text-neutral-300 group-hover:text-brand-500 group-hover:translate-x-1 transition-all text-xl lg:text-2xl shrink-0">&#8599;</span>
-                            </a>
-                        </li>
-                    }
-                </ul>
-
-                <!-- Hover preview (desktop) -->
-                <div class="hidden lg:block sticky top-28">
-                    <div class="relative aspect-[4/5] overflow-hidden bg-neutral-200">
-                        <img id="cat-preview-img" src="" alt="" class="absolute inset-0 w-full h-full object-cover transition-opacity duration-500 opacity-0" />
-                        <div id="cat-preview-fallback" class="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-brand-100 via-neutral-100 to-stone-100">
-                            <span id="cat-preview-name" class="font-bodoni text-3xl font-light text-neutral-400 text-center px-6"></span>
-                        </div>
-                        <span class="absolute bottom-4 left-4 text-[10px] tracking-[0.3em] uppercase text-white/90 mix-blend-difference">Preview</span>
-                    </div>
-                </div>
-            </div>
         </div>
     </section>
 }
@@ -333,12 +451,12 @@
 <!-- ═══ The Selection — featured products ═══════════════════════════════════ -->
 @if (showFeatured)
 {
-    <section class="bg-canvas py-20 lg:py-28">
-        <div class="max-w-7xl mx-auto px-6 lg:px-16">
-            <div class="flex items-end justify-between mb-12 lg:mb-16">
+    <section class="@tCanvas py-16 lg:py-24">
+        <div class="max-w-7xl mx-auto px-6 lg:px-12">
+            <div class="flex items-end justify-between mb-8 lg:mb-12">
                 <div>
-                    <p class="text-[11px] tracking-[0.4em] uppercase text-brand-500 mb-3">Curated for you</p>
-                    <h2 class="font-bodoni text-5xl lg:text-7xl font-light text-neutral-900 leading-none">@featuredHeading</h2>
+                    <p class="text-[11px] tracking-[0.35em] uppercase @tEyebrow mb-3">Curated for you</p>
+                    <h2 class="@tHead text-3xl sm:text-4xl lg:text-5xl font-light text-neutral-900 leading-none">@featuredHeading</h2>
                 </div>
                 <a asp-controller="Products" asp-action="Index"
                    class="hidden md:inline-block text-[11px] tracking-[0.25em] uppercase text-neutral-500 hover:text-brand-600 transition-colors border-b border-neutral-300 pb-1">
@@ -486,28 +604,6 @@
             msg.classList.add('text-red-400');
         } finally { btn.disabled = false; }
     });
-}());
-
-// Category index — hover reveals the category image in the preview panel.
-(function () {
-    var list = document.getElementById('cat-index');
-    var img  = document.getElementById('cat-preview-img');
-    var fb   = document.getElementById('cat-preview-fallback');
-    var name = document.getElementById('cat-preview-name');
-    if (!list || !img) return;
-    var rows = list.querySelectorAll('.cat-row');
-    function preview(row) {
-        var src = row.getAttribute('data-cat-img');
-        name.textContent = row.getAttribute('data-cat-name') || '';
-        if (src) {
-            img.src = src; img.alt = row.getAttribute('data-cat-name') || '';
-            img.classList.remove('opacity-0'); fb.classList.add('opacity-0');
-        } else {
-            img.classList.add('opacity-0'); fb.classList.remove('opacity-0');
-        }
-    }
-    rows.forEach(function (r) { r.addEventListener('mouseenter', function () { preview(r); }); });
-    if (rows.length) preview(rows[0]);   // default to the first category
 }());
 
 // Featured products carousel — auto-advances one card at a time, loops, pauses on interaction.
