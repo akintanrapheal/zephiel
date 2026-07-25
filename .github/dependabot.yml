@@ -4,7 +4,7 @@
 # for vulnerable dependencies continuously — no manual runs needed.
 version: 2
 updates:
-  # .NET / NuGet packages (discovers the projects via SterlingLams.sln at the repo root)
+  # .NET / NuGet packages (discovers the projects via Zephiel.sln at the repo root)
   - package-ecosystem: "nuget"
     directory: "/"
     schedule:

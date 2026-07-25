@@ -11,7 +11,7 @@ node_modules/
 npm-debug.log*
 
 # Generated CSS (built by Tailwind)
-src/SterlingLams.Web/wwwroot/css/app.css
+src/Zephiel.Web/wwwroot/css/app.css
 
 # Logs
 logs/

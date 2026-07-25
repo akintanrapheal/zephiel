@@ -1,4 +1,4 @@
-# Sterlin Glams — Setup, Logins & Deployment Guide
+# Zephiel — Setup, Logins & Deployment Guide
 
 This document explains how to run, access, and host the Sterlin Glams website.
 
@@ -11,8 +11,8 @@ This document explains how to run, access, and host the Sterlin Glams website.
 
 ### Website Admin
 - **URL (local):** http://localhost:5000/Account/Login
-- **Email:** `rapheal@sterlinglamslogistics.com`
-- **Default password:** `Admin@sterlinglams1`
+- **Email:** `rapheal@zephiell.com`
+- **Default password:** `Admin@zephiel1`
 - ⚠️ **Change this immediately after first login** (Profile → Security).
   The default is created by the seeder on a fresh database.
 
@@ -27,19 +27,19 @@ Each role only sees the admin sections you grant it
 |-------|-------|
 | Host | `localhost` |
 | Port | `5432` |
-| Database | `sterlinglams_dev` |
+| Database | `zephiel_dev` |
 | Username | `postgres` |
 | Password | `postgres` |
 
 View it with **pgAdmin 4** (installed with PostgreSQL):
-`Servers → PostgreSQL 18 → Databases → sterlinglams_dev → Schemas → public → Tables`.
+`Servers → PostgreSQL 18 → Databases → zephiel_dev → Schemas → public → Tables`.
 
 ### ERPNext (Frappe Cloud)
-- **URL:** https://sterlinglams.l.frappe.cloud
+- **URL:** https://zephiel.l.frappe.cloud
 - Manage login / API keys from the Frappe Cloud dashboard.
 
 ### Source code (GitHub)
-- **Repo:** https://github.com/sterlinglamslogistics-tech/sterlinglams-erpnext
+- **Repo:** https://github.com/zephiellogistics-tech/zephiel-erpnext
 - Push local commits with: `git push origin master`
 
 ---
@@ -53,7 +53,7 @@ npm install
 npm run build:css
 
 # 3. Run the app
-dotnet run --project src/SterlingLams.Web/SterlingLams.Web.csproj --urls http://localhost:5000
+dotnet run --project src/Zephiel.Web/Zephiel.Web.csproj --urls http://localhost:5000
 ```
 
 On first run against an empty database the app automatically seeds:
@@ -100,15 +100,15 @@ The website needs a **.NET-capable host** + a **hosted PostgreSQL** database.
 
 1. Push code to GitHub: `git push origin master`
 2. [render.com](https://render.com) → sign up with GitHub.
-3. **New → PostgreSQL** → name `sterlinglams` → copy the **Internal Connection String**.
+3. **New → PostgreSQL** → name `zephiel` → copy the **Internal Connection String**.
 4. **New → Web Service** → connect the GitHub repo.
-   - Build: `dotnet publish src/SterlingLams.Web/SterlingLams.Web.csproj -c Release -o out`
-   - Start: `dotnet out/SterlingLams.Web.dll`
+   - Build: `dotnet publish src/Zephiel.Web/Zephiel.Web.csproj -c Release -o out`
+   - Start: `dotnet out/Zephiel.Web.dll`
    - (Or use a Dockerfile — ask the dev to add one.)
 5. Add the **environment variables** from section 3 (use the Postgres string from step 3,
    your ERPNext keys, and your **LIVE** Paystack keys).
-6. Deploy. You get a URL like `sterlinglams.onrender.com`.
-7. **Settings → Custom Domains** → add `sterlinglams.com` and follow the DNS steps.
+6. Deploy. You get a URL like `zephiel.onrender.com`.
+7. **Settings → Custom Domains** → add `zephiel.com` and follow the DNS steps.
 
 ---
 

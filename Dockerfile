@@ -4,9 +4,9 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY tailwind.config.js postcss.config.js ./
-COPY src/SterlingLams.Web/wwwroot/css/input.css ./src/SterlingLams.Web/wwwroot/css/input.css
-COPY src/SterlingLams.Web/Views ./src/SterlingLams.Web/Views
-COPY src/SterlingLams.Web/Areas ./src/SterlingLams.Web/Areas
+COPY src/Zephiel.Web/wwwroot/css/input.css ./src/Zephiel.Web/wwwroot/css/input.css
+COPY src/Zephiel.Web/Views ./src/Zephiel.Web/Views
+COPY src/Zephiel.Web/Areas ./src/Zephiel.Web/Areas
 RUN npm run build:css
 
 # ── Stage 2: .NET Build ─────────────────────────────────────────────────────────
@@ -16,15 +16,15 @@ WORKDIR /src
 # Restore NuGet packages (cached layer).
 # Restore the web project specifically — restoring the .sln would also pull in the
 # test project, which isn't copied into this build stage.
-COPY src/SterlingLams.Web/SterlingLams.Web.csproj ./src/SterlingLams.Web/
-RUN dotnet restore src/SterlingLams.Web/SterlingLams.Web.csproj
+COPY src/Zephiel.Web/Zephiel.Web.csproj ./src/Zephiel.Web/
+RUN dotnet restore src/Zephiel.Web/Zephiel.Web.csproj
 
 # Copy rest and build
 COPY . .
 # Copy compiled Tailwind CSS from previous stage
-COPY --from=css-builder /app/src/SterlingLams.Web/wwwroot/css/app.css ./src/SterlingLams.Web/wwwroot/css/app.css
+COPY --from=css-builder /app/src/Zephiel.Web/wwwroot/css/app.css ./src/Zephiel.Web/wwwroot/css/app.css
 
-RUN dotnet publish src/SterlingLams.Web/SterlingLams.Web.csproj \
+RUN dotnet publish src/Zephiel.Web/Zephiel.Web.csproj \
     -c Release -o /app/publish --no-restore \
     /p:BuildTailwind=false
 
@@ -46,11 +46,11 @@ USER appuser
 COPY --from=dotnet-builder --chown=appuser /app/publish .
 
 # EF Core migrations are run before deploy via:
-#   dotnet ef database update --project src/SterlingLams.Web
+#   dotnet ef database update --project src/Zephiel.Web
 # or via the startup EnsureCreated (development only).
 
 EXPOSE 8080
 ENV ASPNETCORE_URLS=http://+:8080
 ENV ASPNETCORE_ENVIRONMENT=Production
 
-ENTRYPOINT ["dotnet", "SterlingLams.Web.dll"]
+ENTRYPOINT ["dotnet", "Zephiel.Web.dll"]

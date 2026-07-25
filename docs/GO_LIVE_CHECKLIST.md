@@ -29,7 +29,7 @@ use an index (`Logistics__DeliveryStates__0`).
 
 ### App
 - [ ] `ASPNETCORE_ENVIRONMENT` = `Production`
-- [ ] `App__BaseUrl` = `https://sterlinglams.com`  *(absolute links in emails, unsubscribe, abandoned-cart, logistics)*
+- [ ] `App__BaseUrl` = `https://zephiel.com`  *(absolute links in emails, unsubscribe, abandoned-cart, logistics)*
 
 ### Images (Cloudinary) — so the site stays fast
 - [ ] `Cloudinary__CloudName`
@@ -46,7 +46,7 @@ use an index (`Logistics__DeliveryStates__0`).
 ### Email (SMTP) — required for order emails, campaigns & automations
 - [ ] `Email__Enabled` = `true`
 - [ ] `Email__Host`, `Email__Port` (usually 587), `Email__Username`, `Email__Password`
-- [ ] `Email__FromAddress` = e.g. `hello@sterlinglams.com`
+- [ ] `Email__FromAddress` = e.g. `hello@zephiel.com`
 - [ ] `Email__FromName` = `Sterlin Glams`
 - [ ] `Email__EnableSsl` = `true`
   *(Until this is set, emails are written to a pickup folder, not delivered.)*
@@ -54,7 +54,7 @@ use an index (`Logistics__DeliveryStates__0`).
 ### Lagos delivery integration (optional — enable when ready)
 - [ ] `Logistics__Enabled` = `true`
 - [ ] `Logistics__SharedSecret` = *(same secret as the logistics app's `STORE_WEBHOOK_SECRET`)*
-- [ ] `Logistics__PushUrl` = `https://sterlinglamslogistics.com/api/external-orders`
+- [ ] `Logistics__PushUrl` = `https://zephiellogistics.com/api/external-orders`
   *(see `docs/LOGISTICS_INTEGRATION.md`)*
 
 ### Error monitoring (optional)
@@ -67,7 +67,7 @@ use an index (`Logistics__DeliveryStates__0`).
 The app **fails to start in Production while migrations are pending**. Apply them on each deploy.
 
 - [ ] **Option A (recommended):** Render **Pre-Deploy Command**:
-      `dotnet ef database update --project src/SterlingLams.Web`
+      `dotnet ef database update --project src/Zephiel.Web`
       (or build a `dotnet ef migrations bundle` and run it), **or**
 - [ ] **Option B (simplest):** set `Database__AutoMigrate` = `true` so the app migrates on startup.
 
@@ -84,18 +84,18 @@ First deploy auto-seeds roles, stores, categories, settings and an admin user.
 - [ ] Always Use HTTPS = on; Auto Minify (JS/CSS) optional.
 - [ ] Caching: default is fine — the storefront already sets cache headers + output-caches the
       home/category pages; static assets are content-hashed and cached a year.
-- [ ] `AllowedHosts` in `appsettings.Production.json` is `sterlinglams.com;www.sterlinglams.com` —
+- [ ] `AllowedHosts` in `appsettings.Production.json` is `zephiel.com;www.zephiel.com` —
       update if your domain differs.
 
 ---
 
 ## 5. Third-party dashboards
 
-- [ ] **Paystack:** add webhook `https://sterlinglams.com/webhooks/paystack`; set the callback/
+- [ ] **Paystack:** add webhook `https://zephiel.com/webhooks/paystack`; set the callback/
       success URL to your domain; switch to **live** keys.
 - [ ] **Cloudinary:** nothing beyond the keys above (folders are auto-created).
 - [ ] **Logistics (Vercel), if enabling:** set `STORE_WEBHOOK_SECRET` (= `Logistics__SharedSecret`)
-      and `STORE_DELIVERED_WEBHOOK_URL` = `https://sterlinglams.com/webhooks/logistics/delivered`.
+      and `STORE_DELIVERED_WEBHOOK_URL` = `https://zephiel.com/webhooks/logistics/delivered`.
 
 ---
 

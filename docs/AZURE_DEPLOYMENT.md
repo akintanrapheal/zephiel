@@ -24,13 +24,13 @@ You need: an Azure subscription, the [Azure CLI](https://learn.microsoft.com/cli
 Pick names/values once and reuse them:
 
 ```bash
-RG=sterlinglams-rg
+RG=zephiel-rg
 LOCATION=uksouth                 # or your nearest region
-PG=sterlinglams-pg              # PostgreSQL server name (globally unique)
+PG=zephiel-pg              # PostgreSQL server name (globally unique)
 PGADMIN=sladmin
 PGPASS='<a-strong-password>'    # save this
-APP=sterlinglams               # App Service name (globally unique -> https://APP.azurewebsites.net)
-PLAN=sterlinglams-plan
+APP=zephiel               # App Service name (globally unique -> https://APP.azurewebsites.net)
+PLAN=zephiel-plan
 ```
 
 ---
@@ -47,7 +47,7 @@ az postgres flexible-server create \
   --version 16 --storage-size 32 --public-access 0.0.0.0
 
 az postgres flexible-server db create \
-  --resource-group $RG --server-name $PG --database-name sterlinglams
+  --resource-group $RG --server-name $PG --database-name zephiel
 ```
 
 - `--public-access 0.0.0.0` turns on **"Allow public access from Azure services"** so App Service
@@ -57,7 +57,7 @@ az postgres flexible-server db create \
 The connection string the app uses (note **SSL is required**):
 
 ```
-Host=<PG>.postgres.database.azure.com;Port=5432;Database=sterlinglams;Username=<PGADMIN>;Password=<PGPASS>;SSL Mode=Require;Trust Server Certificate=true
+Host=<PG>.postgres.database.azure.com;Port=5432;Database=zephiel;Username=<PGADMIN>;Password=<PGPASS>;SSL Mode=Require;Trust Server Certificate=true
 ```
 
 ---
@@ -75,15 +75,15 @@ Then set the app configuration (**these are App Service settings, not in the rep
 ```bash
 az webapp config appsettings set -g $RG -n $APP --settings \
   ASPNETCORE_ENVIRONMENT=Production \
-  ConnectionStrings__DefaultConnection="Host=$PG.postgres.database.azure.com;Port=5432;Database=sterlinglams;Username=$PGADMIN;Password=$PGPASS;SSL Mode=Require;Trust Server Certificate=true" \
+  ConnectionStrings__DefaultConnection="Host=$PG.postgres.database.azure.com;Port=5432;Database=zephiel;Username=$PGADMIN;Password=$PGPASS;SSL Mode=Require;Trust Server Certificate=true" \
   Database__AutoMigrate=false \
-  AllowedHosts="$APP.azurewebsites.net;sterlinglams.com;www.sterlinglams.com" \
+  AllowedHosts="$APP.azurewebsites.net;zephiel.com;www.zephiel.com" \
   Payment__Paystack__SecretKey="<LIVE_or_TEST_secret>" \
   Payment__Paystack__PublicKey="<LIVE_or_TEST_public>" \
   Payment__Paystack__WebhookSecret="<paystack_webhook_secret>" \
   Email__Host="<smtp host>" Email__Port="587" \
   Email__Username="<smtp user>" Email__Password="<smtp pass>" \
-  Email__FromAddress="no-reply@sterlinglams.com"
+  Email__FromAddress="no-reply@zephiel.com"
 ```
 
 Notes:
@@ -138,7 +138,7 @@ The migration step runs from the GitHub-hosted runner, whose IP is dynamic. Opti
   "Apply EF Core migrations" step from the workflow and run, against the same DB:
   ```bash
   dotnet tool install --global dotnet-ef --version 9.*
-  dotnet ef database update --project src/SterlingLams.Web/SterlingLams.Web.csproj \
+  dotnet ef database update --project src/Zephiel.Web/Zephiel.Web.csproj \
     --connection "<PROD_DB_CONNECTION>"
   ```
 
@@ -148,7 +148,7 @@ The migration step runs from the GitHub-hosted runner, whose IP is dynamic. Opti
 
 1. Open `https://<APP>.azurewebsites.net` — the storefront should load.
 2. **Log in to admin** at `/Account/Login` with the seeded admin
-   (`rapheal@sterlinglamslogistics.com` / `Admin@sterlinglams1`) and **change the password immediately**.
+   (`rapheal@zephiellogistics.com` / `Admin@zephiel1`) and **change the password immediately**.
 3. Smoke-test: browse a category, add to bag, reach checkout; open `/Admin`, `/Inventory`, `/Till`.
 4. If you see a 400, fix `AllowedHosts`. If it won't start, check **App Service → Log stream**
    (a clear "pending migrations" message means the migration step didn't run against this DB).

@@ -1,0 +1,197 @@
+@model List<Zephiel.Web.Controllers.PosController.TillCashier>
+@{
+    ViewData["Title"] = "Sign in";
+    var register = ViewData["Register"] as Zephiel.Web.Models.Domain.Register;
+}
+
+<div class="h-screen bg-neutral-50 flex flex-col overflow-hidden">
+    <!-- Top bar -->
+    <header class="flex items-center justify-between px-6 py-2 bg-white border-b border-neutral-100">
+        <button type="button" id="change-register-btn" class="flex items-center gap-2 text-xs text-neutral-500 hover:text-neutral-800 border border-neutral-200 rounded-full px-4 py-2 transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+            Change register
+        </button>
+        <!-- Live clock in header -->
+        <p class="text-xs text-neutral-400 tabular-nums" id="till-clock-top"></p>
+        <div class="w-[120px]"></div>
+    </header>
+
+    <!-- Brand hero (compact so the keypad + Sign In fit without scrolling) -->
+    <div class="bg-white border-b border-neutral-100 py-3 text-center">
+        <img src="~/images/sg-logo.png" alt="Zephiel" class="h-12 mx-auto object-contain" />
+        @if (register != null)
+        {
+            <p class="text-xs text-neutral-500 mt-1">@register.Name &nbsp;·&nbsp; @register.Store?.Name</p>
+        }
+    </div>
+
+    <div class="flex-1 flex overflow-hidden">
+        <!-- Cashier grid -->
+        <div class="flex-1 p-8 overflow-y-auto">
+            <p class="text-center text-xs uppercase tracking-[0.2em] text-neutral-400 mb-8">Select your name</p>
+            @if (!Model.Any())
+            {
+                <p class="text-center text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-4 max-w-md mx-auto">
+                    No staff have a PIN yet. An admin sets one in Admin → Users → "Set PIN".
+                </p>
+            }
+            else
+            {
+                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 max-w-3xl mx-auto">
+                    @foreach (var c in Model)
+                    {
+                        <button type="button" class="cashier-btn bg-white border border-neutral-200 rounded-xl px-3 py-6 text-center hover:border-brand-400 hover:shadow-md transition-all duration-200"
+                                data-id="@c.Id" data-name="@c.Name">
+                            <div class="w-10 h-10 rounded-full bg-neutral-100 flex items-center justify-center mx-auto mb-2 text-neutral-500 font-medium text-sm">
+                                @(string.IsNullOrEmpty(c.Name) ? "?" : c.Name.Substring(0, 1).ToUpper())
+                            </div>
+                            <span class="text-sm text-neutral-700 leading-tight">@(string.IsNullOrEmpty(c.Name) ? "—" : c.Name)</span>
+                        </button>
+                    }
+                </div>
+            }
+        </div>
+
+        <!-- PIN pad -->
+        <div class="w-full max-w-sm bg-white border-l border-neutral-100 p-6 flex flex-col overflow-y-auto">
+            <p class="text-center text-xs uppercase tracking-[0.2em] text-neutral-400 mb-2">Enter your PIN</p>
+            <p id="pin-name" class="text-center text-base font-medium text-neutral-800 h-6 mb-3">&nbsp;</p>
+
+            <div class="border-b-2 border-neutral-300 h-10 flex items-center justify-center gap-3 mb-2" id="pin-dots"></div>
+            <p id="pin-error" class="text-center text-xs text-red-500 min-h-4 mb-3" role="alert" aria-live="assertive"></p>
+
+            <div class="grid grid-cols-3 gap-2 mb-4">
+                @for (int n = 1; n <= 9; n++)
+                {
+                    <button type="button" class="pin-key bg-neutral-50 border border-neutral-200 rounded-xl py-3.5 text-2xl text-neutral-700 hover:bg-brand-50 hover:border-brand-400 transition-colors font-light" data-k="@n">@n</button>
+                }
+                <span></span>
+                <button type="button" class="pin-key bg-neutral-50 border border-neutral-200 rounded-xl py-3.5 text-2xl text-neutral-700 hover:bg-brand-50 hover:border-brand-400 transition-colors font-light" data-k="0">0</button>
+                <button type="button" id="pin-back" class="bg-neutral-50 border border-neutral-200 rounded-xl py-3.5 text-neutral-500 hover:bg-neutral-100 transition-colors flex items-center justify-center">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 14l-2-2m0 0l-2-2m2 2l2-2m-2 2l-2 2M3 12l6.414-6.414A2 2 0 0110.828 5H19a2 2 0 012 2v10a2 2 0 01-2 2h-8.172a2 2 0 01-1.414-.586L3 12z"/></svg>
+                </button>
+            </div>
+
+            <button id="pin-login" type="button"
+                    class="w-full bg-brand-500 text-white text-base font-medium uppercase tracking-wide py-3 rounded-xl hover:bg-brand-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed" disabled>
+                Sign In
+            </button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+@Html.AntiForgeryToken()
+<script>
+(function () {
+    const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
+    const nameEl = document.getElementById('pin-name');
+    const dots = document.getElementById('pin-dots');
+    const errEl = document.getElementById('pin-error');
+    const loginBtn = document.getElementById('pin-login');
+    let userId = null, pin = '', submitting = false;
+
+    // Live clock — big display + small header
+    function tick() {
+        const now = new Date();
+        const time = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        const date = now.toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        const timeShort = now.toLocaleDateString('en-GB') + '  ' + now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+        const bigEl = document.getElementById('till-clock-big');
+        const dateEl = document.getElementById('till-date');
+        const topEl = document.getElementById('till-clock-top');
+        if (bigEl) bigEl.textContent = time;
+        if (dateEl) dateEl.textContent = date;
+        if (topEl) topEl.textContent = timeShort;
+    }
+    tick(); setInterval(tick, 1000);
+
+    // Change register — needs an admin PIN (same gate as the in-session switch on the Sell screen).
+    document.getElementById('change-register-btn')?.addEventListener('click', async () => {
+        const adminPin = prompt('Admin PIN required to change this till to another register/branch:');
+        if (adminPin === null || adminPin.trim() === '') return;
+        try {
+            const res = await fetch('/Pos/ChangeRegister', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'RequestVerificationToken': token },
+                body: 'pin=' + encodeURIComponent(adminPin.trim())
+            });
+            const data = await res.json().catch(() => ({}));
+            if (data.success) location.reload();
+            else alert(data.message || 'Invalid admin PIN.');
+        } catch { alert('Could not change register.'); }
+    });
+
+    function renderDots() {
+        dots.innerHTML = Array.from({ length: pin.length }).map(() =>
+            '<span class="w-3.5 h-3.5 rounded-full bg-neutral-700 inline-block"></span>'
+        ).join('');
+        loginBtn.disabled = !(userId && pin.length >= 4);
+    }
+
+    // Selected-cashier highlight via INLINE styles, not utility classes — Tailwind purges classes
+    // that only ever appear in JS strings, so the pink selection would vanish in production.
+    const SELECTED = { borderColor: '#a855f7', backgroundColor: '#fff0f8', boxShadow: '0 0 0 2px rgba(168,85,247,0.35)' };
+    function selectCashier(b) {
+        document.querySelectorAll('.cashier-btn').forEach(x => {
+            x.style.borderColor = ''; x.style.backgroundColor = ''; x.style.boxShadow = '';
+            x.setAttribute('aria-pressed', 'false');
+        });
+        b.style.borderColor = SELECTED.borderColor;
+        b.style.backgroundColor = SELECTED.backgroundColor;
+        b.style.boxShadow = SELECTED.boxShadow;
+        b.setAttribute('aria-pressed', 'true');
+        userId = b.dataset.id; nameEl.textContent = b.dataset.name; pin = ''; renderDots(); errEl.textContent = '';
+    }
+    document.querySelectorAll('.cashier-btn').forEach(b => b.addEventListener('click', () => selectCashier(b)));
+
+    // Adding a PIN digit — but only after a name is picked, so it's never unclear why nothing happens.
+    function pressDigit(d) {
+        if (!userId) { errEl.textContent = 'Please select your name first.'; return; }
+        if (pin.length < 8) { pin += d; errEl.textContent = ''; renderDots(); }
+    }
+    document.querySelectorAll('.pin-key').forEach(b => b.addEventListener('click', () => pressDigit(b.dataset.k)));
+    document.getElementById('pin-back').addEventListener('click', () => { pin = pin.slice(0, -1); renderDots(); });
+
+    loginBtn.addEventListener('click', submit);
+
+    // Physical keyboard: Enter submits, Backspace deletes, digits add (with the same name-first guard).
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Enter') { submit(); return; }
+        if (e.key === 'Backspace') { pin = pin.slice(0, -1); renderDots(); return; }
+        if (/^\d$/.test(e.key)) pressDigit(e.key);
+    });
+
+    async function submit() {
+        if (submitting) return;   // a sign-in is already in flight (e.g. Enter pressed again) — don't double-post
+        if (!userId) { errEl.textContent = 'Please select your name first.'; return; }
+        if (pin.length < 4) { errEl.textContent = 'Enter your PIN (at least 4 digits).'; return; }
+        submitting = true;
+        loginBtn.disabled = true;
+        loginBtn.textContent = 'Signing in…';
+        try {
+            const res = await fetch('/Pos/Login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'RequestVerificationToken': token },
+                body: `userId=${encodeURIComponent(userId)}&pin=${encodeURIComponent(pin)}`
+            });
+            let data = {};
+            try { data = await res.json(); } catch { /* non-JSON (e.g. an auth redirect) */ }
+            if (res.ok && data.success) { location.href = window.__posBase || '/Pos'; return; }
+            errEl.textContent = data.message || `Sign-in failed (${res.status}). Please try again.`;
+        } catch {
+            errEl.textContent = 'Network error — check your connection and try again.';
+        }
+        // Reached only on failure (success navigates away above) — re-enable for another attempt.
+        submitting = false;
+        pin = ''; renderDots();
+        loginBtn.disabled = false;
+        loginBtn.textContent = 'Sign In';
+    }
+
+    // Safety net: never let a script error or rejected promise fail silently on the POS login.
+    window.addEventListener('error', e => { errEl.textContent = 'Unexpected error: ' + (e.message || 'unknown') + ' — please reload.'; });
+    window.addEventListener('unhandledrejection', e => { errEl.textContent = 'Unexpected error: ' + ((e.reason && e.reason.message) || 'unexpected') + ' — please reload.'; });
+}());
+</script>
+}

@@ -1,10 +1,10 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [
-    './src/SterlingLams.Web/Views/**/*.cshtml',
-    './src/SterlingLams.Web/Areas/**/*.cshtml',
-    './src/SterlingLams.Web/Pages/**/*.cshtml',
-    './src/SterlingLams.Web/wwwroot/js/**/*.js',
+    './src/Zephiel.Web/Views/**/*.cshtml',
+    './src/Zephiel.Web/Areas/**/*.cshtml',
+    './src/Zephiel.Web/Pages/**/*.cshtml',
+    './src/Zephiel.Web/wwwroot/js/**/*.js',
   ],
   theme: {
     extend: {

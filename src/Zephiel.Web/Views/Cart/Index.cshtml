@@ -1,0 +1,336 @@
+@model Zephiel.Web.Models.ViewModels.CartViewModel
+@inject Zephiel.Web.Services.ISettingsService SettingsService
+@{
+    ViewData["Title"] = "Shopping Bag";
+
+    // "Order on WhatsApp" — a click-to-chat link pre-filled with the bag contents. Reuses the same
+    // editable WhatsApp number as the floating button (Admin → Settings → General). No API/cost;
+    // hidden when the bag is empty or no number is set.
+    var waNum = await SettingsService.GetAsync("general.whatsapp_number");
+    var waDigits = new string((waNum ?? "").Where(char.IsDigit).ToArray());
+    string? waOrderUrl = null;
+    if (!Model.IsEmpty && waDigits.Length > 0)
+    {
+        var waMsg = new System.Text.StringBuilder();
+        waMsg.Append("Hello! I'd like to order these items from my bag:\n\n");
+        foreach (var it in Model.Items)
+        {
+            var v = string.IsNullOrEmpty(it.VariantName) ? "" : $" ({it.VariantName})";
+            waMsg.Append($"• {it.Quantity}× {it.ProductName}{v} — {it.FormattedLineTotal}\n");
+        }
+        waMsg.Append($"\nTotal: {Model.FormattedTotal}");
+        waOrderUrl = $"https://wa.me/{waDigits}?text={Uri.EscapeDataString(waMsg.ToString())}";
+    }
+}
+
+<div class="max-w-4xl mx-auto px-6 py-16">
+    <div class="text-center mb-12">
+        <h1 class="font-cormorant text-4xl font-light">Shopping Bag</h1>
+    </div>
+
+    @if (TempData["CartMessage"] != null)
+    {
+        <div class="mb-8 px-4 py-3 bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm rounded-md text-center">@TempData["CartMessage"]</div>
+    }
+
+    @if (Model.IsEmpty && !Model.SavedItems.Any())
+    {
+        <div class="text-center py-24">
+            <p class="text-neutral-400 mb-8 font-light">Your bag is empty.</p>
+            <a asp-controller="Products" asp-action="Index" class="btn-primary">Continue Shopping</a>
+        </div>
+    }
+    else
+    {
+        @Html.AntiForgeryToken()
+        @if (!Model.IsEmpty)
+        {
+        <div class="space-y-6 mb-12">
+            @foreach (var item in Model.Items)
+            {
+                <div class="flex gap-6 py-6 border-b border-neutral-100">
+                    <img src="@Img.Cld(item.ImageUrl, 224, 224)" alt="@item.ProductName"
+                         loading="lazy" decoding="async" width="112" height="112"
+                         class="w-28 h-28 object-cover flex-shrink-0" />
+                    <div class="flex-1 min-w-0">
+                        <h3 class="font-light text-neutral-800 mb-1">@item.ProductName</h3>
+                        @if (!string.IsNullOrEmpty(item.VariantName))
+                        {
+                            <p class="text-xs text-neutral-400 mb-2">@item.VariantName</p>
+                        }
+                        <p class="text-sm text-neutral-600 mb-4">@item.FormattedUnitPrice</p>
+                        <div class="flex items-center gap-4">
+                            <div class="flex items-center border border-neutral-200">
+                                <button class="qty-btn px-3 py-1 text-neutral-600 hover:bg-neutral-50"
+                                        data-product-id="@item.ProductId"
+                                        data-variant-id="@item.VariantId"
+                                        data-delta="-1">−</button>
+                                <span class="qty-display px-4 py-1 text-sm border-x border-neutral-200">@item.Quantity</span>
+                                <button class="qty-btn px-3 py-1 text-neutral-600 hover:bg-neutral-50"
+                                        data-product-id="@item.ProductId"
+                                        data-variant-id="@item.VariantId"
+                                        data-delta="1">+</button>
+                            </div>
+                            <form asp-controller="Cart" asp-action="SaveForLater" method="post" class="inline">
+                                <input type="hidden" name="productId" value="@item.ProductId" />
+                                <input type="hidden" name="variantId" value="@item.VariantId" />
+                                <button type="submit" class="text-xs text-neutral-400 hover:text-neutral-900 transition-colors">Save for later</button>
+                            </form>
+                            <button class="remove-item text-xs text-neutral-400 hover:text-neutral-900 transition-colors"
+                                    data-product-id="@item.ProductId"
+                                    data-variant-id="@item.VariantId">
+                                Remove
+                            </button>
+                        </div>
+                    </div>
+                    <div class="text-right flex-shrink-0">
+                        <p class="font-light text-neutral-800">@item.FormattedLineTotal</p>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <div class="border-t border-neutral-200 pt-8 flex flex-col md:flex-row justify-between gap-8">
+            <div>
+                <a asp-controller="Products" asp-action="Index"
+                   class="text-xs tracking-widest uppercase text-neutral-500 hover:text-brand-500 transition-colors">
+                    ← Continue Shopping
+                </a>
+            </div>
+            <div class="md:w-72">
+                <!-- Discount Code -->
+                <div class="mb-6">
+                    <p class="text-xs tracking-[0.15em] uppercase text-neutral-500 mb-2">Discount Code</p>
+                    @if (Model.HasDiscount)
+                    {
+                        <div id="discount-applied" class="flex items-center justify-between bg-emerald-50 border border-emerald-200 px-4 py-3">
+                            <div>
+                                <span class="text-xs font-medium text-emerald-800 tracking-wide">@Model.AppliedDiscountCode</span>
+                                @if (!string.IsNullOrEmpty(Model.DiscountDescription))
+                                {
+                                    <p class="text-[11px] text-emerald-600">@Model.DiscountDescription</p>
+                                }
+                            </div>
+                            <button id="remove-discount" class="text-xs text-emerald-700 hover:text-emerald-900 transition-colors">✕</button>
+                        </div>
+                        <div id="discount-input-wrap" class="hidden">
+                            <div class="flex gap-2">
+                                <input id="discount-code" type="text" placeholder="Enter code" maxlength="50"
+                                       class="flex-1 border border-neutral-200 text-sm px-3 py-2 uppercase tracking-wider focus:outline-none focus:border-brand-500" />
+                                <button id="apply-discount" class="bg-brand-500 text-white text-xs tracking-widest px-4 py-2 hover:bg-brand-600 transition-colors">Apply</button>
+                            </div>
+                            <p id="discount-error" class="text-xs text-red-500 mt-1 hidden"></p>
+                        </div>
+                    }
+                    else
+                    {
+                        <div id="discount-applied" class="hidden flex items-center justify-between bg-emerald-50 border border-emerald-200 px-4 py-3">
+                            <div>
+                                <span id="applied-code-label" class="text-xs font-medium text-emerald-800 tracking-wide"></span>
+                                <p id="applied-code-desc" class="text-[11px] text-emerald-600"></p>
+                            </div>
+                            <button id="remove-discount" class="text-xs text-emerald-700 hover:text-emerald-900 transition-colors">✕</button>
+                        </div>
+                        <div id="discount-input-wrap">
+                            <div class="flex gap-2">
+                                <input id="discount-code" type="text" placeholder="Enter code" maxlength="50"
+                                       class="flex-1 border border-neutral-200 text-sm px-3 py-2 uppercase tracking-wider focus:outline-none focus:border-brand-500" />
+                                <button id="apply-discount" class="bg-brand-500 text-white text-xs tracking-widest px-4 py-2 hover:bg-brand-600 transition-colors">Apply</button>
+                            </div>
+                            <p id="discount-error" class="text-xs text-red-500 mt-1 hidden"></p>
+                        </div>
+                    }
+                </div>
+
+                <div class="flex justify-between text-sm mb-2">
+                    <span class="text-neutral-500">Subtotal</span>
+                    <span id="subtotal-display" class="font-light">@Model.FormattedSubtotal</span>
+                </div>
+                @if (Model.HasDiscount)
+                {
+                    <div id="discount-line" class="flex justify-between text-sm mb-2">
+                        <span class="text-emerald-600">@(Model.IsAutomaticDiscount ? "Promo" : "Discount") (@Model.DiscountDescription)</span>
+                        <span id="discount-amount-display" class="text-emerald-600">@(Model.FreeShipping && Model.DiscountAmount == 0 ? "Free shipping" : Model.FormattedDiscount)</span>
+                    </div>
+                }
+                else
+                {
+                    <div id="discount-line" class="hidden flex justify-between text-sm mb-2">
+                        <span class="text-emerald-600">Discount (<span id="discount-code-label"></span>)</span>
+                        <span id="discount-amount-display" class="text-emerald-600"></span>
+                    </div>
+                }
+                <div class="flex justify-between text-sm font-medium border-t border-neutral-100 pt-3 mb-2">
+                    <span>Total</span>
+                    <span id="total-display" class="font-light">@Model.FormattedTotal</span>
+                </div>
+                <p class="text-xs text-neutral-400 mb-6">Shipping calculated at checkout.</p>
+                <a asp-controller="Checkout" asp-action="Index"
+                   class="block text-center bg-brand-500 text-white text-xs tracking-[0.2em] uppercase py-4 hover:bg-brand-600 transition-colors">
+                    Proceed to Checkout
+                </a>
+                @if (waOrderUrl != null)
+                {
+                    @* Inline styles (like the floating button) so the WhatsApp green is never purged from prod CSS. *@
+                    <a href="@waOrderUrl" target="_blank" rel="noopener" aria-label="Order on WhatsApp"
+                       style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:12px;background:#25D366;color:#fff;padding:14px 16px;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;">
+                        <svg style="width:18px;height:18px;fill:#fff;flex-shrink:0;" viewBox="0 0 24 24" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+                        Order on WhatsApp
+                    </a>
+                }
+            </div>
+        </div>
+        }
+
+        @if (Model.SavedItems.Any())
+        {
+            <div class="@(Model.IsEmpty ? "" : "mt-16 pt-8 border-t border-neutral-200")">
+                <h2 class="font-cormorant text-2xl font-light mb-6">Saved for later (@Model.SavedItems.Count)</h2>
+                <div class="space-y-4">
+                    @foreach (var item in Model.SavedItems)
+                    {
+                        <div class="flex gap-6 py-4 border-b border-neutral-100 items-center">
+                            <img src="@Img.Cld(item.ImageUrl, 160, 160)" alt="@item.ProductName" loading="lazy" class="w-20 h-20 object-cover flex-shrink-0" />
+                            <div class="flex-1 min-w-0">
+                                <h3 class="font-light text-neutral-800">@item.ProductName</h3>
+                                @if (!string.IsNullOrEmpty(item.VariantName))
+                                {
+                                    <p class="text-xs text-neutral-400">@item.VariantName</p>
+                                }
+                                <p class="text-sm text-neutral-600 mt-1">@item.FormattedUnitPrice</p>
+                            </div>
+                            <div class="flex items-center gap-4 flex-shrink-0">
+                                <form asp-controller="Cart" asp-action="MoveToBag" method="post">
+                                    <input type="hidden" name="productId" value="@item.ProductId" />
+                                    <input type="hidden" name="variantId" value="@item.VariantId" />
+                                    <button type="submit" class="text-xs tracking-widest uppercase text-neutral-700 hover:text-neutral-900 transition-colors">Move to bag</button>
+                                </form>
+                                <form asp-controller="Cart" asp-action="RemoveSaved" method="post">
+                                    <input type="hidden" name="productId" value="@item.ProductId" />
+                                    <input type="hidden" name="variantId" value="@item.VariantId" />
+                                    <button type="submit" class="text-xs text-neutral-400 hover:text-neutral-900 transition-colors">Remove</button>
+                                </form>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    }
+</div>
+
+@section Scripts {
+<script nonce="@Context.Items["csp-nonce"]">
+(function () {
+    const token = () => document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
+
+    // ── Quantity buttons ───────────────────────────────────────────────────
+    document.querySelectorAll('.qty-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const row   = btn.closest('[data-product-id]') ?? btn.parentElement.parentElement.parentElement.parentElement;
+            const pid   = btn.dataset.productId;
+            const vid   = btn.dataset.variantId ?? '';
+            const delta = parseInt(btn.dataset.delta, 10);
+            const display = btn.parentElement.querySelector('.qty-display');
+            const newQty  = Math.max(0, parseInt(display.textContent, 10) + delta);
+
+            const res  = await fetch('/Cart/UpdateQuantity', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `productId=${pid}&variantId=${vid}&quantity=${newQty}&__RequestVerificationToken=${encodeURIComponent(token())}`
+            });
+            const data = await res.json();
+            if (data.success) {
+                if (newQty <= 0) { location.reload(); return; }
+                display.textContent = newQty;
+                document.getElementById('subtotal-display').textContent = data.subtotal;
+                document.getElementById('total-display').textContent    = data.subtotal;
+                updateCartBadge(data.cartCount);
+            }
+        });
+    });
+
+    // ── Remove item ────────────────────────────────────────────────────────
+    document.querySelectorAll('.remove-item').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const pid = btn.dataset.productId;
+            const vid = btn.dataset.variantId ?? '';
+            const res = await fetch('/Cart/Remove', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `productId=${pid}&variantId=${vid}&__RequestVerificationToken=${encodeURIComponent(token())}`
+            });
+            const data = await res.json();
+            if (data.success) location.reload();
+        });
+    });
+
+    // ── Discount code ──────────────────────────────────────────────────────
+    const applyBtn      = document.getElementById('apply-discount');
+    const removeBtn     = document.getElementById('remove-discount');
+    const codeInput     = document.getElementById('discount-code');
+    const errorEl       = document.getElementById('discount-error');
+    const appliedEl     = document.getElementById('discount-applied');
+    const inputWrap     = document.getElementById('discount-input-wrap');
+    const discountLine  = document.getElementById('discount-line');
+    const discountAmt   = document.getElementById('discount-amount-display');
+    const totalDisplay  = document.getElementById('total-display');
+    const codeLabel     = document.getElementById('discount-code-label');
+    const appliedLabel  = document.getElementById('applied-code-label');
+    const appliedDesc   = document.getElementById('applied-code-desc');
+
+    if (applyBtn && codeInput) {
+        applyBtn.addEventListener('click', async () => {
+            const code = codeInput.value.trim();
+            if (!code) return;
+            applyBtn.disabled = true;
+            applyBtn.textContent = '…';
+
+            const res  = await fetch('/Cart/ApplyDiscount', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `code=${encodeURIComponent(code)}&__RequestVerificationToken=${encodeURIComponent(token())}`
+            });
+            const data = await res.json();
+            applyBtn.disabled = false;
+            applyBtn.textContent = 'Apply';
+
+            if (data.success) {
+                if (errorEl) { errorEl.textContent = ''; errorEl.classList.add('hidden'); }
+                if (appliedEl) {
+                    if (appliedLabel) appliedLabel.textContent = data.code;
+                    if (appliedDesc)  appliedDesc.textContent  = data.description ?? '';
+                    appliedEl.classList.remove('hidden');
+                }
+                if (inputWrap) inputWrap.classList.add('hidden');
+                if (discountLine) discountLine.classList.remove('hidden');
+                if (codeLabel)   codeLabel.textContent  = data.code;
+                if (discountAmt) discountAmt.textContent = data.discount;
+                if (totalDisplay) totalDisplay.textContent = data.total;
+            } else {
+                if (errorEl) { errorEl.textContent = data.message; errorEl.classList.remove('hidden'); }
+            }
+        });
+
+        codeInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); applyBtn.click(); } });
+    }
+
+    if (removeBtn) {
+        removeBtn.addEventListener('click', async () => {
+            const res  = await fetch('/Cart/RemoveDiscount', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `__RequestVerificationToken=${encodeURIComponent(token())}`
+            });
+            const data = await res.json();
+            if (data.success) {
+                if (appliedEl) appliedEl.classList.add('hidden');
+                if (inputWrap) inputWrap.classList.remove('hidden');
+                if (discountLine) discountLine.classList.add('hidden');
+                if (totalDisplay) totalDisplay.textContent = data.total;
+            }
+        });
+    }
+}());
+</script>
+}

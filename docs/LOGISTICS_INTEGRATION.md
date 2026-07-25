@@ -1,7 +1,7 @@
 # Sterlin Glams Store ⇄ Lagos Delivery Integration
 
-Two-way, HMAC-signed link between the store (**sterlinglams.com**, this repo) and the Lagos
-delivery app (**sterlinglamslogistics.com**, Next.js on Vercel). Matched on the order number.
+Two-way, HMAC-signed link between the store (**zephiel.com**, this repo) and the Lagos
+delivery app (**zephiellogistics.com**, Next.js on Vercel). Matched on the order number.
 
 1. **Store → Logistics (push):** when a paid online **Lagos delivery** order is confirmed, the
    store POSTs it to the courier and it shows up as an unassigned order in the dispatch dashboard.
@@ -14,7 +14,7 @@ Both calls are signed with **one shared secret** (HMAC-SHA256, base64, header `x
 
 ## 1. Merge the logistics PR
 
-Branch: `feat/sterlinglams-store-integration` on the logistics repo. Let Vercel build a **preview**
+Branch: `feat/zephiel-store-integration` on the logistics repo. Let Vercel build a **preview**
 first (that repo has no CI), confirm it compiles, then merge.
 
 ## 2. Generate one shared secret
@@ -33,7 +33,7 @@ The **same** value goes in both dashboards.
 |-----|-------|
 | `Logistics__Enabled` | `true` |
 | `Logistics__SharedSecret` | *(the secret from step 2)* |
-| `Logistics__PushUrl` | `https://sterlinglamslogistics.com/api/external-orders` |
+| `Logistics__PushUrl` | `https://zephiellogistics.com/api/external-orders` |
 
 `Logistics__DeliveryStates__0` defaults to `Lagos`; add `Logistics__DeliveryStates__1=Ogun`, etc.
 to serve more states (empty = push every delivery order).
@@ -48,10 +48,10 @@ deploy. Choose one:
 
 ```bash
 # from the repo root, against the production connection string
-dotnet ef database update --project src/SterlingLams.Web
+dotnet ef database update --project src/Zephiel.Web
 
 # or apply a generated SQL bundle produced at build time:
-dotnet ef migrations bundle --project src/SterlingLams.Web -o migrate
+dotnet ef migrations bundle --project src/Zephiel.Web -o migrate
 ./migrate --connection "$DATABASE_URL"
 ```
 
@@ -74,10 +74,10 @@ Then trigger a redeploy.
 | Key | Value |
 |-----|-------|
 | `STORE_WEBHOOK_SECRET` | *(the same secret from step 2)* |
-| `STORE_DELIVERED_WEBHOOK_URL` | `https://sterlinglams.com/webhooks/logistics/delivered` |
+| `STORE_DELIVERED_WEBHOOK_URL` | `https://zephiel.com/webhooks/logistics/delivered` |
 
 Use whatever URL the store is publicly reachable at — if the custom domain isn't live, use
-`https://sterlinglams.onrender.com/webhooks/logistics/delivered`. Redeploy.
+`https://zephiel.onrender.com/webhooks/logistics/delivered`. Redeploy.
 
 ## 5. Test end-to-end
 

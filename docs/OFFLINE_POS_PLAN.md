@@ -7,8 +7,8 @@
 
 ## Context — how the POS works today
 
-- The POS is a server-rendered, client-heavy web page ([`Views/Pos/Sell.cshtml`](../src/SterlingLams.Web/Views/Pos/Sell.cshtml)) that calls JSON endpoints on [`PosController`](../src/SterlingLams.Web/Controllers/PosController.cs) (`Search`, `StockLookup`, `Categories`, `Checkout`, `Hold`/`RecallParkedSale`, `CustomerSearch`, `DiscountReasons`, …).
-- Checkout deducts stock **server-side** under a Postgres `SELECT … FOR UPDATE` row lock + `StockService.ApplyAsync` ([`Checkout`](../src/SterlingLams.Web/Controllers/PosController.cs#L738)), so online it **cannot oversell**.
+- The POS is a server-rendered, client-heavy web page ([`Views/Pos/Sell.cshtml`](../src/Zephiel.Web/Views/Pos/Sell.cshtml)) that calls JSON endpoints on [`PosController`](../src/Zephiel.Web/Controllers/PosController.cs) (`Search`, `StockLookup`, `Categories`, `Checkout`, `Hold`/`RecallParkedSale`, `CustomerSearch`, `DiscountReasons`, …).
+- Checkout deducts stock **server-side** under a Postgres `SELECT … FOR UPDATE` row lock + `StockService.ApplyAsync` ([`Checkout`](../src/Zephiel.Web/Controllers/PosController.cs#L738)), so online it **cannot oversell**.
 - **Payments are manual labels.** `order.PaymentProvider = req.PaymentMethod` — cash / card / transfer / USSD / Opay are just recorded; the actual card/transfer happens on a separate bank terminal/app. The till also records cash tendered + change.
 - Sign-in is a cashier **PIN** verified against the server.
 - One shared PostgreSQL database is the single source of truth.

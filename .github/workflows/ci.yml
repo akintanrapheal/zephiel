@@ -26,12 +26,12 @@ jobs:
           dotnet-version: '9.0.x'
 
       - name: Restore
-        run: dotnet restore SterlingLams.sln
+        run: dotnet restore Zephiel.sln
 
       # BuildTailwind=false skips the npm/Tailwind CSS step — CSS isn't needed to compile or
       # run the tests, and there's no Node toolchain in this job (Render builds CSS separately).
       - name: Build
-        run: dotnet build SterlingLams.sln --configuration Release --no-restore -p:BuildTailwind=false
+        run: dotnet build Zephiel.sln --configuration Release --no-restore -p:BuildTailwind=false
 
       - name: Test
-        run: dotnet test SterlingLams.sln --configuration Release --no-build --verbosity normal
+        run: dotnet test Zephiel.sln --configuration Release --no-build --verbosity normal

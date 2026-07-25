@@ -1,10 +1,10 @@
 -- ══════════════════════════════════════════════════════════════════════════════
--- SterlingLams.com — Manual PostgreSQL Schema
+-- Zephiel.com — Manual PostgreSQL Schema
 -- Use this ONLY if you cannot run `dotnet ef migrations add InitialCreate`.
 -- If using EF Core with EnsureCreated() in Development, this file is NOT needed.
 --
 -- How to apply:
---   psql -h localhost -U postgres -d sterlinglams -f schema.sql
+--   psql -h localhost -U postgres -d zephiel -f schema.sql
 -- ══════════════════════════════════════════════════════════════════════════════
 
 -- ─── ASP.NET Core Identity ────────────────────────────────────────────────────

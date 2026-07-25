@@ -1,0 +1,17 @@
+@model List<Zephiel.Web.Models.ViewModels.ProductCardViewModel>
+@inject Zephiel.Web.Services.ISettingsService SettingsService
+@*
+    Renders the product cards only (no grid wrapper), via the shared _ProductCard component.
+    Used both by the listing grid on first paint and by the "View more" endpoint
+    (?partial=cards) which appends the next page of cards without a full reload.
+*@
+@{
+    // Low-stock badge threshold (0 = off) — read once, then passed to each card via ViewData.
+    ViewData["CardLowThreshold"] = await SettingsService.GetBoolAsync("inventory.show_low_stock_nudge", true)
+        ? (int)await SettingsService.GetDecimalAsync("inventory.low_stock_threshold", 5)
+        : 0;
+}
+@foreach (var product in Model)
+{
+    <partial name="_ProductCardTiffany" model="product" />
+}

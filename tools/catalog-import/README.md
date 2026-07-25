@@ -9,7 +9,7 @@ WooCommerce site into the in-house DB.
    - The `.wpress` contains a `database.sql` MySQL dump (table prefix `SERVMASK_PREFIX_`).
    - `extract_catalog.py` parses `wp_posts` / `wp_postmeta` / `wp_terms*` and writes a structured
      `catalog.json`: each product with `sku`, `title`, `description`, `categories`, `images`
-     (live `sterlinglams.com` URLs), and `variants[]` (each with its `attrs`, e.g. `{color, size}`).
+     (live `zephiel.com` URLs), and `variants[]` (each with its `attrs`, e.g. `{color, size}`).
    - Point the `DB` path in the script at the extracted `database.sql`, then `python extract_catalog.py`.
 
 2. **Import** into the app DB (two modes):
@@ -34,5 +34,5 @@ WooCommerce site into the in-house DB.
 ## Notes
 - ~2,021 published products, ~2,644 variants. Variant attributes: Color, Size, Alphabet,
   Measurement, Signs, Combo.
-- Images reference live `https://sterlinglams.com/wp-content/uploads/...` URLs (verified resolving).
+- Images reference live `https://zephiel.com/wp-content/uploads/...` URLs (verified resolving).
 - `catalog.json` is checked in so the import is reproducible without the 7 GB backup.

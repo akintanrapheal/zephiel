@@ -1,0 +1,189 @@
+@model List<Zephiel.Web.Models.Domain.BlogPost>
+@{
+    ViewData["Title"] = "Journal";
+    Layout = "_AdminLayout";
+    string filter = ViewBag.Filter ?? "all";
+    int published = ViewBag.PublishedCount ?? 0;
+    int draft = ViewBag.DraftCount ?? 0;
+    string TabCls(string f) => f == filter ? "border-neutral-900 text-neutral-900" : "border-transparent text-neutral-400 hover:text-neutral-700";
+}
+@Html.AntiForgeryToken()
+
+<div class="mb-6 flex items-start justify-between gap-4 flex-wrap">
+    <div>
+        <h1 class="text-2xl font-light text-neutral-900">Journal</h1>
+        <p class="text-sm text-neutral-500 mt-1">Blog &amp; lookbook posts — @published published, @draft draft.</p>
+    </div>
+    <a asp-area="Admin" asp-controller="Journal" asp-action="Create" class="px-4 py-2 text-sm bg-neutral-900 text-white rounded-sm hover:bg-neutral-700">+ New post</a>
+</div>
+
+@* ─── Auto-generate a post from live products (preview → save) ───────────────── *@
+<div class="mb-6 bg-white border border-neutral-200 rounded-sm p-5">
+    <div class="flex items-center gap-2 mb-1">
+        <svg class="w-4 h-4 text-brand-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
+        </svg>
+        <h2 class="text-sm font-semibold text-neutral-800">Auto-generate a post</h2>
+    </div>
+    <p class="text-xs text-neutral-500 mb-4 max-w-2xl">Compose an elegant, brand-styled post from your live products — preview it, then save as a draft (or publish). Runs on this site's own database, so it works here and on the live site with no setup.</p>
+
+    <div class="flex flex-wrap items-end gap-2">
+        <div>
+            <label class="block text-[10px] text-neutral-400 uppercase tracking-widest mb-1">Theme</label>
+            <select id="gen-theme" class="border border-neutral-200 rounded-sm px-3 py-2 text-sm bg-white focus:outline-none focus:border-brand-500">
+                <option value="">Surprise me</option>
+                @foreach (var t in Zephiel.Web.Services.JournalPostGenerator.Themes)
+                {
+                    <option value="@t">@t</option>
+                }
+            </select>
+        </div>
+        <button id="gen-preview" type="button" class="px-4 py-2 text-sm bg-neutral-900 text-white rounded-sm hover:bg-neutral-700">Preview a post</button>
+        <button id="gen-shuffle" type="button" class="px-4 py-2 text-sm border border-neutral-200 text-neutral-600 rounded-sm hover:border-neutral-400 hidden">&#8635; Regenerate</button>
+    </div>
+
+    <div id="gen-result" class="hidden mt-5 border-t border-neutral-100 pt-5">
+        <div class="flex flex-col sm:flex-row gap-5">
+            <img id="gen-cover" src="" alt="" class="w-full sm:w-56 h-40 object-cover rounded-sm bg-neutral-100 flex-shrink-0" />
+            <div class="min-w-0 flex-1">
+                <p id="gen-featured" class="text-[10px] text-neutral-400 uppercase tracking-widest mb-1"></p>
+                <h3 id="gen-title" class="font-cormorant text-2xl font-light text-neutral-900 leading-tight"></h3>
+                <p id="gen-excerpt" class="text-sm text-neutral-500 mt-1"></p>
+            </div>
+        </div>
+        <div id="gen-body" class="journal-preview max-w-2xl mt-5 text-neutral-600 text-sm leading-relaxed"></div>
+        <form asp-area="Admin" asp-controller="Journal" asp-action="GenerateCreate" method="post" class="mt-6 flex flex-wrap items-center gap-2">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="theme" id="gen-form-theme" />
+            <input type="hidden" name="seed" id="gen-form-seed" />
+            <button type="submit" name="publish" value="false" class="px-4 py-2 text-sm bg-neutral-900 text-white rounded-sm hover:bg-neutral-700">Save as draft &amp; edit</button>
+            <button type="submit" name="publish" value="true" class="px-4 py-2 text-sm bg-brand-500 text-white rounded-sm">Publish now</button>
+            <span class="text-xs text-neutral-400">You can edit everything before it goes live.</span>
+        </form>
+    </div>
+</div>
+
+<style>
+    .journal-preview h2 { font-family: 'Cormorant Garamond', serif; font-weight: 300; color: #171717; font-size: 1.5rem; margin: 1.5rem 0 .5rem; line-height: 1.2; }
+    .journal-preview h3 { font-size: 1rem; font-weight: 500; color: #262626; margin: 1.25rem 0 .4rem; }
+    .journal-preview p  { margin: 0 0 .85rem; }
+    .journal-preview blockquote { border-left: 2px solid #a855f7; padding-left: 1rem; margin: 1rem 0; font-style: italic; }
+</style>
+
+@if (TempData["Success"] != null)
+{
+    <div class="mb-4 bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm px-4 py-3 rounded-sm">@TempData["Success"]</div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="mb-4 bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-sm">@TempData["Error"]</div>
+}
+
+<div class="flex gap-6 border-b border-neutral-200 mb-5 text-sm">
+    @foreach (var f in new[] { ("all", "All"), ("published", "Published"), ("draft", "Drafts") })
+    {
+        <a asp-area="Admin" asp-controller="Journal" asp-action="Index" asp-route-filter="@f.Item1" class="pb-2.5 border-b-2 @TabCls(f.Item1)">@f.Item2</a>
+    }
+</div>
+
+@if (!Model.Any())
+{
+    <div class="bg-white border border-neutral-200 rounded-sm p-12 text-center text-sm text-neutral-400">No posts here yet.</div>
+}
+else
+{
+    <div class="bg-white border border-neutral-200 rounded-sm overflow-x-auto">
+        <table class="w-full text-sm min-w-[640px]">
+            <thead class="bg-neutral-50 text-neutral-500 text-xs">
+                <tr>
+                    <th class="text-left font-semibold px-4 py-3">Title</th>
+                    <th class="text-left font-semibold px-4 py-3">Status</th>
+                    <th class="text-left font-semibold px-4 py-3">Published</th>
+                    <th class="px-4 py-3"></th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-neutral-100">
+                @foreach (var p in Model)
+                {
+                    <tr class="hover:bg-neutral-50">
+                        <td class="px-4 py-2.5">
+                            <div class="flex items-center gap-3">
+                                @if (!string.IsNullOrEmpty(p.CoverImageUrl))
+                                {
+                                    <img src="@Img.Cld(p.CoverImageUrl, 96, 96)" alt="" loading="lazy" class="w-10 h-10 object-cover rounded-sm flex-shrink-0" />
+                                }
+                                <div>
+                                    <div class="text-neutral-800 font-medium">@p.Title</div>
+                                    <div class="text-xs text-neutral-400 font-mono">/journal/@p.Slug</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-4 py-2.5">
+                            @if (p.IsPublished) { <span class="text-[10px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full">Published</span> }
+                            else { <span class="text-[10px] bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full">Draft</span> }
+                        </td>
+                        <td class="px-4 py-2.5 text-neutral-400 text-xs">@(p.PublishedAt?.ToString("dd MMM yyyy") ?? "—")</td>
+                        <td class="px-4 py-2.5 text-right whitespace-nowrap">
+                            @if (p.IsPublished)
+                            {
+                                <a asp-area="" asp-controller="Journal" asp-action="Detail" asp-route-slug="@p.Slug" target="_blank" class="text-xs text-neutral-500 hover:text-neutral-900 mr-3">View ↗</a>
+                            }
+                            <a asp-area="Admin" asp-controller="Journal" asp-action="Edit" asp-route-id="@p.Id" class="text-xs text-neutral-500 hover:text-neutral-900 mr-3">Edit</a>
+                            <form asp-area="Admin" asp-controller="Journal" asp-action="TogglePublish" method="post" class="inline">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@p.Id" />
+                                <button type="submit" class="text-xs text-neutral-500 hover:text-neutral-900 mr-3">@(p.IsPublished ? "Unpublish" : "Publish")</button>
+                            </form>
+                            <form asp-area="Admin" asp-controller="Journal" asp-action="Delete" method="post" class="inline" onsubmit="return confirm('Delete this post permanently?');">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@p.Id" />
+                                <button type="submit" class="text-xs text-red-500 hover:text-red-700">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@section Scripts {
+<script>
+(function () {
+    var base = window.__adminBase || '/Admin';
+    var themeSel = document.getElementById('gen-theme');
+    var previewBtn = document.getElementById('gen-preview');
+    var shuffleBtn = document.getElementById('gen-shuffle');
+    var result = document.getElementById('gen-result');
+    if (!previewBtn) return;
+
+    async function generate() {
+        previewBtn.disabled = true; shuffleBtn.disabled = true;
+        var label = previewBtn.textContent; previewBtn.textContent = 'Composing…';
+        try {
+            var theme = themeSel.value;
+            // No seed → the server rolls a fresh one and returns it, so each preview differs.
+            var r = await fetch(base + '/Journal/Generate?theme=' + encodeURIComponent(theme), { headers: { 'Accept': 'application/json' } });
+            var d = await r.json();
+            if (!d.ok) { alert(d.error || 'Could not generate a post.'); return; }
+
+            document.getElementById('gen-title').textContent = d.title;
+            document.getElementById('gen-excerpt').textContent = d.excerpt;
+            document.getElementById('gen-body').innerHTML = d.bodyHtml;
+            document.getElementById('gen-featured').textContent = 'Featuring: ' + (d.featured || []).join('  ·  ');
+            var cover = document.getElementById('gen-cover');
+            if (d.coverImageUrl) { cover.src = d.coverImageUrl; cover.style.display = ''; } else { cover.style.display = 'none'; }
+            // Lock in the previewed content so "Save"/"Publish" create exactly what's shown.
+            document.getElementById('gen-form-theme').value = theme;
+            document.getElementById('gen-form-seed').value = d.seed;
+            result.classList.remove('hidden');
+            shuffleBtn.classList.remove('hidden');
+        } catch (e) { alert('Could not generate a preview.'); }
+        finally { previewBtn.disabled = false; shuffleBtn.disabled = false; previewBtn.textContent = label; }
+    }
+
+    previewBtn.addEventListener('click', generate);
+    shuffleBtn.addEventListener('click', generate);
+})();
+</script>
+}

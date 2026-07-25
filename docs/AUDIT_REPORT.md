@@ -1,4 +1,4 @@
-# Sterling Lams Platform — Full Audit Report (Findings)
+# Zephiel Platform — Full Audit Report (Findings)
 
 **Date:** 2026-06-12
 **Scope:** Entire ASP.NET Core MVC + EF Core (PostgreSQL) application — customer storefront, Areas/Admin, Areas/Inventory (POS/inventory system), database schema, security/permissions, and performance.

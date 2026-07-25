@@ -8,7 +8,7 @@
 #    AZURE_WEBAPP_PUBLISH_PROFILE  -- the App Service "Get publish profile" XML
 #    PROD_DB_CONNECTION            -- Npgsql connection string for the prod PostgreSQL DB
 #                                     e.g. Host=...postgres.database.azure.com;Port=5432;
-#                                          Database=sterlinglams;Username=...;Password=...;SSL Mode=Require;Trust Server Certificate=true
+#                                          Database=zephiel;Username=...;Password=...;SSL Mode=Require;Trust Server Certificate=true
 #
 #  Set AZURE_WEBAPP_NAME below to your App Service name.
 # ─────────────────────────────────────────────────────────────────────────────
@@ -23,7 +23,7 @@ env:
   # Set this in GitHub: Settings -> Secrets and variables -> Actions -> Variables -> New
   # repository variable named AZURE_WEBAPP_NAME (value = your App Service name). No code edit needed.
   AZURE_WEBAPP_NAME: ${{ vars.AZURE_WEBAPP_NAME }}
-  PROJECT: src/SterlingLams.Web/SterlingLams.Web.csproj
+  PROJECT: src/Zephiel.Web/Zephiel.Web.csproj
   DOTNET_VERSION: '9.0.x'
   NODE_VERSION: '20'
 

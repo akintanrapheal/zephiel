@@ -1,0 +1,635 @@
+// ─────────────────────────────────────────────────────────────────────────────
+//  Zephiel Platform — storefront, admin back office & in-house inventory/POS
+//  Developed by Dev Rapheal.
+// ─────────────────────────────────────────────────────────────────────────────
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.EntityFrameworkCore;
+using Sentry.AspNetCore;
+using Serilog;
+using Zephiel.Web.Data;
+using Zephiel.Web.Infrastructure;
+using Zephiel.Web.Infrastructure.Extensions;
+using Zephiel.Web.Models.Domain;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// ─── Reduce tech fingerprinting ─────────────────────────────────────────────
+// Don't advertise the server software. Kestrel's "Server: Kestrel" header is what stack-detection
+// extensions (Wappalyzer/BuiltWith) read to identify ASP.NET Core — and Render echoes it back to
+// the browser as "x-render-origin-server". Obscurity only: it slows casual/automated fingerprinting,
+// it is NOT a security control on its own.
+builder.WebHost.ConfigureKestrel(o => o.AddServerHeader = false);
+
+// Configurable secret prefixes for the staff backends (StaffPaths:Admin/Inventory/Marketing);
+// unset → current names. Read once here so routing + CSP + staff-path checks all agree.
+Zephiel.Web.Infrastructure.StaffPaths.Init(builder.Configuration);
+Zephiel.Web.Areas.Admin.AdminSections.InitOwners(builder.Configuration);
+
+// ─── Serilog ────────────────────────────────────────────────────────────────
+// The load-balancer/uptime probe hits /health every few seconds; without filtering, its request
+// logs (start/finish, endpoint, session start, readiness DB query) drown out real traffic and make
+// genuine errors hard to spot. Drop any log event that belongs to a /health(/…) request — matched by
+// {Path} on the hosting start/finish lines and {RequestPath} (pushed by middleware below) on the rest.
+static bool IsHealthCheckLog(Serilog.Events.LogEvent e)
+{
+    static bool IsHealth(Serilog.Events.LogEventPropertyValue? v) =>
+        v is Serilog.Events.ScalarValue { Value: string s }
+        && (s.Equals("/health", StringComparison.OrdinalIgnoreCase)
+            || s.StartsWith("/health/", StringComparison.OrdinalIgnoreCase));
+    return (e.Properties.TryGetValue("RequestPath", out var rp) && IsHealth(rp))
+        || (e.Properties.TryGetValue("Path", out var p) && IsHealth(p));
+}
+
+Log.Logger = new LoggerConfiguration()
+    .ReadFrom.Configuration(builder.Configuration)
+    .Enrich.FromLogContext()
+    .Filter.ByExcluding(IsHealthCheckLog)
+    .WriteTo.Console()
+    .WriteTo.File("logs/zephiel-.txt", rollingInterval: RollingInterval.Day)
+    .CreateLogger();
+
+builder.Host.UseSerilog();
+
+// ─── Error monitoring (Sentry) ───────────────────────────────────────────────
+// Opt-in: stays completely inert until a DSN is supplied (Sentry:Dsn or SENTRY_DSN env var),
+// so local/dev runs never phone home. Set the DSN in Render to start capturing server-side
+// exceptions + performance traces. No secret needs to live in the repo.
+var sentryDsn = builder.Configuration["Sentry:Dsn"];
+if (!string.IsNullOrWhiteSpace(sentryDsn))
+{
+    builder.WebHost.UseSentry(o =>
+    {
+        o.Dsn = sentryDsn;
+        o.Environment = builder.Environment.EnvironmentName;
+        o.TracesSampleRate = builder.Configuration.GetValue("Sentry:TracesSampleRate", 0.1);
+        // Don't capture request bodies (they can carry PII / payment data).
+        o.MaxRequestBodySize = Sentry.Extensibility.RequestSize.None;
+        o.SendDefaultPii = false;
+    });
+}
+
+// ─── Database ───────────────────────────────────────────────────────────────
+// Render/Heroku/Railway hand the database to the app as a postgres:// URL in DATABASE_URL.
+// Convert it to the Npgsql key/value format; otherwise use ConnectionStrings:DefaultConnection.
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
+if (!string.IsNullOrWhiteSpace(databaseUrl))
+{
+    var uri = new Uri(databaseUrl);
+    var creds = uri.UserInfo.Split(':', 2);
+    connectionString = new Npgsql.NpgsqlConnectionStringBuilder
+    {
+        Host = uri.Host,
+        Port = uri.Port > 0 ? uri.Port : 5432,
+        Database = uri.AbsolutePath.TrimStart('/'),
+        Username = Uri.UnescapeDataString(creds[0]),
+        Password = creds.Length > 1 ? Uri.UnescapeDataString(creds[1]) : string.Empty,
+        SslMode = Npgsql.SslMode.Require
+    }.ConnectionString;
+}
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseNpgsql(connectionString));
+
+// ─── Data Protection ──────────────────────────────────────────────────────────
+// Persist keys so antiforgery tokens, auth cookies and other protected payloads survive app
+// restarts/redeploys and are shared across instances. Keys live in the DATABASE: the host
+// (Render free tier) has an ephemeral filesystem that's wiped on every redeploy and cold start,
+// so file-based keys would rotate constantly and invalidate every issued token/cookie (HTTP 400
+// antiforgery failures on form posts, plus surprise logouts). A fixed application name keeps keys
+// valid across deploys. Optional file fallback for environments without a DB (DataProtection:KeysPath).
+var dpKeysPath = builder.Configuration["DataProtection:KeysPath"];
+var dataProtection = builder.Services.AddDataProtection().SetApplicationName("Zephiel");
+if (!string.IsNullOrWhiteSpace(dpKeysPath))
+{
+    Directory.CreateDirectory(dpKeysPath);
+    dataProtection.PersistKeysToFileSystem(new DirectoryInfo(dpKeysPath));
+}
+else
+{
+    dataProtection.PersistKeysToDbContext<ApplicationDbContext>();
+}
+
+// ─── Identity ───────────────────────────────────────────────────────────────
+builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
+{
+    // Explicit, balanced password policy (applies to staff + customers). Requires a mix of
+    // upper/lower/digit at 8+ chars with 4 distinct characters — strong without forcing a special
+    // character (which is user-hostile and adds little once length + character classes are required).
+    options.Password.RequiredLength = 8;
+    options.Password.RequireDigit = true;
+    options.Password.RequireLowercase = true;
+    options.Password.RequireUppercase = true;
+    options.Password.RequireNonAlphanumeric = false;
+    options.Password.RequiredUniqueChars = 4;
+
+    // Email confirmation is NOT enforced yet: existing users are unconfirmed and SMTP may be
+    // unconfigured, so flipping this on would lock everyone out. The confirmation flow exists
+    // (Register sends a link, AccountController.ConfirmEmail verifies it); enable enforcement only
+    // once existing users are grandfathered (EmailConfirmed=true) and SMTP is live in production.
+    options.SignIn.RequireConfirmedEmail = false;
+
+    // Brute-force protection: lock the account after repeated failed logins.
+    options.Lockout.AllowedForNewUsers = true;
+    options.Lockout.MaxFailedAccessAttempts = 5;
+    options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
+})
+.AddEntityFrameworkStores<ApplicationDbContext>()
+.AddDefaultTokenProviders();
+
+builder.Services.ConfigureApplicationCookie(options =>
+{
+    options.LoginPath = "/Account/Login";
+    options.LogoutPath = "/Account/Logout";
+    options.AccessDeniedPath = "/Account/AccessDenied";
+    options.Cookie.Name = "sg_auth";   // was ".AspNetCore.Identity.Application" (framework giveaway)
+    options.Cookie.HttpOnly = true;
+    // Require HTTPS for the auth cookie outside Development (plain HTTP localhost has no TLS).
+    options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
+        ? CookieSecurePolicy.SameAsRequest
+        : CookieSecurePolicy.Always;
+    options.Cookie.SameSite = SameSiteMode.Lax;
+    options.ExpireTimeSpan = TimeSpan.FromDays(30);
+    options.SlidingExpiration = true;
+
+    // Staff/admin get a much shorter, non-persistent session than shoppers — a stolen or
+    // shared back-office cookie shouldn't stay valid for a month. Customers keep the 30-day
+    // sliding convenience above.
+
+    options.Events ??= new Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationEvents();
+    options.Events.OnSigningIn = ctx =>
+    {
+        string[] staffRoles = { "Admin", "Operations", "Sales", "Inventory", "Social Media" };
+        if (ctx.Principal is not null && Array.Exists(staffRoles, r => ctx.Principal!.IsInRole(r)))
+        {
+            ctx.Properties.IsPersistent = false;
+            ctx.Properties.ExpiresUtc = DateTimeOffset.UtcNow.AddHours(8);
+        }
+        return Task.CompletedTask;
+    };
+
+    // An expired POS session must never bounce the till to the customer storefront login — keep it
+    // inside the POS by redirecting to the POS sign-in screen instead of /Account/Login.
+    options.Events.OnRedirectToLogin = ctx =>
+    {
+        var seg = ctx.Request.Path.Value?.TrimStart('/').Split('/', 2)[0] ?? "";
+        var isPos = seg.Equals(Zephiel.Web.Infrastructure.StaffPaths.Pos, StringComparison.OrdinalIgnoreCase)
+                 || seg.Equals("Till", StringComparison.OrdinalIgnoreCase);
+        ctx.Response.Redirect(isPos ? $"/{Zephiel.Web.Infrastructure.StaffPaths.Pos}" : ctx.RedirectUri);
+        return Task.CompletedTask;
+    };
+});
+
+// ─── Caching ────────────────────────────────────────────────────────────────
+var redisConn = builder.Configuration.GetConnectionString("Redis");
+if (!string.IsNullOrEmpty(redisConn))
+    builder.Services.AddStackExchangeRedisCache(opts => opts.Configuration = redisConn);
+else
+    builder.Services.AddMemoryCache();
+
+// ─── Session ────────────────────────────────────────────────────────────────
+builder.Services.AddDistributedMemoryCache();
+builder.Services.AddSession(options =>
+{
+    options.IdleTimeout = TimeSpan.FromMinutes(30);
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+    options.Cookie.Name = "sg_s";           // was ".AspNetCore.Session" — see fingerprinting note above
+});
+
+// Antiforgery cookie carries the framework name by default (".AspNetCore.Antiforgery.<hash>").
+// Only the COOKIE is renamed here — the form field/header names are left at their defaults because
+// ~58 client-side references depend on them; renaming those is a separate, wider change.
+builder.Services.AddAntiforgery(o => o.Cookie.Name = "sg_af");
+
+// HSTS: the framework default is only 30 days. A year is the recommended value (and the minimum
+// for the browser preload list). IncludeSubDomains is deliberately NOT set — it would force HTTPS
+// on every subdomain, which breaks any that are still plain HTTP; enable it only once every
+// subdomain is confirmed HTTPS-only. Preload is likewise left off: it is hard to reverse.
+builder.Services.AddHsts(o => o.MaxAge = TimeSpan.FromDays(365));
+
+// ─── Application Services ───────────────────────────────────────────────────
+// Encrypts sensitive site-settings (payment keys, SMTP password) at rest via Data Protection.
+builder.Services.AddSingleton<Zephiel.Web.Services.ISettingsSecretProtector, Zephiel.Web.Services.SettingsSecretProtector>();
+builder.Services.AddScoped<Zephiel.Web.Services.BackofficeChrome>();
+builder.Services.AddZephielServices(builder.Configuration);
+
+// ─── Email (SMTP) ─────────────────────────────────────────────────────────────
+builder.Services.Configure<Zephiel.Web.Services.EmailOptions>(builder.Configuration.GetSection("Email"));
+builder.Services.AddScoped<Zephiel.Web.Services.IEmailService, Zephiel.Web.Services.SmtpEmailService>();
+builder.Services.AddScoped<Zephiel.Web.Services.BarcodeImportService>();
+
+// ─── Rate limiting ────────────────────────────────────────────────────────────
+// Per-IP throttle on auth & email-sending endpoints (brute-force / abuse protection).
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("auth", ctx =>
+        System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+            }));
+});
+
+// ─── Background Services ─────────────────────────────────────────────────────
+// Frees stock reserved by abandoned (unpaid) online orders so it returns to sale.
+builder.Services.AddHostedService<Zephiel.Web.Infrastructure.ReservationSweeper>();
+// Retries paid-but-unfulfilled online orders (self-heals transient failures) and alerts the
+// admin for ones that stay stuck (e.g. genuine stock shortage). See OP-2.
+builder.Services.AddHostedService<Zephiel.Web.Infrastructure.FulfilmentRetryService>();
+builder.Services.AddHostedService<Zephiel.Web.Infrastructure.LowStockAlertService>();
+builder.Services.AddHostedService<Zephiel.Web.Infrastructure.BackInStockNotifier>();
+builder.Services.AddHostedService<Zephiel.Web.Infrastructure.AbandonedCartService>();
+// Sends marketing campaigns (Marketing Hub) in the background — due/scheduled + resumable.
+builder.Services.AddHostedService<Zephiel.Web.Infrastructure.CampaignSenderService>();
+// Runs marketing automations (welcome / post-purchase / win-back) — poll-based enrol + send.
+builder.Services.AddHostedService<Zephiel.Web.Infrastructure.AutomationSweepService>();
+// Rewards refer-a-friend referrals when the referred customer's first order is paid.
+builder.Services.AddHostedService<Zephiel.Web.Infrastructure.ReferralRewardService>();
+// Publishes due scheduled social posts (dormant until accounts are connected: Social:Enabled).
+builder.Services.AddHostedService<Zephiel.Web.Infrastructure.SocialPublisherService>();
+builder.Services.AddScoped<Zephiel.Web.Infrastructure.IFinanceReportService, Zephiel.Web.Infrastructure.FinanceReportService>();
+builder.Services.AddHostedService<Zephiel.Web.Infrastructure.FinanceReportScheduler>();
+
+// ─── MVC ────────────────────────────────────────────────────────────────────
+builder.Services.AddControllersWithViews()
+    .AddJsonOptions(opts =>
+        opts.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase)
+    // Store TempData in the session, not a cookie. The cookie provider writes a Set-Cookie on
+    // every response that touches TempData (the layout reads TempData["Success"]/["Error"]),
+    // which would make every storefront page uncacheable. Session-backed TempData has no such
+    // per-response cookie. (Session is already enabled below.)
+    .AddSessionStateTempDataProvider();
+
+builder.Services.AddHttpContextAccessor();
+
+// ─── Output caching ───────────────────────────────────────────────────────────
+// Opt-in only: nothing is cached unless an action carries [OutputCache(PolicyName="Storefront")].
+// The big, read-mostly storefront pages (home, category lists) use it. Their per-user bits
+// (cart/wishlist badges, signed-in state, CSRF token) are loaded client-side from
+// /site/header-state, so the cached HTML is identical for everyone. Short TTL + tag eviction
+// keep it fresh; the "no-store if Set-Cookie" rule is the correctness backstop.
+builder.Services.AddOutputCache(options =>
+{
+    options.AddPolicy("Storefront", policy => policy
+        .Expire(TimeSpan.FromSeconds(60))
+        .SetVaryByQuery("*")
+        .Tag("storefront"));
+});
+
+// ─── Health checks ────────────────────────────────────────────────────────────
+// /health        → liveness  (process is up & serving)        — Render deploy probe
+// /health/ready  → readiness (can actually reach Postgres)    — catches a bad deploy
+builder.Services.AddHealthChecks()
+    .AddCheck<Zephiel.Web.Infrastructure.DatabaseHealthCheck>("database", tags: new[] { "ready" });
+
+var app = builder.Build();
+
+// ─── Middleware Pipeline ─────────────────────────────────────────────────────
+// Behind Render / any reverse proxy: honour X-Forwarded-Proto/For so the app knows the request
+// actually came in over HTTPS. Without this, generated links + auth redirects come out as http://
+// (the proxy forwards plain HTTP internally). Proxy IP is dynamic, so clear the known lists.
+var forwardedOptions = new ForwardedHeadersOptions
+{
+    ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor
+                     | Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto
+};
+forwardedOptions.KnownNetworks.Clear();
+forwardedOptions.KnownProxies.Clear();
+app.UseForwardedHeaders(forwardedOptions);
+
+// Tag every log written during a request with its path (AsyncLocal → flows to inner middleware,
+// endpoints, EF). The Serilog filter above uses this to drop health-check request noise.
+app.Use(async (ctx, next) =>
+{
+    using (Serilog.Context.LogContext.PushProperty("RequestPath", ctx.Request.Path.Value ?? ""))
+        await next();
+});
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler("/Home/Error");
+    app.UseHsts();
+}
+
+// Bare 4xx responses (route misses, NotFound(), a wrong secret staff path) render the branded
+// error page instead of an empty body. Runs in all environments so it's testable locally too.
+app.UseStatusCodePagesWithReExecute("/Home/PageNotFound", "?code={0}");
+
+app.UseHttpsRedirection();
+
+// ─── Security headers ───────────────────────────────────────────────────────
+// Reject verbs the app has no endpoints for. Without this, MVC answers DELETE/PUT on any GET
+// action (returning 200), which scanners flag and which can confuse caches/proxies.
+var allowedMethods = new[] { "GET", "HEAD", "POST", "OPTIONS" };
+app.Use(async (context, next) =>
+{
+    if (!allowedMethods.Contains(context.Request.Method, StringComparer.OrdinalIgnoreCase))
+    {
+        context.Response.StatusCode = StatusCodes.Status405MethodNotAllowed;
+        context.Response.Headers["Allow"] = "GET, HEAD, POST, OPTIONS";
+        return;
+    }
+    // The POS service worker must NOT inherit the page CSP: a worker adopts the CSP of its own
+    // script, and connect-src 'self' would block it from fetching cross-origin product images
+    // (Cloudinary) to cache them for offline. Serve the SW script without a CSP.
+    if (context.Request.Path.Equals("/pos-sw.js", StringComparison.OrdinalIgnoreCase))
+    {
+        await next();
+        return;
+    }
+
+    context.Response.Headers["X-Content-Type-Options"] = "nosniff";
+    context.Response.Headers["X-Frame-Options"] = "DENY";
+    context.Response.Headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
+
+    // Drop browser features the site never uses, so injected/3rd-party script can't reach them.
+    context.Response.Headers["Permissions-Policy"] =
+        "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), " +
+        "fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), " +
+        "midi=(), usb=(), xr-spatial-tracking=(), " +
+        // Payment Request API stays open to us and Paystack — some card/wallet flows use it, and
+        // silently blocking it would break checkout.
+        "payment=(self \"https://checkout.paystack.com\" \"https://paystack.com\")";
+
+    // Isolate our browsing context from cross-origin windows. "allow-popups" (not plain
+    // "same-origin") so the Paystack checkout popup can still talk back to the opener.
+    context.Response.Headers["Cross-Origin-Opener-Policy"] = "same-origin-allow-popups";
+    // Legacy Adobe crossdomain.xml policy — nothing should honour one for this site.
+    context.Response.Headers["X-Permitted-Cross-Domain-Policies"] = "none";
+
+    // Per-request CSP nonce for inline <script> blocks (read in views via Context.Items["csp-nonce"]).
+    // Hex (not base64) so there are no +/= characters for Razor to HTML-encode — the attribute value
+    // then matches the header byte-for-byte.
+    var nonce = Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(16)).ToLowerInvariant();
+    context.Items["csp-nonce"] = nonce;
+
+    // Content-Security-Policy. The public storefront uses a strict nonce-based script-src (no
+    // 'unsafe-inline'), so injected inline scripts/handlers are blocked. Staff areas (/Admin,
+    // /Inventory, /Till) still rely on inline handlers, so they keep 'unsafe-inline' for now.
+    // style-src keeps 'unsafe-inline' (inline style attributes are pervasive + low-risk) + Google Fonts.
+    var p = context.Request.Path;
+    var staffArea = p.StartsWithSegments($"/{StaffPaths.Admin}") || p.StartsWithSegments($"/{StaffPaths.Inventory}") || p.StartsWithSegments("/Till") || p.StartsWithSegments($"/{StaffPaths.Pos}") || p.StartsWithSegments($"/{StaffPaths.Marketing}");
+    var scriptSrc = staffArea ? "script-src 'self' 'unsafe-inline'" : $"script-src 'self' 'nonce-{nonce}'";
+
+    context.Response.Headers["Content-Security-Policy"] =
+        "default-src 'self'; " +
+        scriptSrc + "; " +
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+        "font-src 'self' https://fonts.gstatic.com; " +
+        "img-src 'self' data: https:; " +
+        "connect-src 'self'; " +
+        "object-src 'none'; " +
+        "base-uri 'self'; " +
+        // Allow the checkout form to redirect to the Paystack hosted payment page (the payment
+        // callback returns to our own origin, covered by 'self'). Without this, CSP blocks the
+        // cross-origin redirect to checkout.paystack.com and the user is never sent to pay.
+        "form-action 'self' https://checkout.paystack.com https://*.paystack.com https://*.paystack.co; " +
+        "frame-ancestors 'none'";
+    await next();
+});
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    OnPrepareResponse = ctx =>
+    {
+        var req = ctx.Context.Request;
+        // Content-addressed assets never change in place, so they're safe to cache hard for a year:
+        //  • css/js carry a ?v=<content-hash> (asp-append-version) that changes when the file changes;
+        //  • everything under /uploads is saved with a unique Guid filename (a replacement = new URL).
+        var contentAddressed = req.Query.ContainsKey("v")
+            || req.Path.StartsWithSegments("/uploads", StringComparison.OrdinalIgnoreCase);
+        ctx.Context.Response.Headers.CacheControl = contentAddressed
+            ? "public,max-age=31536000,immutable"
+            : "public,max-age=86400"; // other/unversioned assets (e.g. favicon) — revalidate daily
+        // The POS service worker lives at the site root but must control the (possibly secret) POS
+        // scope, so it needs an explicit Service-Worker-Allowed header for that path.
+        if (req.Path.Equals("/pos-sw.js", StringComparison.OrdinalIgnoreCase))
+            ctx.Context.Response.Headers["Service-Worker-Allowed"] = $"/{StaffPaths.Pos}";
+    }
+});
+
+// Once POS is behind a secret prefix, the guessable "/Pos" must not resolve (it would otherwise
+// still hit PosController via the default route and leak the register/cashier picker). 404 it.
+if (StaffPaths.PosIsSecret)
+{
+    app.Use(async (ctx, next) =>
+    {
+        if (ctx.Request.Path.StartsWithSegments("/Pos", StringComparison.OrdinalIgnoreCase))
+        {
+            ctx.Response.StatusCode = StatusCodes.Status404NotFound;
+            return;
+        }
+        await next();
+    });
+}
+
+// Zephiel is a storefront + admin-only, delivery-only online store — the POS till and the
+// multi-branch Inventory System are disabled. Their routes 404 (the stock/store engine stays,
+// because storefront checkout depends on it; only the operator UIs are hidden). Keep this ahead
+// of routing so the requests never reach those controllers/areas.
+app.Use(async (ctx, next) =>
+{
+    var path = ctx.Request.Path;
+    if (path.StartsWithSegments("/Pos", StringComparison.OrdinalIgnoreCase)
+        || path.StartsWithSegments("/Till", StringComparison.OrdinalIgnoreCase)
+        || path.StartsWithSegments("/Inventory", StringComparison.OrdinalIgnoreCase)
+        || path.StartsWithSegments("/Stores", StringComparison.OrdinalIgnoreCase))
+    {
+        ctx.Response.StatusCode = StatusCodes.Status404NotFound;
+        return;
+    }
+    await next();
+});
+
+app.UseRouting();
+app.UseRateLimiter();
+app.UseSession();
+// Track storefront origin + page views per session for order attribution (needs session).
+app.UseMiddleware<Zephiel.Web.Infrastructure.OrderAttributionMiddleware>();
+app.UseAuthentication();
+app.UseAuthorization();
+
+// Public storefront maintenance page (store.maintenance_mode). After auth so staff are exempt.
+app.UseMiddleware<Zephiel.Web.Infrastructure.MaintenanceModeMiddleware>();
+
+// Output cache sits as late as possible: session, order-attribution, auth and maintenance all
+// run BEFORE it, so they still execute on a cache hit — only the MVC page render is short-circuited.
+app.UseOutputCache();
+
+// Friendly redirects for the staff-area roots — the area default controller is "Home", which
+// doesn't exist, so a bare root would 404. Send them to the real landing pages (secret-prefix aware).
+app.MapGet($"/{StaffPaths.Admin}", () => Results.Redirect($"/{StaffPaths.Admin}/Dashboard"));
+app.MapGet($"/{StaffPaths.Inventory}", () => Results.Redirect($"/{StaffPaths.Inventory}/Overview"));
+app.MapGet($"/{StaffPaths.Marketing}", () => Results.Redirect($"/{StaffPaths.Marketing}/Dashboard"));
+
+// Explicit per-area routes using the configurable secret prefix (instead of the generic
+// {area:exists} route which would expose the real area names). asp-area links auto-resolve to
+// the prefix; the real names (/Admin …) 404 once a secret prefix is set.
+app.MapAreaControllerRoute(name: "admin_area",     areaName: "Admin",     pattern: $"{StaffPaths.Admin}/{{controller=Home}}/{{action=Index}}/{{id?}}");
+app.MapAreaControllerRoute(name: "inventory_area", areaName: "Inventory", pattern: $"{StaffPaths.Inventory}/{{controller=Home}}/{{action=Index}}/{{id?}}");
+app.MapAreaControllerRoute(name: "marketing_area", areaName: "Marketing", pattern: $"{StaffPaths.Marketing}/{{controller=Home}}/{{action=Index}}/{{id?}}");
+
+// POS (a single non-area controller) behind the configurable secret prefix. Placed before the
+// default route so asp-action links + ambient URL generation resolve to the prefix, and "/Pos"
+// (the guessable default) is blocked above once a secret prefix is configured.
+app.MapControllerRoute(name: "pos", pattern: $"{StaffPaths.Pos}/{{action=Index}}/{{id?}}",
+    defaults: new { controller = "Pos" });
+
+app.MapControllerRoute(
+    name: "default",
+    pattern: "{controller=Home}/{action=Index}/{id?}");
+
+app.MapControllers(); // API controllers (WebhooksController)
+
+// Health probes (anonymous). Liveness runs no checks (is the process serving?); readiness
+// includes the DB check so Render can detect an instance that's up but can't reach Postgres.
+app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = _ => false
+});
+app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("ready")
+});
+
+// ─── DB Initialisation ───────────────────────────────────────────────────────
+{
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<ApplicationDbContext>>();
+
+    try
+    {
+        // In Production: expect migrations to have been run before deploy.
+        // In Development: use EnsureCreated so the app works without `dotnet ef` installed.
+        if (app.Environment.IsDevelopment())
+        {
+            // EnsureCreated creates all tables from the model — no migration files needed.
+            // Switch to MigrateAsync once you've run `dotnet ef migrations add InitialCreate`.
+            var created = await db.Database.EnsureCreatedAsync();
+            if (created) logger.LogInformation("Database created from EF model (EnsureCreated).");
+        }
+        else
+        {
+            // Production: do NOT silently auto-migrate on startup — a bad migration would take the
+            // site down, and concurrent instances could race applying them. Migrations should be
+            // applied as a gated deploy step (`dotnet ef database update` or a migration bundle)
+            // BEFORE the app starts. If there are unapplied migrations we fail fast with guidance.
+            // Opt back into startup migration with Database:AutoMigrate=true if you really want it.
+            var pending = (await db.Database.GetPendingMigrationsAsync()).ToList();
+            if (pending.Count == 0)
+            {
+                logger.LogInformation("Database schema is up to date.");
+            }
+            else if (app.Configuration.GetValue<bool>("Database:AutoMigrate"))
+            {
+                logger.LogWarning("Database:AutoMigrate=true — applying {Count} pending migration(s) on startup: {List}",
+                    pending.Count, string.Join(", ", pending));
+                await db.Database.MigrateAsync();
+            }
+            else
+            {
+                throw new InvalidOperationException(
+                    $"{pending.Count} pending database migration(s) not applied: {string.Join(", ", pending)}. " +
+                    "Apply them as a deploy step (dotnet ef database update / migration bundle) before starting, " +
+                    "or set Database:AutoMigrate=true to migrate on startup.");
+            }
+        }
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Database initialisation failed. Check your connection string.");
+        if (!app.Environment.IsDevelopment()) throw; // Fail fast in production
+        logger.LogWarning("Continuing without database in Development mode. Some features will not work.");
+    }
+}
+
+// Seed roles, stores, and categories (all environments)
+try
+{
+    await Zephiel.Web.Infrastructure.SeedData.SeedAsync(app.Services);
+
+    // Seed product attributes (Colour, Alphabet, Size, Length, Combo) + admin user
+    using var attrScope   = app.Services.CreateScope();
+    var attrDb            = attrScope.ServiceProvider.GetRequiredService<Zephiel.Web.Data.ApplicationDbContext>();
+    var attrLogger        = attrScope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    var attrUserManager   = attrScope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+    var attrRoleManager   = attrScope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+    await Zephiel.Web.Infrastructure.RoleSeedData.SeedAsync(attrRoleManager, attrDb, attrLogger);
+    await Zephiel.Web.Infrastructure.AttributeSeedData.SeedAdminUserAsync(attrUserManager, attrRoleManager, attrLogger);
+    await Zephiel.Web.Infrastructure.AttributeSeedData.SeedAsync(attrDb, attrLogger);
+    await Zephiel.Web.Infrastructure.SettingsSeedData.SeedAsync(attrDb, attrLogger);
+}
+catch (Exception ex)
+{
+    var seedLogger = app.Services.GetRequiredService<ILogger<Program>>();
+    seedLogger.LogError(ex, "Seeding failed — database may not be available.");
+}
+
+// ─── CLI maintenance commands ────────────────────────────────────────────────
+// Usage: dotnet run -- migrate-woo "C:\path\to\product-export.csv"
+// Replaces all website products with the CSV export, then exits without serving.
+if (args.Length >= 1 && args[0].Equals("migrate-woo", StringComparison.OrdinalIgnoreCase))
+{
+    if (args.Length < 2)
+    {
+        Console.Error.WriteLine("Usage: dotnet run -- migrate-woo \"<path-to-csv>\"");
+        return;
+    }
+    await Zephiel.Web.Infrastructure.WooMigrationRunner.RunAsync(app.Services, args[1]);
+    Log.CloseAndFlush();
+    return;
+}
+
+// Usage: dotnet run -- clean-product-text  (decodes leftover HTML entities in descriptions)
+if (args.Length >= 1 && args[0].Equals("clean-product-text", StringComparison.OrdinalIgnoreCase))
+{
+    await Zephiel.Web.Infrastructure.WooMigrationRunner.CleanProductTextAsync(app.Services);
+    Log.CloseAndFlush();
+    return;
+}
+
+// Usage: dotnet run -- import-catalog "<path-to-catalog.json>" [--upsert]
+//   default        → WIPE all products then import (dev/first-time seeding; destroys order history)
+//   --upsert       → match by code, UPDATE existing / INSERT new / DEACTIVATE missing (production-safe)
+if (args.Length >= 1 && args[0].Equals("import-catalog", StringComparison.OrdinalIgnoreCase))
+{
+    var path = args.Skip(1).FirstOrDefault(a => !a.StartsWith("--")) ?? "";
+    var upsert = args.Any(a => a.Equals("--upsert", StringComparison.OrdinalIgnoreCase));
+    using var scope = app.Services.CreateScope();
+    var svc = scope.ServiceProvider.GetRequiredService<Zephiel.Web.Services.ICatalogImportService>();
+    Console.WriteLine(upsert ? "Mode: UPSERT (production-safe, preserves order history)" : "Mode: WIPE + import");
+    var res = await svc.ImportAsync(path, wipeFirst: !upsert, skipUncategorized: true, new Progress<string>(Console.WriteLine));
+    Console.WriteLine("RESULT: " + res.Summary);
+    foreach (var e in res.Errors.Take(25)) Console.WriteLine("  ERR: " + e);
+    Log.CloseAndFlush();
+    return;
+}
+
+// Usage: dotnet run -- import-barcodes "tools/barcode-import/eposnow_barcodes.csv"
+// Matches EposNow barcodes (sku,color,barcode) to our products and assigns them.
+if (args.Length >= 1 && args[0].Equals("import-barcodes", StringComparison.OrdinalIgnoreCase))
+{
+    var path = args.Skip(1).FirstOrDefault(a => !a.StartsWith("--")) ?? "";
+    using var scope = app.Services.CreateScope();
+    var svc = scope.ServiceProvider.GetRequiredService<Zephiel.Web.Services.BarcodeImportService>();
+    var res = await svc.ImportAsync(path, new Progress<string>(Console.WriteLine));
+    Console.WriteLine("RESULT: " + res.Summary);
+    foreach (var e in res.Errors.Take(25)) Console.WriteLine("  ERR: " + e);
+    Log.CloseAndFlush();
+    return;
+}
+
+// Timezone sanity line — confirms the container is running in West Africa Time (set via TZ +
+// tzdata in the Dockerfile). Should log "Africa/Lagos … +01:00:00"; if it says UTC, ToLocalTime
+// displays will be an hour behind.
+Log.Information("Server timezone: {Zone} (UTC offset {Offset})",
+    TimeZoneInfo.Local.Id, TimeZoneInfo.Local.BaseUtcOffset);
+
+await app.RunAsync();

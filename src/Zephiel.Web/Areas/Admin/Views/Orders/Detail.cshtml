@@ -1,0 +1,436 @@
+@model Zephiel.Web.Areas.Admin.ViewModels.AdminOrderDetailViewModel
+@{
+    ViewData["Title"] = "Order " + Model.Order.OrderNumber;
+}
+
+<div class="flex items-center justify-between mb-6">
+    <a asp-area="Admin" asp-controller="Orders" asp-action="Index"
+       class="text-xs text-neutral-400 hover:text-neutral-700 transition-colors">← Back to Orders</a>
+    <div class="flex items-center gap-2">
+        <a asp-area="Admin" asp-controller="Orders" asp-action="Invoice" asp-route-id="@Model.Order.Id" target="_blank"
+           class="px-3 py-1.5 text-xs border border-neutral-200 rounded-sm hover:border-neutral-400 transition-colors">🖨 Invoice</a>
+        <a asp-area="Admin" asp-controller="Orders" asp-action="PackingSlip" asp-route-id="@Model.Order.Id" target="_blank"
+           class="px-3 py-1.5 text-xs border border-neutral-200 rounded-sm hover:border-neutral-400 transition-colors">🖨 Packing slip</a>
+        <span class="text-xs text-neutral-400 ml-2">@Model.Order.CreatedAt.ToLocalTime().ToString("dddd, dd MMMM yyyy HH:mm")</span>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <!-- Order items -->
+    <div class="lg:col-span-2 space-y-4">
+        <div class="bg-white rounded-sm border border-neutral-100">
+            <div class="px-6 py-4 border-b border-neutral-100">
+                <h2 class="text-sm font-medium">Items</h2>
+            </div>
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="bg-neutral-50 border-b border-neutral-100">
+                        <th class="text-left px-6 py-2 text-xs text-neutral-400 font-medium">Product</th>
+                        <th class="text-left px-6 py-2 text-xs text-neutral-400 font-medium">Variant</th>
+                        <th class="text-right px-6 py-2 text-xs text-neutral-400 font-medium">Qty</th>
+                        <th class="text-right px-6 py-2 text-xs text-neutral-400 font-medium">Price</th>
+                        <th class="text-right px-6 py-2 text-xs text-neutral-400 font-medium">Subtotal</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-neutral-50">
+                    @foreach (var item in Model.Order.Items)
+                    {
+                        var sku = !string.IsNullOrWhiteSpace(item.ProductSku) ? item.ProductSku
+                            : (item.ProductVariant?.Sku ?? item.Product?.Sku);
+                        var imgUrl = item.Product?.Images?
+                            .OrderByDescending(i => i.IsPrimary).ThenBy(i => i.SortOrder)
+                            .FirstOrDefault()?.Url;
+                        var thumb = Zephiel.Web.Infrastructure.Img.Cld(imgUrl, 80, 80);
+                        <tr>
+                            <td class="px-6 py-3">
+                                <div class="flex items-center gap-3">
+                                    @if (!string.IsNullOrEmpty(thumb))
+                                    {
+                                        <img src="@thumb" alt="@item.ProductName" width="40" height="40"
+                                             class="w-10 h-10 rounded object-cover border border-neutral-100 flex-shrink-0" />
+                                    }
+                                    else
+                                    {
+                                        <div class="w-10 h-10 rounded bg-neutral-100 flex items-center justify-center flex-shrink-0 text-neutral-300 text-base">◇</div>
+                                    }
+                                    <div class="min-w-0">
+                                        <div class="text-xs font-medium text-neutral-800">@item.ProductName</div>
+                                        @if (!string.IsNullOrWhiteSpace(sku))
+                                        {
+                                            <div class="text-[11px] text-neutral-400">SKU: @sku</div>
+                                        }
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-3 text-xs text-neutral-500">@(item.VariantName ?? "—")</td>
+                            <td class="px-6 py-3 text-xs text-right">@item.Quantity</td>
+                            <td class="px-6 py-3 text-xs text-right">₦@item.UnitPrice.ToString("N0")</td>
+                            <td class="px-6 py-3 text-xs text-right font-medium">₦@item.LineTotal.ToString("N0")</td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot class="border-t border-neutral-100">
+                    <tr><td colspan="4" class="px-6 py-2 text-xs text-right text-neutral-400">Subtotal</td><td class="px-6 py-2 text-xs text-right">₦@Model.Order.Subtotal.ToString("N0")</td></tr>
+                    @if (Model.Order.DiscountAmount > 0)
+                    {
+                        <tr><td colspan="4" class="px-6 py-2 text-xs text-right text-emerald-600">Discount@(string.IsNullOrEmpty(Model.Order.DiscountCode) ? "" : $" ({Model.Order.DiscountCode})")</td><td class="px-6 py-2 text-xs text-right text-emerald-600">-₦@Model.Order.DiscountAmount.ToString("N0")</td></tr>
+                    }
+                    @if (Model.Order.LoyaltyDiscount > 0)
+                    {
+                        <tr><td colspan="4" class="px-6 py-2 text-xs text-right text-emerald-600">Loyalty (@Model.Order.LoyaltyPointsRedeemed pts)</td><td class="px-6 py-2 text-xs text-right text-emerald-600">-₦@Model.Order.LoyaltyDiscount.ToString("N0")</td></tr>
+                    }
+                    <tr><td colspan="4" class="px-6 py-2 text-xs text-right text-neutral-400">Delivery</td><td class="px-6 py-2 text-xs text-right">₦@Model.Order.DeliveryFee.ToString("N0")</td></tr>
+                    <tr><td colspan="4" class="px-6 py-2 text-sm text-right font-medium">Total</td><td class="px-6 py-2 text-sm text-right font-medium">₦@Model.Order.Total.ToString("N0")</td></tr>
+                </tfoot>
+            </table>
+        </div>
+
+        <!-- Fulfillment info -->
+        <div class="bg-white rounded-sm border border-neutral-100 px-6 py-4">
+            <h2 class="text-sm font-medium mb-3">Fulfillment</h2>
+            <p class="text-xs text-neutral-600 mb-1"><span class="text-neutral-400">Type:</span> @Model.Order.FulfillmentType</p>
+            @if (Model.Order.PickupStore != null)
+            {
+                <p class="text-xs text-neutral-600"><span class="text-neutral-400">Pickup at:</span> @Model.Order.PickupStore.Name — @Model.Order.PickupStore.Address</p>
+            }
+            @if (Model.Order.DeliveryAddress != null)
+            {
+                var a = Model.Order.DeliveryAddress;
+                <p class="text-xs text-neutral-600"><span class="text-neutral-400">Deliver to:</span> @a.Line1, @a.City, @a.State</p>
+            }
+            @if (!string.IsNullOrWhiteSpace(Model.Order.Notes))
+            {
+                <div class="mt-3 pt-3 border-t border-neutral-100">
+                    <p class="text-[11px] uppercase tracking-wide text-neutral-400 mb-1">Customer note</p>
+                    <p class="text-xs text-neutral-700 whitespace-pre-line">@Model.Order.Notes</p>
+                </div>
+            }
+        </div>
+
+        <!-- Refunds -->
+        @if (Model.Refunds.Any())
+        {
+            <div class="bg-white rounded-sm border border-neutral-100 px-6 py-4">
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="text-sm font-medium">Refunds</h2>
+                    <span class="text-xs text-neutral-500">Total refunded: <span class="font-medium text-rose-600">₦@Model.RefundedTotal.ToString("N0")</span></span>
+                </div>
+                <div class="space-y-2">
+                    @foreach (var r in Model.Refunds)
+                    {
+                        <div class="border border-neutral-100 rounded-sm px-3 py-2">
+                            <div class="flex items-center justify-between text-xs">
+                                <span class="font-mono text-neutral-700">@r.RefundNumber</span>
+                                <span class="font-medium text-rose-600">₦@r.Amount.ToString("N0")</span>
+                            </div>
+                            <div class="text-[11px] text-neutral-400 mt-0.5">
+                                @r.CreatedAt.ToLocalTime().ToString("dd MMM yy HH:mm") · @r.RefundMethod · @r.Items.Sum(i => i.Quantity) item(s)
+                                @if (!string.IsNullOrWhiteSpace(r.Reason)) { <text>· @r.Reason</text> }
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
+        <!-- Refund form -->
+        @if (Model.CanRefund)
+        {
+            <div class="bg-white rounded-sm border border-neutral-100">
+                <div class="px-6 py-4 border-b border-neutral-100">
+                    <h2 class="text-sm font-medium">Issue a refund</h2>
+                    <p class="text-[11px] text-neutral-400 mt-0.5">Records the refund, optionally returns stock, and attempts the gateway refund.</p>
+                </div>
+                <form asp-area="Admin" asp-controller="Orders" asp-action="RefundOrder"
+                      asp-route-id="@Model.Order.Id" method="post">
+                    @Html.AntiForgeryToken()
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="bg-neutral-50 border-b border-neutral-100">
+                                <th class="text-left px-6 py-2 text-xs text-neutral-400 font-medium">Item</th>
+                                <th class="text-right px-6 py-2 text-xs text-neutral-400 font-medium">Ordered</th>
+                                <th class="text-right px-6 py-2 text-xs text-neutral-400 font-medium">Refunded</th>
+                                <th class="text-right px-6 py-2 text-xs text-neutral-400 font-medium">Refund qty</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-neutral-50">
+                            @foreach (var item in Model.Order.Items)
+                            {
+                                var done = Model.RefundedQty.TryGetValue((item.ProductId, item.ProductVariantId), out var dq) ? dq : 0;
+                                var remaining = item.Quantity - done;
+                                <tr>
+                                    <td class="px-6 py-2 text-xs">
+                                        <span class="font-medium text-neutral-800">@item.ProductName</span>
+                                        @if (!string.IsNullOrEmpty(item.VariantName)) { <span class="text-neutral-400">— @item.VariantName</span> }
+                                    </td>
+                                    <td class="px-6 py-2 text-xs text-right">@item.Quantity</td>
+                                    <td class="px-6 py-2 text-xs text-right text-neutral-400">@done</td>
+                                    <td class="px-6 py-2 text-right">
+                                        <input type="hidden" name="itemProductId" value="@item.ProductId" />
+                                        <input type="hidden" name="itemVariantId" value="@(item.ProductVariantId ?? 0)" />
+                                        <input type="number" name="refundQty" value="0" min="0" max="@remaining"
+                                               readonly="@(remaining == 0)"
+                                               class="w-16 border border-neutral-200 rounded-sm px-2 py-1 text-xs text-right focus:outline-none focus:border-neutral-400 @(remaining == 0 ? "bg-neutral-50 text-neutral-300" : "")" />
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                    <div class="px-6 py-4 border-t border-neutral-100 space-y-3">
+                        <div class="flex items-center gap-2">
+                            <input type="checkbox" name="restock" value="true" checked id="restock" class="rounded-sm border-neutral-300" />
+                            <input type="hidden" name="restock" value="false" />
+                            <label for="restock" class="text-xs text-neutral-600">Return refunded items to stock@(Model.RefundStoreId > 0 ? "" : " (no store on order — won't restock)")</label>
+                        </div>
+                        <div class="flex gap-2">
+                            <select name="method" class="border border-neutral-200 rounded-sm px-3 py-2 text-xs focus:outline-none focus:border-neutral-400">
+                                <option value="Paystack">Gateway (Paystack)</option>
+                                <option value="Transfer">Bank transfer</option>
+                                <option value="Manual">Manual / other</option>
+                            </select>
+                            <input name="reason" type="text" placeholder="Reason (optional)"
+                                   class="flex-1 border border-neutral-200 rounded-sm px-3 py-2 text-xs focus:outline-none focus:border-neutral-400" />
+                        </div>
+                        <button type="submit"
+                                onclick="return confirm('Process this refund? Stock will be returned if checked and a gateway refund attempted.');"
+                                class="w-full py-2 bg-rose-600 text-white text-xs rounded-sm hover:bg-rose-500 transition-colors">
+                            Process Refund
+                        </button>
+                    </div>
+                </form>
+            </div>
+        }
+    </div>
+
+    <!-- Sidebar -->
+    <div class="space-y-4">
+
+        <!-- Customer -->
+        <div class="bg-white rounded-sm border border-neutral-100 px-6 py-4">
+            <h2 class="text-sm font-medium mb-3">Customer</h2>
+            <p class="text-xs font-medium text-neutral-800">@Model.CustomerName</p>
+            @if (!string.IsNullOrWhiteSpace(Model.CustomerEmail))
+            {
+                <p class="text-xs text-neutral-500">@Model.CustomerEmail</p>
+            }
+            @if (!string.IsNullOrWhiteSpace(Model.CustomerPhone))
+            {
+                <p class="text-xs text-neutral-500">@Model.CustomerPhone</p>
+            }
+            @if (!string.IsNullOrWhiteSpace(Model.CashierName))
+            {
+                <p class="text-[11px] text-neutral-400 mt-2 pt-2 border-t border-neutral-100">Served by <span class="text-neutral-600">@Model.CashierName</span></p>
+            }
+        </div>
+
+        <!-- Resend email -->
+        <div class="bg-white rounded-sm border border-neutral-100 px-6 py-4">
+            <h2 class="text-sm font-medium mb-3">Resend email</h2>
+            <div class="flex flex-wrap gap-2">
+                <form asp-area="Admin" asp-controller="Orders" asp-action="ResendEmail" asp-route-id="@Model.Order.Id" method="post">
+                    <input type="hidden" name="type" value="summary" />
+                    <button type="submit" class="px-3 py-1.5 text-xs border border-neutral-200 rounded-sm hover:border-neutral-400 transition-colors">Order summary</button>
+                </form>
+                @if (Model.Order.FulfillmentType == Zephiel.Web.Models.Domain.FulfillmentType.StorePickup)
+                {
+                    <form asp-area="Admin" asp-controller="Orders" asp-action="ResendEmail" asp-route-id="@Model.Order.Id" method="post">
+                        <input type="hidden" name="type" value="pickup" />
+                        <button type="submit" class="px-3 py-1.5 text-xs border border-neutral-200 rounded-sm hover:border-neutral-400 transition-colors">Pickup pass (QR)</button>
+                    </form>
+                }
+            </div>
+            @if (!string.IsNullOrWhiteSpace(Model.CustomerEmail))
+            {
+                <p class="text-[11px] text-neutral-400 mt-2">Sends to @Model.CustomerEmail</p>
+            }
+        </div>
+
+        <!-- Customer history -->
+        <div class="bg-white rounded-sm border border-neutral-100 px-6 py-4">
+            <h2 class="text-sm font-medium mb-3">Customer history</h2>
+            <div class="space-y-2">
+                <div>
+                    <p class="text-[11px] text-neutral-400">Total orders</p>
+                    <p class="text-sm text-neutral-800">@Model.CustomerTotalOrders</p>
+                </div>
+                <div>
+                    <p class="text-[11px] text-neutral-400">Total revenue <span class="text-neutral-300">(paid)</span></p>
+                    <p class="text-sm text-neutral-800">₦@Model.CustomerTotalRevenue.ToString("N2")</p>
+                </div>
+                <div>
+                    <p class="text-[11px] text-neutral-400">Average order value</p>
+                    <p class="text-sm text-neutral-800">₦@Model.CustomerAvgOrderValue.ToString("N2")</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Order attribution -->
+        @if (Model.Order.Channel == Zephiel.Web.Models.Domain.OrderChannel.Online
+             && (Model.Order.Origin != null || Model.Order.DeviceType != null || Model.Order.CustomerIp != null || Model.Order.SessionPageViews != null))
+        {
+            <div class="bg-white rounded-sm border border-neutral-100 px-6 py-4">
+                <h2 class="text-sm font-medium mb-3">Order attribution</h2>
+                <div class="space-y-2">
+                    <div>
+                        <p class="text-[11px] text-neutral-400">Origin</p>
+                        <p class="text-sm text-neutral-800">@(Model.Order.Origin ?? "—")</p>
+                    </div>
+                    <div>
+                        <p class="text-[11px] text-neutral-400">Device type</p>
+                        <p class="text-sm text-neutral-800">@(Model.Order.DeviceType ?? "—")</p>
+                    </div>
+                    <div>
+                        <p class="text-[11px] text-neutral-400">Session page views</p>
+                        <p class="text-sm text-neutral-800">@(Model.Order.SessionPageViews?.ToString() ?? "—")</p>
+                    </div>
+                    <div>
+                        <p class="text-[11px] text-neutral-400">Customer IP</p>
+                        <p class="text-sm text-neutral-800 font-mono text-xs">@(Model.Order.CustomerIp ?? "—")</p>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- Payment -->
+        <div class="bg-white rounded-sm border border-neutral-100 px-6 py-4">
+            <h2 class="text-sm font-medium mb-3">Payment</h2>
+            <div class="space-y-1">
+                <p class="text-xs"><span class="text-neutral-400">Status:</span>
+                    @if (Model.Order.IsPaid)
+                    {
+                        <span class="text-emerald-600 font-medium">Paid</span>
+                    }
+                    else
+                    {
+                        <span class="text-amber-600 font-medium">Unpaid</span>
+                    }
+                </p>
+                @if (Model.Order.PaymentReference != null)
+                {
+                    <p class="text-xs"><span class="text-neutral-400">Ref:</span> <code class="font-mono text-[10px]">@Model.Order.PaymentReference</code></p>
+                }
+                @if (Model.Order.PaidAt.HasValue)
+                {
+                    <p class="text-xs"><span class="text-neutral-400">Paid at:</span> @Model.Order.PaidAt.Value.ToLocalTime().ToString("dd MMM yy HH:mm")</p>
+                }
+            </div>
+        </div>
+
+        <!-- Update Status -->
+        <div class="bg-white rounded-sm border border-neutral-100 px-6 py-4">
+            <h2 class="text-sm font-medium mb-1">Update Status</h2>
+            <p class="text-xs text-neutral-500 mb-3">Current:
+                <span class="font-medium @(Model.Order.Status == Zephiel.Web.Models.Domain.OrderStatus.Refunded ? "text-rose-600" : "text-neutral-800")">@Model.Order.Status</span>
+            </p>
+            <form asp-area="Admin" asp-controller="Orders" asp-action="UpdateStatus"
+                  asp-route-id="@Model.Order.Id" method="post" class="space-y-3">
+                @Html.AntiForgeryToken()
+                <select name="status"
+                        class="w-full border border-neutral-200 rounded-sm px-3 py-2 text-sm focus:outline-none focus:border-neutral-400">
+                    @foreach (var s in Model.AvailableStatuses)
+                    {
+                        <option value="@s" selected="@(Model.Order.Status.ToString() == s)">@s</option>
+                    }
+                </select>
+                <button type="submit"
+                        class="w-full py-2 bg-neutral-900 text-white text-xs rounded-sm hover:bg-neutral-700 transition-colors">
+                    Update Status
+                </button>
+            </form>
+        </div>
+
+        <!-- Order notes (timeline) -->
+        <div class="bg-white rounded-sm border border-neutral-100 px-6 py-4">
+            <h2 class="text-sm font-medium mb-3">Order notes</h2>
+
+            <!-- Add note -->
+            <form asp-area="Admin" asp-controller="Orders" asp-action="AddNote"
+                  asp-route-id="@Model.Order.Id" method="post" class="space-y-2 mb-4">
+                @Html.AntiForgeryToken()
+                <textarea name="content" rows="3" required
+                          placeholder="Add a note…"
+                          class="w-full border border-neutral-200 rounded-sm px-3 py-2 text-xs focus:outline-none focus:border-neutral-400 resize-none"></textarea>
+                <div class="flex gap-2">
+                    <select name="noteType"
+                            class="flex-1 border border-neutral-200 rounded-sm px-2 py-2 text-xs bg-white focus:outline-none focus:border-neutral-400">
+                        <option value="private">Private note</option>
+                        <option value="customer">Note to customer</option>
+                    </select>
+                    <button type="submit"
+                            class="px-4 py-2 bg-neutral-900 text-white text-xs rounded-sm hover:bg-neutral-700 transition-colors">
+                        Add
+                    </button>
+                </div>
+            </form>
+
+            <!-- Notes list (newest first) -->
+            <div class="space-y-2 max-h-96 overflow-auto">
+                @if (!Model.Notes.Any())
+                {
+                    <p class="text-xs text-neutral-400">No notes yet.</p>
+                }
+                @foreach (var n in Model.Notes)
+                {
+                    var tone = n.IsCustomerNote ? "bg-blue-50 border-blue-100"
+                             : n.IsSystem ? "bg-neutral-50 border-neutral-100"
+                             : "bg-purple-50 border-purple-100";
+                    var kind = n.IsSystem ? "" : n.IsCustomerNote ? "Note to customer" : "Private note";
+                    <div class="border rounded-sm p-3 @tone">
+                        <p class="text-xs text-neutral-700 whitespace-pre-line">@n.Content</p>
+                        <div class="flex items-center justify-between mt-2 text-[11px] text-neutral-400">
+                            <span>
+                                @n.CreatedAt.ToString("MMM d, yyyy 'at' h:mm tt")
+                                @if (!string.IsNullOrEmpty(kind)) { <text> · @kind</text> }
+                                @if (!string.IsNullOrEmpty(n.AuthorName)) { <text> · @n.AuthorName</text> }
+                            </span>
+                            <form asp-area="Admin" asp-controller="Orders" asp-action="DeleteNote"
+                                  asp-route-id="@Model.Order.Id" method="post"
+                                  onsubmit="return confirm('Delete this note?');">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="noteId" value="@n.Id" />
+                                <button type="submit" class="text-rose-400 hover:text-rose-600">Delete</button>
+                            </form>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Tracking Number -->
+        <div class="bg-white rounded-sm border border-neutral-100 px-6 py-4">
+            <h2 class="text-sm font-medium mb-3">Tracking</h2>
+            @if (!string.IsNullOrEmpty(Model.Order.TrackingNumber))
+            {
+                <p class="text-xs font-mono text-emerald-700 mb-2">@Model.Order.TrackingNumber</p>
+            }
+            <form asp-area="Admin" asp-controller="Orders" asp-action="SaveTracking"
+                  asp-route-id="@Model.Order.Id" method="post" class="flex gap-2">
+                @Html.AntiForgeryToken()
+                <input name="trackingNumber" type="text" value="@Model.Order.TrackingNumber"
+                       placeholder="Enter tracking number…"
+                       class="flex-1 border border-neutral-200 rounded-sm px-3 py-1.5 text-xs focus:outline-none focus:border-neutral-400" />
+                <button type="submit"
+                        class="px-3 py-1.5 bg-neutral-900 text-white text-xs rounded-sm hover:bg-neutral-700 transition-colors">
+                    Save
+                </button>
+            </form>
+        </div>
+
+        <!-- Admin Notes -->
+        <div class="bg-white rounded-sm border border-neutral-100 px-6 py-4">
+            <h2 class="text-sm font-medium mb-3">Internal Notes</h2>
+            <form asp-area="Admin" asp-controller="Orders" asp-action="SaveNote"
+                  asp-route-id="@Model.Order.Id" method="post" class="space-y-3">
+                @Html.AntiForgeryToken()
+                <textarea name="adminNotes" rows="4"
+                          placeholder="Add internal notes (not visible to customer)…"
+                          class="w-full border border-neutral-200 rounded-sm px-3 py-2 text-xs focus:outline-none focus:border-neutral-400 resize-none">@Model.Order.AdminNotes</textarea>
+                <button type="submit"
+                        class="w-full py-2 bg-neutral-100 text-neutral-700 text-xs rounded-sm hover:bg-neutral-200 transition-colors">
+                    Save Note
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
