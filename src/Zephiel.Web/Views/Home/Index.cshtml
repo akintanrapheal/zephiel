@@ -69,6 +69,15 @@
         .Where(c => c != null).Select(c => c!).ToList();
     if (classicCats.Count < 4) classicCats = shopCategories.Take(4).ToList();
     var classicTrust = tickerLabels.Take(4).ToList();
+    // Trust-bar icons (shipping · shield · gem · lock), reused by every theme's static trust bar.
+    var trustIcons = new[]
+    {
+        "M3 7.5h11v7H3zM14 10h3.5L20 12.5v2H14z M6.5 16.5a1.5 1.5 0 103 0 M15 16.5a1.5 1.5 0 103 0",
+        "M12 3l7 3v5c0 4-3 6.7-7 8-4-1.3-7-4-7-8V6z",
+        "M12 2.5l2.3 4.7 5.2.8-3.8 3.7.9 5.2L12 14.4l-4.6 2.4.9-5.2L4.5 8l5.2-.8z",
+        "M6.5 10.5V8a5.5 5.5 0 1111 0v2.5 M5 10.5h14v9H5z"
+    };
+    var tTrustIcon = isMinimal ? "text-neutral-400" : "text-brand-400";
 
     // Shared tokens
     var tHead    = isMinimal ? "font-sans" : "font-bodoni";
@@ -247,30 +256,20 @@
 
 @if (!isClassic)
 {
-<!-- ═══ Oversized running statement (editorial ticker) ══════════════════════ -->
-<section class="@tTicker border-t overflow-hidden py-6 lg:py-8" aria-label="Why shop with us">
-    <div class="ed-marquee flex w-max items-center">
-        @for (var g = 0; g < 2; g++)
+<!-- ═══ Trust bar — static, editable in Admin → Settings → Homepage ══════════ -->
+<section class="@tTicker border-t" aria-label="Why shop with us">
+    <div class="max-w-7xl mx-auto px-6 lg:px-12 py-10 lg:py-12 grid grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-10">
+        @for (var ti = 0; ti < tickerLabels.Count && ti < 4; ti++)
         {
-            <div class="flex shrink-0 items-center" aria-hidden="@(g == 1 ? "true" : "false")">
-                @for (var r = 0; r < 4; r++)
-                {
-                    @foreach (var label in tickerLabels)
-                    {
-                        <span class="@tTickerLabel whitespace-nowrap px-8">@label</span>
-                        <span class="@tTickerStar px-2">&#10022;</span>
-                    }
-                }
+            <div class="flex flex-col items-center text-center gap-3.5 lg:px-4">
+                <svg class="w-7 h-7 @tTrustIcon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.4">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="@trustIcons[ti % trustIcons.Length]" />
+                </svg>
+                <span class="@tHead text-base lg:text-lg font-light leading-tight">@tickerLabels[ti]</span>
             </div>
         }
     </div>
 </section>
-<style>
-    @@keyframes edScroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-    .ed-marquee { animation: edScroll 60s linear infinite; will-change: transform; }
-    .ed-marquee:hover { animation-play-state: paused; }
-    @@media (prefers-reduced-motion: reduce) { .ed-marquee { animation: none; } }
-</style>
 }
 
 @if (shopCategories.Any() && isClassic)
@@ -304,15 +303,6 @@
     <!-- Static trust bar (no motion) -->
     <section class="bg-stone-50 border-t border-neutral-200 py-8 lg:py-10">
         <div class="max-w-7xl mx-auto px-6 lg:px-12 grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
-            @{
-                var trustIcons = new[]
-                {
-                    "M3 7.5h11v7H3zM14 10h3.5L20 12.5v2H14z M6.5 16.5a1.5 1.5 0 103 0 M15 16.5a1.5 1.5 0 103 0",
-                    "M12 3l7 3v5c0 4-3 6.7-7 8-4-1.3-7-4-7-8V6z",
-                    "M12 2.5l2.3 4.7 5.2.8-3.8 3.7.9 5.2L12 14.4l-4.6 2.4.9-5.2L4.5 8l5.2-.8z",
-                    "M6.5 10.5V8a5.5 5.5 0 1111 0v2.5 M5 10.5h14v9H5z"
-                };
-            }
             @for (var ti = 0; ti < classicTrust.Count; ti++)
             {
                 <div class="flex items-center gap-3">
