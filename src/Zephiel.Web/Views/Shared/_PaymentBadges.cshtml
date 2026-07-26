@@ -5,6 +5,15 @@
     // Paystack" badge (real-colour card marks, no external image) so it never breaks.
     // Reused in the footer (all pages) and at checkout.
     var badgesUrl = await SettingsService.GetAsync("general.payment_badges_url", "");
+    // On a dark surface (e.g. the footer) drop the white card and use light-friendly mark colours.
+    var onDark = ViewData["PaymentBadgesOnDark"] as bool? == true;
+    var cardCls  = onDark ? "inline-flex flex-col items-center gap-3"
+                          : "inline-flex flex-col items-center gap-3 rounded-2xl border border-neutral-200 bg-white px-6 py-4 shadow-sm";
+    var headTxt  = onDark ? "text-neutral-300" : "text-neutral-600";
+    var headBold = onDark ? "text-white" : "text-neutral-900";
+    var mcLabel  = onDark ? "text-neutral-400" : "text-neutral-500";
+    var visaClr  = onDark ? "#ffffff" : "#1A1F71";
+    var erveClr  = onDark ? "#ffffff" : "#111827";
 }
 @if (!string.IsNullOrWhiteSpace(badgesUrl))
 {
@@ -13,8 +22,8 @@
 }
 else
 {
-    <div class="inline-flex flex-col items-center gap-3 rounded-2xl border border-neutral-200 bg-white px-6 py-4 shadow-sm">
-        <span class="text-[13px] text-neutral-600">Secured by <span class="font-extrabold tracking-tight text-neutral-900">paystack</span></span>
+    <div class="@cardCls">
+        <span class="text-[13px] @headTxt">Secured by <span class="font-extrabold tracking-tight @headBold">paystack</span></span>
         <div class="flex items-center gap-5">
             <!-- Paystack mark -->
             <svg class="h-5 w-auto" viewBox="0 0 30 24" role="img" aria-label="Paystack">
@@ -30,12 +39,12 @@ else
                     <circle cx="26" cy="13" r="11" fill="#F79E1B" />
                     <path d="M21 4.9a11 11 0 000 16.2 11 11 0 000-16.2z" fill="#FF5F00" />
                 </svg>
-                <span class="mt-1 text-[6px] font-semibold tracking-wide text-neutral-500">mastercard</span>
+                <span class="mt-1 text-[6px] font-semibold tracking-wide @mcLabel">mastercard</span>
             </span>
             <!-- VISA -->
-            <span class="text-[17px] font-bold italic leading-none tracking-tight" style="color:#1A1F71;font-family:Arial,Helvetica,sans-serif">VISA</span>
+            <span class="text-[17px] font-bold italic leading-none tracking-tight" style="color:@visaClr;font-family:Arial,Helvetica,sans-serif">VISA</span>
             <!-- Verve -->
-            <span class="text-[15px] font-extrabold leading-none tracking-tight" style="font-family:Arial,Helvetica,sans-serif"><span style="color:#ED1C24">V</span><span style="color:#111827">erve</span></span>
+            <span class="text-[15px] font-extrabold leading-none tracking-tight" style="font-family:Arial,Helvetica,sans-serif"><span style="color:#ED1C24">V</span><span style="color:@erveClr">erve</span></span>
         </div>
     </div>
 }

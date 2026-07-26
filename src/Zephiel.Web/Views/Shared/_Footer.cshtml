@@ -6,78 +6,78 @@
     var siteName = await SettingsService.GetAsync("general.site_name", "Zephiel");
 
     // Pages that end on a dark full-bleed section (e.g. Home's newsletter) set FooterFlush
-    // so the footer butts straight against it — no cream body-gap above the footer.
-    var footerTopMargin = ViewData["FooterFlush"] as bool? == true ? "" : "mt-24";
+    // so the dark footer butts straight against it — no gap above.
+    var footerTopMargin = ViewData["FooterFlush"] as bool? == true ? "" : "mt-16";
+    ViewData["PaymentBadgesOnDark"] = true;   // footer is dark — badge drops its white card
 }
 
-<footer class="bg-brand-50 text-neutral-800 @footerTopMargin">
-    <div class="max-w-7xl mx-auto px-6 lg:px-10 py-16 lg:py-20">
+<footer class="bg-[#211a30] text-neutral-300 @footerTopMargin">
+    <div class="max-w-7xl mx-auto px-6 lg:px-10 py-11 lg:py-12">
 
-        <!-- Top row: brand (top-left logo only) + link columns -->
-        <div class="grid gap-12 lg:gap-20 md:grid-cols-[1.1fr_2fr]">
-
+        <!-- Columns -->
+        <div class="grid gap-9 md:gap-8 md:grid-cols-[1.6fr_1fr_1fr_1fr]">
             <!-- Brand -->
             <div>
                 <a asp-controller="Home" asp-action="Index" class="inline-block">
                     @if (!string.IsNullOrEmpty(logoUrl))
                     {
-                        <img src="@logoUrl" alt="@siteName" class="h-20 w-auto" />
+                        @* Invert the (purple, transparent-PNG) logo to white so it reads on the dark footer. *@
+                        <img src="@logoUrl" alt="@siteName" class="h-16 w-auto" style="filter:brightness(0) invert(1);" />
                     }
                     else
                     {
-                        <span class="font-bodoni text-3xl font-light tracking-[0.25em] uppercase text-neutral-900">@siteName</span>
+                        <span class="font-bodoni text-2xl font-light tracking-[0.25em] uppercase text-white">@siteName</span>
                     }
                 </a>
-                <p class="mt-5 max-w-xs text-sm leading-relaxed font-light text-neutral-500">@tagline</p>
-                <p class="mt-6 text-[11px] tracking-[0.3em] uppercase text-neutral-400">Nationwide delivery across Nigeria</p>
+                <p class="mt-4 max-w-xs text-sm leading-relaxed font-light text-neutral-400">@tagline</p>
             </div>
 
-            <!-- Link columns -->
-            <div class="grid grid-cols-2 sm:grid-cols-3 gap-8 lg:gap-10">
-                <div>
-                    <h4 class="font-bodoni text-lg font-light text-neutral-900 mb-4">Shop</h4>
-                    <ul class="space-y-2.5">
-                        <li><a asp-controller="Products" asp-action="Index" asp-route-category="rings"     class="text-sm text-neutral-600 hover:text-brand-600 transition-colors">Rings</a></li>
-                        <li><a asp-controller="Products" asp-action="Index" asp-route-category="necklaces" class="text-sm text-neutral-600 hover:text-brand-600 transition-colors">Necklaces</a></li>
-                        <li><a asp-controller="Products" asp-action="Index" asp-route-category="bracelets" class="text-sm text-neutral-600 hover:text-brand-600 transition-colors">Bracelets</a></li>
-                        <li><a asp-controller="Products" asp-action="Index" asp-route-category="earrings"  class="text-sm text-neutral-600 hover:text-brand-600 transition-colors">Earrings</a></li>
-                        <li><a asp-controller="Products" asp-action="Index" asp-route-isNewArrival="true"  class="text-sm text-neutral-600 hover:text-brand-600 transition-colors">New Arrivals</a></li>
-                    </ul>
-                </div>
-                <div>
-                    <h4 class="font-bodoni text-lg font-light text-neutral-900 mb-4">Company</h4>
-                    <ul class="space-y-2.5">
-                        <li><a asp-controller="Home"     asp-action="About"   class="text-sm text-neutral-600 hover:text-brand-600 transition-colors">Our Story</a></li>
-                        <li><a asp-controller="Journal"  asp-action="Index"   class="text-sm text-neutral-600 hover:text-brand-600 transition-colors">Journal</a></li>
-                        <li><a asp-controller="Referral" asp-action="Index"   class="text-sm text-neutral-600 hover:text-brand-600 transition-colors">Refer a Friend</a></li>
-                        <li><a asp-controller="Home"     asp-action="Contact" class="text-sm text-neutral-600 hover:text-brand-600 transition-colors">Contact</a></li>
-                        <li><a href="/track" class="text-sm text-neutral-600 hover:text-brand-600 transition-colors">Track Order</a></li>
-                    </ul>
-                </div>
-                <div>
-                    <h4 class="font-bodoni text-lg font-light text-neutral-900 mb-4">Customer Care</h4>
-                    <ul class="space-y-2.5">
-                        <li><a asp-controller="Home" asp-action="Contact" class="text-sm text-neutral-600 hover:text-brand-600 transition-colors">Contact us</a></li>
-                        <li><a href="/track" class="text-sm text-neutral-600 hover:text-brand-600 transition-colors">Track your order</a></li>
-                        <li><a asp-controller="Home" asp-action="PaymentReturns" class="text-sm text-neutral-600 hover:text-brand-600 transition-colors">Payment &amp; Returns</a></li>
-                    </ul>
-                </div>
+            <!-- Shop -->
+            <div>
+                <h4 class="font-bodoni text-base text-white mb-3.5">Shop</h4>
+                <ul class="space-y-2.5">
+                    <li><a asp-controller="Products" asp-action="Index" asp-route-category="rings"     class="text-sm text-neutral-400 hover:text-white transition-colors">Rings</a></li>
+                    <li><a asp-controller="Products" asp-action="Index" asp-route-category="necklaces" class="text-sm text-neutral-400 hover:text-white transition-colors">Necklaces</a></li>
+                    <li><a asp-controller="Products" asp-action="Index" asp-route-category="bracelets" class="text-sm text-neutral-400 hover:text-white transition-colors">Bracelets</a></li>
+                    <li><a asp-controller="Products" asp-action="Index" asp-route-category="earrings"  class="text-sm text-neutral-400 hover:text-white transition-colors">Earrings</a></li>
+                    <li><a asp-controller="Products" asp-action="Index" asp-route-isNewArrival="true"  class="text-sm text-neutral-400 hover:text-white transition-colors">New Arrivals</a></li>
+                </ul>
+            </div>
+
+            <!-- Company -->
+            <div>
+                <h4 class="font-bodoni text-base text-white mb-3.5">Company</h4>
+                <ul class="space-y-2.5">
+                    <li><a asp-controller="Home"     asp-action="About"   class="text-sm text-neutral-400 hover:text-white transition-colors">Our Story</a></li>
+                    <li><a asp-controller="Journal"  asp-action="Index"   class="text-sm text-neutral-400 hover:text-white transition-colors">Journal</a></li>
+                    <li><a asp-controller="Referral" asp-action="Index"   class="text-sm text-neutral-400 hover:text-white transition-colors">Refer a Friend</a></li>
+                    <li><a asp-controller="Home"     asp-action="Contact" class="text-sm text-neutral-400 hover:text-white transition-colors">Contact</a></li>
+                    <li><a href="/track" class="text-sm text-neutral-400 hover:text-white transition-colors">Track Order</a></li>
+                </ul>
+            </div>
+
+            <!-- Customer Care -->
+            <div>
+                <h4 class="font-bodoni text-base text-white mb-3.5">Customer Care</h4>
+                <ul class="space-y-2.5">
+                    <li><a asp-controller="Home" asp-action="Contact" class="text-sm text-neutral-400 hover:text-white transition-colors">Contact us</a></li>
+                    <li><a href="/track" class="text-sm text-neutral-400 hover:text-white transition-colors">Track your order</a></li>
+                    <li><a asp-controller="Home" asp-action="PaymentReturns" class="text-sm text-neutral-400 hover:text-white transition-colors">Payment &amp; Returns</a></li>
+                </ul>
             </div>
         </div>
 
         <!-- Bottom bar: payments + legal + copyright -->
-        <div class="mt-14 lg:mt-16 pt-8 border-t border-neutral-900/10">
-            <div class="flex flex-col gap-8 md:flex-row md:items-center md:justify-between">
-                <div class="flex justify-center md:justify-start">
-                    <partial name="_PaymentBadges" />
-                </div>
-                <div class="flex flex-wrap justify-center gap-x-6 gap-y-2">
-                    <a asp-controller="Home" asp-action="Privacy" class="text-xs tracking-wide text-neutral-500 hover:text-brand-600 transition-colors">Privacy Policy</a>
-                    <a asp-controller="Home" asp-action="Terms"   class="text-xs tracking-wide text-neutral-500 hover:text-brand-600 transition-colors">Terms of Service</a>
-                    <a asp-controller="Home" asp-action="PaymentReturns" class="text-xs tracking-wide text-neutral-500 hover:text-brand-600 transition-colors">Payment &amp; Returns</a>
-                </div>
+        <div class="mt-9 pt-6 border-t border-white/10 flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+            <div class="flex items-center gap-6">
+                <partial name="_PaymentBadges" />
             </div>
-            <p class="mt-6 text-center md:text-left text-xs text-neutral-400">&copy; @DateTime.UtcNow.Year @siteName. All rights reserved.</p>
+            <div class="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
+                <a asp-controller="Home" asp-action="Privacy" class="text-xs tracking-wide text-neutral-400 hover:text-white transition-colors">Privacy Policy</a>
+                <a asp-controller="Home" asp-action="Terms"   class="text-xs tracking-wide text-neutral-400 hover:text-white transition-colors">Terms of Service</a>
+                <a asp-controller="Home" asp-action="PaymentReturns" class="text-xs tracking-wide text-neutral-400 hover:text-white transition-colors">Payment &amp; Returns</a>
+                <span class="text-xs text-neutral-500">&copy; @DateTime.UtcNow.Year @siteName</span>
+            </div>
         </div>
     </div>
 </footer>
