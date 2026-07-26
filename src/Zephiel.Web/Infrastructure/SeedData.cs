@@ -35,19 +35,12 @@ public static class SeedData
             // â”€â”€â”€ Categories â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             var categories = new[]
             {
-                new { Name = "Rings",        Slug = "rings",        Description = "Engagement, wedding, and fashion rings", Image = "https://images.unsplash.com/photo-1603561591411-07134e71a2a9?w=800&q=80" },
-                new { Name = "Necklaces",    Slug = "necklaces",    Description = "Pendants, chains, and statement necklaces", Image = "https://images.unsplash.com/photo-1608042314453-ae338d80c427?w=800&q=80" },
-                new { Name = "Earrings",     Slug = "earrings",     Description = "Studs, hoops, and drop earrings", Image = "https://images.unsplash.com/photo-1629224316810-9d8805b95e76?w=800&q=80" },
-                new { Name = "Bracelet & Bangle", Slug = "bracelets", Description = "Bangles, cuffs, and tennis bracelets", Image = "https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=800&q=80" },
-                new { Name = "Brooches",     Slug = "brooches",     Description = "Lapel pins and decorative brooches", Image = "https://images.unsplash.com/photo-1535556116002-6281ff3e9f36?w=800&q=80" },
-                new { Name = "Watches",      Slug = "watches",      Description = "Luxury timepieces and watch collections", Image = "https://images.unsplash.com/photo-1508057198894-247b23fe5ade?w=800&q=80" },
-                new { Name = "Bracelet Watches", Slug = "bracelet-watches", Description = "Watches with a metal bracelet band", Image = "https://images.unsplash.com/photo-1523170335258-f5ed11844a49?w=800&q=80" },
-                new { Name = "Strap Watches",    Slug = "strap-watches",    Description = "Watches with a leather or fabric strap", Image = "https://images.unsplash.com/photo-1434493789847-2f02dc6ca35d?w=800&q=80" },
-                new { Name = "Bracelet",         Slug = "mens-bracelets",   Description = "Wrist bracelets", Image = "https://images.unsplash.com/photo-1602173574767-37ac01994b2a?w=800&q=80" },
-                new { Name = "Sets",         Slug = "sets",         Description = "Matching jewellery sets and gift collections", Image = "https://images.unsplash.com/photo-1620656798579-1984d9e87df7?w=800&q=80" },
-                new { Name = "Clutches",     Slug = "clutches",     Description = "Evening clutches and stoned bags", Image = "https://images.unsplash.com/photo-1594223274512-ad4803739b7c?w=800&q=80" },
-                new { Name = "Sunglasses",   Slug = "sunglasses",   Description = "Fashion and crystal sunglasses", Image = "https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=800&q=80" },
-                new { Name = "Accessories",  Slug = "accessories",  Description = "Hair accessories, waist chains, scarfs, and more", Image = "https://images.unsplash.com/photo-1630019852942-f89202989a59?w=800&q=80" },
+                new { Name = "Sets",              Slug = "sets",       Description = "Matching jewellery sets and gift collections", Image = "https://images.unsplash.com/photo-1620656798579-1984d9e87df7?w=800&q=80" },
+                new { Name = "Necklaces",         Slug = "necklaces",  Description = "Pendants, chains, and statement necklaces", Image = "https://images.unsplash.com/photo-1608042314453-ae338d80c427?w=800&q=80" },
+                new { Name = "Earrings",          Slug = "earrings",   Description = "Studs, hoops, and drop earrings", Image = "https://images.unsplash.com/photo-1629224316810-9d8805b95e76?w=800&q=80" },
+                new { Name = "Bracelet & Bangle", Slug = "bracelets",  Description = "Bangles, cuffs, and tennis bracelets", Image = "https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=800&q=80" },
+                new { Name = "Rings",             Slug = "rings",      Description = "Engagement, wedding, and fashion rings", Image = "https://images.unsplash.com/photo-1603561591411-07134e71a2a9?w=800&q=80" },
+                new { Name = "Clutches",          Slug = "clutches",   Description = "Evening clutches and stoned bags", Image = "https://images.unsplash.com/photo-1594223274512-ad4803739b7c?w=800&q=80" },
             };
 
             foreach (var cat in categories)
@@ -68,45 +61,28 @@ public static class SeedData
             await db.SaveChangesAsync();
 
             // ─── One-time category structure fixes (idempotent) ──────────────────
-            // The loop above only inserts MISSING categories, so it never touches the
+            // The loop above only inserts MISSING categories, so it never touches a
             // long-standing "Bracelets" category. Rename it to "Bracelet & Bangle" here
-            // (keeping its slug so all existing product URLs keep working), and make sure
-            // the watch/men sub-categories the nav links to are active.
+            // (keeping its slug so all existing product URLs keep working).
             var braceletCat = await db.Categories.FirstOrDefaultAsync(c => c.Slug == "bracelets");
             if (braceletCat != null && braceletCat.Name == "Bracelets")
             {
                 braceletCat.Name = "Bracelet & Bangle";
                 logger.LogInformation("Renamed 'Bracelets' category to 'Bracelet & Bangle'.");
-            }
-            foreach (var slug in new[] { "bracelet-watches", "strap-watches", "mens-bracelets" })
-            {
-                var sub = await db.Categories.FirstOrDefaultAsync(c => c.Slug == slug);
-                if (sub != null && !sub.IsActive) { sub.IsActive = true; }
-            }
-
-            // The Mens menu shows this category as "Bracelet"; name it to match (page title + admin).
-            var mensBracelet = await db.Categories.FirstOrDefaultAsync(c => c.Slug == "mens-bracelets");
-            if (mensBracelet != null && mensBracelet.Name == "Men's Bracelets")
-            {
-                mensBracelet.Name = "Bracelet";
-                logger.LogInformation("Renamed 'Men's Bracelets' category to 'Bracelet'.");
-            }
-
-            // NOTE: the initial men's-bracelet SKUs were filed under "Bracelet" by an earlier deploy
-            // (see git history / tools/move-skus-to-bracelet.sql). That one-off move has been removed
-            // so products can be freely re-categorised in the admin without a deploy undoing it.
-
-            await db.SaveChangesAsync();
-
-            // Remove the empty, redundant "Bracelets & Bangles" leftover (the near-duplicate of
-            // "Bracelet & Bangle"). Checked AFTER the SKU moves above are saved, so if SGK02 was
-            // parked here it's already gone — deleted only once truly empty (no product orphaned).
-            var dupBangles = await db.Categories.FirstOrDefaultAsync(c => c.Slug == "bracelets-bangles");
-            if (dupBangles != null && !await db.Products.AnyAsync(p => p.CategoryId == dupBangles.Id))
-            {
-                db.Categories.Remove(dupBangles);
-                logger.LogInformation("Removed empty duplicate category 'bracelets-bangles'.");
                 await db.SaveChangesAsync();
+            }
+
+            // Retire categories that are no longer offered — only when truly empty, so no product
+            // is ever orphaned (an admin who re-adds one of these keeps it, since it won't be empty).
+            var retiredSlugs = new[] { "brooches", "watches", "bracelet-watches", "strap-watches", "mens-bracelets", "sunglasses", "accessories", "bracelets-bangles" };
+            var retired = await db.Categories
+                .Where(c => retiredSlugs.Contains(c.Slug) && !db.Products.Any(p => p.CategoryId == c.Id) && !db.Categories.Any(ch => ch.ParentId == c.Id))
+                .ToListAsync();
+            if (retired.Count > 0)
+            {
+                db.Categories.RemoveRange(retired);
+                await db.SaveChangesAsync();
+                logger.LogInformation("Removed {Count} retired empty categories: {Slugs}", retired.Count, string.Join(", ", retired.Select(c => c.Slug)));
             }
 
             // â”€â”€â”€ Stores â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
