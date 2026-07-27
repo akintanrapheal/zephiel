@@ -8,9 +8,9 @@
    Renders nothing when there are no products, so empty rows never show. *@
 @if (Model != null && Model.Any())
 {
-    <section class="py-20 @bg">
+    <section class="py-10 lg:py-14 @bg">
         <div class="max-w-7xl mx-auto px-6">
-            <div class="text-center mb-14">
+            <div class="text-center mb-10">
                 @if (!string.IsNullOrEmpty(eyebrow))
                 {
                     <p class="text-xs tracking-[0.3em] uppercase text-brand-500 mb-3">@eyebrow</p>

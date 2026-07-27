@@ -358,7 +358,7 @@
 <!-- ═══ Shop by Category — compact image-card grid (non-classic) ════════════ -->
 @if (shopCategories.Any() && !isClassic)
 {
-    <section class="@tCanvas py-16 lg:py-24">
+    <section class="@tCanvas py-10 lg:py-14">
         <div class="max-w-7xl mx-auto px-6 lg:px-12">
             <div class="text-center mb-8 lg:mb-12">
                 <p class="text-[11px] tracking-[0.35em] uppercase @tEyebrow mb-3">Shop by</p>
@@ -380,7 +380,7 @@
                 }
             </div>
 
-            <div class="mt-10 lg:mt-12 text-center">
+            <div class="mt-7 text-center">
                 <a asp-controller="Products" asp-action="Index"
                    class="inline-block text-[11px] tracking-[0.25em] uppercase text-neutral-500 hover:text-brand-600 transition-colors border-b border-neutral-300 pb-1">
                     View All Categories &rarr;
@@ -469,7 +469,7 @@
 <!-- ═══ The Selection — featured products ═══════════════════════════════════ -->
 @if (showFeatured && featuredProducts.Any())
 {
-    <section class="@tCanvas py-16 lg:py-24">
+    <section class="@tCanvas py-10 lg:py-14">
         <div class="max-w-7xl mx-auto px-6 lg:px-12">
             <div class="text-center mb-8 lg:mb-12">
                 <p class="text-[11px] tracking-[0.35em] uppercase @tEyebrow mb-3">Curated for you</p>
@@ -541,7 +541,7 @@
 }
 @if (reviews.Any())
 {
-    <section class="@tCanvas py-16 lg:py-24">
+    <section class="@tCanvas py-10 lg:py-14">
         <div class="max-w-7xl mx-auto px-6 lg:px-12">
             <div class="text-center mb-10 lg:mb-14">
                 <p class="text-[11px] tracking-[0.35em] uppercase @tEyebrow mb-3">Loved by</p>
