@@ -78,6 +78,16 @@
         "M6.5 10.5V8a5.5 5.5 0 1111 0v2.5 M5 10.5h14v9H5z"
     };
     var tTrustIcon = isMinimal ? "text-neutral-400" : "text-brand-400";
+    // Pick a trust-bar icon that matches the label's meaning (delivery/secure/returns/authentic).
+    Func<string, string> trustIconFor = label =>
+    {
+        var l = (label ?? "").ToLowerInvariant();
+        if (l.Contains("deliver") || l.Contains("ship") || l.Contains("free"))                       return trustIcons[0]; // truck
+        if (l.Contains("secure") || l.Contains("checkout") || l.Contains("payment") || l.Contains("safe") || l.Contains("ssl")) return trustIcons[3]; // lock
+        if (l.Contains("return") || l.Contains("refund") || l.Contains("exchange"))                  return "M3.5 9a8.5 8.5 0 0 1 14.4-4.3L21 8M20.5 15a8.5 8.5 0 0 1-14.4 4.3L3 16M21 4v4h-4M3 20v-4h4"; // return arrows
+        if (l.Contains("authentic") || l.Contains("genuine") || l.Contains("certif") || l.Contains("quality") || l.Contains("warrant") || l.Contains("guarant")) return trustIcons[1]; // shield
+        return trustIcons[2]; // gem/star fallback
+    };
 
     // Colored faceted-gem vector illustration per category (light purple / white / black).
     // viewBox 0 0 48 48. Palette: deep #6d28d9, mid #a855f7, light #c4a0f5, pale #e9d5ff, black #171717.
@@ -263,16 +273,22 @@
             </div>
         </div>
 
-        <!-- Slider dots -->
+        <!-- Slider dots (bottom-left so they don't clash with the scroll cue) -->
         @if (hasHeroImage && heroImages.Count > 1)
         {
-            <div id="hero-dots" class="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+            <div id="hero-dots" class="absolute bottom-7 left-6 flex gap-2 z-10">
                 @for (var hi = 0; hi < heroImages.Count; hi++)
                 {
                     <button type="button" class="hero-dot h-1.5 rounded-full transition-all duration-500 @(hi == 0 ? "w-6 bg-white" : "w-1.5 bg-white/50")" data-hero-go="@hi" aria-label="Show campaign image @(hi + 1)"></button>
                 }
             </div>
         }
+
+        <!-- Scroll cue -->
+        <div class="pointer-events-none absolute bottom-6 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-1.5 text-white/55">
+            <span class="text-[9px] tracking-[0.3em] uppercase">Scroll</span>
+            <svg class="w-4 h-4 animate-bounce" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+        </div>
     </div>
 </section>
 }
@@ -286,7 +302,7 @@
         {
             <div class="flex flex-col items-center text-center gap-3.5 lg:px-4">
                 <svg class="w-7 h-7 @tTrustIcon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.4">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="@trustIcons[ti % trustIcons.Length]" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="@trustIconFor(tickerLabels[ti])" />
                 </svg>
                 <span class="@tHead text-base lg:text-lg font-light leading-tight">@tickerLabels[ti]</span>
             </div>
@@ -330,7 +346,7 @@
             {
                 <div class="flex items-center gap-3">
                     <svg class="w-6 h-6 flex-shrink-0 @goldText" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="@trustIcons[ti % trustIcons.Length]" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="@trustIconFor(classicTrust[ti])" />
                     </svg>
                     <span class="text-sm font-medium text-neutral-800">@classicTrust[ti]</span>
                 </div>
@@ -451,7 +467,7 @@
 }
 
 <!-- ═══ The Selection — featured products ═══════════════════════════════════ -->
-@if (showFeatured)
+@if (showFeatured && featuredProducts.Any())
 {
     <section class="@tCanvas py-16 lg:py-24">
         <div class="max-w-7xl mx-auto px-6 lg:px-12">
@@ -460,8 +476,6 @@
                 <h2 class="@tHead text-3xl sm:text-4xl lg:text-5xl font-light text-neutral-900 leading-none">@featuredHeading</h2>
             </div>
 
-            @if (featuredProducts.Any())
-            {
                 <div class="relative group/carousel">
                     @if (featuredProducts.Count > 4)
                     {
@@ -479,47 +493,71 @@
                         }
                     </div>
                 </div>
-            }
-            else
-            {
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
-                    @for (int i = 0; i < 4; i++)
-                    {
-                        <div class="group">
-                            <div class="aspect-square bg-neutral-100 mb-4 overflow-hidden">
-                                <div class="w-full h-full bg-gradient-to-br from-neutral-200 to-neutral-100"></div>
-                            </div>
-                            <div class="h-3 bg-neutral-200 rounded w-3/4 mb-2"></div>
-                            <div class="h-2 bg-neutral-100 rounded w-1/3"></div>
-                        </div>
-                    }
-                </div>
-            }
         </div>
     </section>
 }
 
 <!-- ═══ Merchandising rows ══════════════════════════════════════════════════ -->
-@if (showBestSellers)
+@if (showBestSellers && bestSellers.Any())
 {
     @await Html.PartialAsync("_ProductCardRow", bestSellers, new ViewDataDictionary(ViewData)
     {
         ["RowTitle"] = "Best Sellers", ["RowEyebrow"] = "Most loved", ["RowBg"] = "bg-white",
     })
 }
-@if (showTrending)
+@if (showTrending && trending.Any())
 {
     @await Html.PartialAsync("_ProductCardRow", trending, new ViewDataDictionary(ViewData)
     {
         ["RowTitle"] = "Trending Now", ["RowEyebrow"] = "Popular this month", ["RowBg"] = "bg-stone-50",
     })
 }
-@if (showRecentlyView)
+@if (showRecentlyView && recentlyViewed.Any())
 {
     @await Html.PartialAsync("_ProductCardRow", recentlyViewed, new ViewDataDictionary(ViewData)
     {
         ["RowTitle"] = "Recently Viewed", ["RowEyebrow"] = "Pick up where you left off", ["RowBg"] = "bg-white",
     })
+}
+
+<!-- ═══ Testimonials — social proof (admin-editable; hidden when empty) ═══════ -->
+@{
+    var reviews = new List<(string Quote, string Author)>();
+    for (var r = 1; r <= 3; r++)
+    {
+        var q = await SettingsService.GetAsync($"home.review_{r}_quote", "");
+        if (string.IsNullOrWhiteSpace(q)) { continue; }
+        reviews.Add((q.Trim(), (await SettingsService.GetAsync($"home.review_{r}_author", "")).Trim()));
+    }
+}
+@if (reviews.Any())
+{
+    <section class="@tCanvas py-16 lg:py-24">
+        <div class="max-w-7xl mx-auto px-6 lg:px-12">
+            <div class="text-center mb-10 lg:mb-14">
+                <p class="text-[11px] tracking-[0.35em] uppercase @tEyebrow mb-3">Loved by</p>
+                <h2 class="@tHead text-3xl sm:text-4xl lg:text-5xl font-light text-neutral-900 leading-none">What our customers say</h2>
+            </div>
+            <div class="grid gap-6 lg:gap-8 @(reviews.Count == 1 ? "max-w-xl mx-auto" : reviews.Count == 2 ? "sm:grid-cols-2 max-w-3xl mx-auto" : "sm:grid-cols-3")">
+                @foreach (var rv in reviews)
+                {
+                    <figure class="bg-white border border-neutral-200 @(isBoutique ? "rounded-2xl" : "rounded-xl") p-7 flex flex-col">
+                        <div class="flex gap-1 text-brand-500 mb-4" aria-label="5 out of 5 stars">
+                            @for (var s = 0; s < 5; s++)
+                            {
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10 1.5l2.6 5.3 5.9.9-4.2 4.1 1 5.8L10 15l-5.3 2.6 1-5.8L1.5 7.7l5.9-.9z"/></svg>
+                            }
+                        </div>
+                        <blockquote class="flex-1 text-sm leading-relaxed text-neutral-600 font-light">&ldquo;@rv.Quote&rdquo;</blockquote>
+                        @if (!string.IsNullOrWhiteSpace(rv.Author))
+                        {
+                            <figcaption class="mt-5 text-xs tracking-[0.15em] uppercase text-neutral-500">@rv.Author</figcaption>
+                        }
+                    </figure>
+                }
+            </div>
+        </div>
+    </section>
 }
 
 <!-- ═══ Newsletter — full-bleed editorial statement ═════════════════════════ -->

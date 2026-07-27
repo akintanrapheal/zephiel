@@ -32,8 +32,13 @@ public class HomeController : Controller
         // Project straight to the card VM — EF turns the image/stock/variant lookups into small
         // correlated subqueries in ONE query, instead of Include'ing three collections at once
         // (which the DB expands into a cartesian product of images × inventories × variants).
-        var featuredCards = await _db.Products
-            .Where(p => p.IsActive && p.IsFeatured)
+        // Prefer admin-featured products; if none are flagged yet, fall back to the newest active
+        // products so the "Featured Pieces" strip is populated for a brand-new catalogue.
+        var featBase = _db.Products.Where(p => p.IsActive && p.IsFeatured);
+        if (!await featBase.AnyAsync())
+            featBase = _db.Products.Where(p => p.IsActive);
+
+        var featuredCards = await featBase
             .OrderByDescending(p => p.CreatedAt)
             .Take(24)
             .Select(p => new ProductCardViewModel

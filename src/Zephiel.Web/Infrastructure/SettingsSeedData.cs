@@ -259,6 +259,14 @@ public static class SettingsSeedData
         new() { Key = "homepage.trust_5_icon",     Group = "Homepage", Label = "Trust Bar — Item 5 Icon", Type = "image", Value = "",                   Description = "Optional icon for item 5. Blank = built-in icon.", SortOrder = 18 },
         new() { Key = "homepage.trust_6_icon",     Group = "Homepage", Label = "Trust Bar — Item 6 Icon", Type = "image", Value = "",                   Description = "Optional icon for item 6. Blank = built-in icon.", SortOrder = 19 },
 
+        // Homepage testimonials / social proof. Fill any of the three (leave all blank to hide the row).
+        new() { Key = "home.review_1_quote",  Group = "Homepage", Label = "Testimonial 1 — quote",  Type = "textarea", Value = "", Description = "A short customer quote for the homepage 'What our customers say' row. Leave all three blank to hide the row.", SortOrder = 40 },
+        new() { Key = "home.review_1_author", Group = "Homepage", Label = "Testimonial 1 — author", Type = "text",     Value = "", Description = "Name (and optional location) for testimonial 1, e.g. 'Amara O., Lagos'.", SortOrder = 41 },
+        new() { Key = "home.review_2_quote",  Group = "Homepage", Label = "Testimonial 2 — quote",  Type = "textarea", Value = "", Description = "Second customer quote.", SortOrder = 42 },
+        new() { Key = "home.review_2_author", Group = "Homepage", Label = "Testimonial 2 — author", Type = "text",     Value = "", Description = "Name/location for testimonial 2.", SortOrder = 43 },
+        new() { Key = "home.review_3_quote",  Group = "Homepage", Label = "Testimonial 3 — quote",  Type = "textarea", Value = "", Description = "Third customer quote.", SortOrder = 44 },
+        new() { Key = "home.review_3_author", Group = "Homepage", Label = "Testimonial 3 — author", Type = "text",     Value = "", Description = "Name/location for testimonial 3.", SortOrder = 45 },
+
         // ── Content pages (leave blank to keep the built-in page; paste HTML to replace the body) ──
         new() { Key = "pages.about_body",           Group = "Content Pages", Label = "Our Story (body)",       Type = "html", Value = "", Description = "Replace the 'Our Story' page body. Leave blank to keep the built-in page. Use the toolbar to format text — bold, lists, alignment, fonts.", SortOrder = 1 },
         new() { Key = "pages.privacy_body",         Group = "Content Pages", Label = "Privacy Policy (body)",  Type = "html", Value = "", Description = "Replace the Privacy Policy body. Leave blank to keep the built-in page.", SortOrder = 2 },
