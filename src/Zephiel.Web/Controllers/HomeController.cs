@@ -96,6 +96,18 @@ public class HomeController : Controller
         ViewBag.RecentlyViewed = await _merch.ByIdsAsync(
             Zephiel.Web.Infrastructure.RecentlyViewed.Get(Request));
 
+        // Testimonials — the newest approved 4★+ reviews that have text, for the homepage social-proof
+        // row. Auto-populates as real reviews come in; the view falls back to admin-set quotes if none.
+        var reviewRows = await _db.ProductReviews
+            .Where(r => r.IsApproved && r.Rating >= 4 && r.Body != "")
+            .OrderByDescending(r => r.CreatedAt)
+            .Take(3)
+            .Select(r => new { r.Body, r.AuthorName, r.Rating })
+            .ToListAsync();
+        ViewBag.Testimonials = reviewRows
+            .Select(r => (Quote: r.Body, Author: string.IsNullOrWhiteSpace(r.AuthorName) ? "Verified buyer" : r.AuthorName, Rating: r.Rating))
+            .ToList();
+
         return View();
     }
 

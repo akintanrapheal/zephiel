@@ -522,12 +522,21 @@
 
 <!-- ═══ Testimonials — social proof (admin-editable; hidden when empty) ═══════ -->
 @{
-    var reviews = new List<(string Quote, string Author)>();
-    for (var r = 1; r <= 3; r++)
+    // Prefer real approved product reviews (from the controller); fall back to admin-set quotes.
+    var realReviews = (ViewBag.Testimonials as List<(string Quote, string Author, int Rating)>) ?? new List<(string, string, int)>();
+    var reviews = new List<(string Quote, string Author, int Rating)>();
+    if (realReviews.Any())
     {
-        var q = await SettingsService.GetAsync($"home.review_{r}_quote", "");
-        if (string.IsNullOrWhiteSpace(q)) { continue; }
-        reviews.Add((q.Trim(), (await SettingsService.GetAsync($"home.review_{r}_author", "")).Trim()));
+        reviews = realReviews;
+    }
+    else
+    {
+        for (var r = 1; r <= 3; r++)
+        {
+            var q = await SettingsService.GetAsync($"home.review_{r}_quote", "");
+            if (string.IsNullOrWhiteSpace(q)) { continue; }
+            reviews.Add((q.Trim(), (await SettingsService.GetAsync($"home.review_{r}_author", "")).Trim(), 5));
+        }
     }
 }
 @if (reviews.Any())
@@ -542,10 +551,10 @@
                 @foreach (var rv in reviews)
                 {
                     <figure class="bg-white border border-neutral-200 @(isBoutique ? "rounded-2xl" : "rounded-xl") p-7 flex flex-col">
-                        <div class="flex gap-1 text-brand-500 mb-4" aria-label="5 out of 5 stars">
+                        <div class="flex gap-1 mb-4" aria-label="@rv.Rating out of 5 stars">
                             @for (var s = 0; s < 5; s++)
                             {
-                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10 1.5l2.6 5.3 5.9.9-4.2 4.1 1 5.8L10 15l-5.3 2.6 1-5.8L1.5 7.7l5.9-.9z"/></svg>
+                                <svg class="w-4 h-4 @(s < rv.Rating ? "text-brand-500" : "text-neutral-300")" fill="currentColor" viewBox="0 0 20 20"><path d="M10 1.5l2.6 5.3 5.9.9-4.2 4.1 1 5.8L10 15l-5.3 2.6 1-5.8L1.5 7.7l5.9-.9z"/></svg>
                             }
                         </div>
                         <blockquote class="flex-1 text-sm leading-relaxed text-neutral-600 font-light">&ldquo;@rv.Quote&rdquo;</blockquote>
