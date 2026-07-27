@@ -8,8 +8,9 @@
     // hidden when the bag is empty or no number is set.
     var waNum = await SettingsService.GetAsync("general.whatsapp_number");
     var waDigits = new string((waNum ?? "").Where(char.IsDigit).ToArray());
+    var waWidgetC = await SettingsService.GetBoolAsync("general.whatsapp_widget", true);
     string? waOrderUrl = null;
-    if (!Model.IsEmpty && waDigits.Length > 0)
+    if (waWidgetC && !Model.IsEmpty && waDigits.Length > 0)
     {
         var waMsg = new System.Text.StringBuilder();
         waMsg.Append("Hello! I'd like to order these items from my bag:\n\n");

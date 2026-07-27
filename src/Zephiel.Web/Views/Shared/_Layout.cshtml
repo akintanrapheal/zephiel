@@ -186,13 +186,14 @@
     @{
         var floatWa = await SettingsService.GetAsync("general.whatsapp_number");
         var floatWaDigits = floatWa.Replace("+", "").Replace(" ", "").Replace("-", "").Replace("(", "").Replace(")", "");
+        var waWidgetOn = await SettingsService.GetBoolAsync("general.whatsapp_widget", true);
         // Hide the floating button on pages that put a primary CTA at the bottom of the screen
         // (cart's "Proceed to checkout", checkout, the product buy bar) so it never covers them.
         var waPath = (Context.Request.Path.Value ?? "").ToLowerInvariant().TrimEnd('/');
         var hideFloatWa = waPath.StartsWith("/cart") || waPath.StartsWith("/checkout")
             || (waPath.StartsWith("/products/") && waPath.Length > "/products".Length);
     }
-    @if (!string.IsNullOrWhiteSpace(floatWaDigits) && !hideFloatWa)
+    @if (waWidgetOn && !string.IsNullOrWhiteSpace(floatWaDigits) && !hideFloatWa)
     {
         <a id="wa-float" href="https://wa.me/@floatWaDigits" target="_blank" rel="noopener" aria-label="Chat with us on WhatsApp"
            style="position:fixed;bottom:24px;right:24px;z-index:45;width:56px;height:56px;border-radius:9999px;background:#25D366;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(0,0,0,.28);">

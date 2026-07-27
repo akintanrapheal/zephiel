@@ -444,8 +444,9 @@
                 @{
                     var waNumP = await SettingsService.GetAsync("general.whatsapp_number");
                     var waDigitsP = new string((waNumP ?? "").Where(char.IsDigit).ToArray());
+                    var waWidgetP = await SettingsService.GetBoolAsync("general.whatsapp_widget", true);
                 }
-                @if (waDigitsP.Length > 0)
+                @if (waWidgetP && waDigitsP.Length > 0)
                 {
                     var askMsg = $"Hi! I'm interested in {Model.Name} — is it available?\n{sdUrl}";
                     var askUrl = $"https://wa.me/{waDigitsP}?text={Uri.EscapeDataString(askMsg)}";
