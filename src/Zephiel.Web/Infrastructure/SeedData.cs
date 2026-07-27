@@ -35,14 +35,15 @@ public static class SeedData
             // â”€â”€â”€ Categories â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             var categories = new[]
             {
-                new { Name = "Sets",              Slug = "sets",       Description = "Matching jewellery sets and gift collections", Image = "https://images.unsplash.com/photo-1620656798579-1984d9e87df7?w=800&q=80" },
-                new { Name = "Necklaces",         Slug = "necklaces",  Description = "Pendants, chains, and statement necklaces", Image = "https://images.unsplash.com/photo-1608042314453-ae338d80c427?w=800&q=80" },
-                new { Name = "Earrings",          Slug = "earrings",   Description = "Studs, hoops, and drop earrings", Image = "https://images.unsplash.com/photo-1629224316810-9d8805b95e76?w=800&q=80" },
-                new { Name = "Bracelet & Bangle", Slug = "bracelets",  Description = "Bangles, cuffs, and tennis bracelets", Image = "https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=800&q=80" },
-                new { Name = "Rings",             Slug = "rings",      Description = "Engagement, wedding, and fashion rings", Image = "https://images.unsplash.com/photo-1603561591411-07134e71a2a9?w=800&q=80" },
-                new { Name = "Clutches",          Slug = "clutches",   Description = "Evening clutches and stoned bags", Image = "https://images.unsplash.com/photo-1594223274512-ad4803739b7c?w=800&q=80" },
+                new { Name = "Sets",              Slug = "sets",       Description = "Matching jewellery sets and gift collections", Image = "/images/categories/sets.jpg" },
+                new { Name = "Necklaces",         Slug = "necklaces",  Description = "Pendants, chains, and statement necklaces", Image = "/images/categories/necklaces.jpg" },
+                new { Name = "Earrings",          Slug = "earrings",   Description = "Studs, hoops, and drop earrings", Image = "/images/categories/earrings.jpg" },
+                new { Name = "Rings",             Slug = "rings",      Description = "Engagement, wedding, and fashion rings", Image = "/images/categories/rings.jpg" },
+                new { Name = "Bracelet & Bangle", Slug = "bracelets",  Description = "Bangles, cuffs, and tennis bracelets", Image = "/images/categories/bracelets.jpg" },
+                new { Name = "Clutches",          Slug = "clutches",   Description = "Evening clutches and stoned bags", Image = "/images/categories/clutches.jpg" },
             };
 
+            var catOrder = 1;
             foreach (var cat in categories)
             {
                 if (!await db.Categories.AnyAsync(c => c.Slug == cat.Slug))
@@ -53,9 +54,11 @@ public static class SeedData
                         Slug = cat.Slug,
                         Description = cat.Description,
                         ImageUrl = cat.Image,
+                        SortOrder = catOrder,
                         IsActive = true
                     });
                 }
+                catOrder++;
             }
 
             await db.SaveChangesAsync();
