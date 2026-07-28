@@ -72,26 +72,14 @@ public class SeoDescriptionGenerator
     // ══════════════════════════════════════════════════════════════════════════
     //  JEWELLERY
     // ══════════════════════════════════════════════════════════════════════════
-    private const string JewelleryCare =
-        "<h3>Jewellery Care Instructions</h3>"
-      + "<p>Your Zephiel piece is crafted from high-grade, gold/platinum-plated brass set with "
-      + "semi-precious cubic zirconia stones &mdash; beautifully made costume jewellery designed to be treasured.</p>"
-      + "<ul>"
-      + "<li>Like all fine costume jewellery, <strong>keep away from harsh liquids</strong> such as perfume, lotion, hand sanitiser and water.</li>"
-      + "<li>Always <strong>wipe away body residue</strong> with a soft, dry cloth after each wear.</li>"
-      + "<li><strong>Store in a cool, dry place</strong> &mdash; ideally a pouch or jewellery box, out of direct sunlight.</li>"
-      + "<li><strong>Nickel &amp; lead free</strong>, so it is gentle on skin and should not cause reactions.</li>"
-      + "<li>These are <strong>occasional-wear</strong> pieces (not everyday wear). Cared for properly, they will stay beautiful for several years.</li>"
-      + "</ul>";
-
     private static readonly string[] JewelleryIntros =
     {
-        "Turn heads with the <strong>{0}</strong> from Zephiel &mdash; {1} {2} handcrafted to add instant glamour to any look.",
-        "Meet the <strong>{0}</strong> by Zephiel: {1} {2} designed to elevate everything from workwear to evening outfits.",
-        "Effortlessly chic, the <strong>{0}</strong> is {1} {2} that brings a polished, put-together finish to your style.",
-        "Make a statement with the <strong>{0}</strong> from Zephiel &mdash; beautifully crafted {1} {2} that catches the light with every move.",
-        "The <strong>{0}</strong> is {1} {2} from Zephiel, blending modern design with handmade quality for a standout finish.",
-        "Add a touch of luxe to your jewellery box with the <strong>{0}</strong> &mdash; {1} {2} made to be noticed.",
+        "The <strong>{0}</strong> is a modern everyday staple &mdash; {1} {2} with a quiet, lasting polish that carries you from desk to dinner.",
+        "Clean, confident and built to last, the <strong>{0}</strong> is {1} {2} you can genuinely wear every single day.",
+        "Meet the <strong>{0}</strong> &mdash; {1} {2} that stays bright, shrugs off tarnish and feels featherlight to wear.",
+        "Understated but never plain, the <strong>{0}</strong> brings a refined {1} {2} finish to whatever is already in your wardrobe.",
+        "The <strong>{0}</strong> proves everyday can be elevated: {1} {2} made to be worn, not saved for &lsquo;best&rsquo;.",
+        "Effortless and enduring, the <strong>{0}</strong> is {1} {2} &mdash; the kind of piece you reach for on repeat.",
     };
 
     private string BuildJewellery(int seed, string name, string category)
@@ -105,46 +93,65 @@ public class SeoDescriptionGenerator
         var pearl = n.Contains("pearl");
         var stone = ContainsAny(n, "stone", "crystal", "sparkle", "shiny", "gloss", "zirconia", "laser",
             "shimmer", "bloom", "royal", "glow", "diamond", "ice", "star");
-
         var typPhrase = string.IsNullOrEmpty(style) ? noun : $"{style} {noun}";
+        var plated = fin != "silver-tone";
 
-        var intro = string.Format(JewelleryIntros[Math.Abs(seed) % JewelleryIntros.Length], safeName, fin, typPhrase);
-        intro += pearl
-            ? " Finished with elegant faux pearls for a timeless, feminine touch."
+        var lead = string.Format(JewelleryIntros[Math.Abs(seed) % JewelleryIntros.Length], safeName, fin, typPhrase);
+        lead += pearl
+            ? " Soft faux pearls add a feminine, timeless glow."
             : stone
-                ? " Set with brilliant AAA cubic zirconia stones that sparkle from every angle."
-                : " A versatile piece that pairs beautifully with any outfit.";
+                ? " Hand-set cubic zirconia catches the light from every angle."
+                : " A clean silhouette that layers effortlessly with the rest of your jewellery.";
 
-        var bullets = new List<string>
+        // At-a-glance facts
+        var facts = new List<string>
         {
-            string.IsNullOrEmpty(style)
-                ? $"Beautifully crafted <strong>{noun}</strong> design"
-                : $"Eye-catching <strong>{style} {noun}</strong> design"
+            $"<li><strong>Material</strong> &mdash; {(plated ? $"316L stainless steel, {fin} PVD-plated" : "polished 316L stainless steel")}</li>"
         };
-        if (pearl) bullets.Add("Elegant <strong>faux pearls</strong> for timeless sophistication");
-        else if (stone) bullets.Add("Brilliant <strong>cubic zirconia</strong> stones for all-out sparkle");
-        bullets.Add($"Beautiful {fin} finish with long-lasting plating");
-        bullets.Add("Lightweight and comfortable for all-day wear");
-        bullets.Add("<strong>Nickel &amp; lead free</strong> &mdash; gentle on sensitive skin");
-        bullets.Add("Perfect for weddings, parties, gifting and special occasions");
+        if (pearl) facts.Add("<li><strong>Stones</strong> &mdash; hand-set faux pearls</li>");
+        else if (stone) facts.Add("<li><strong>Stones</strong> &mdash; AAA-grade cubic zirconia</li>");
+        if (!string.IsNullOrEmpty(closeLabel)) facts.Add($"<li><strong>{closeLabel}</strong> &mdash; {closeVal}</li>");
+        facts.Add("<li><strong>Skin-friendly</strong> &mdash; hypoallergenic, nickel &amp; lead free</li>");
+        facts.Add("<li><strong>Wear</strong> &mdash; tarnish- &amp; water-resistant, made for every day</li>");
+        facts.Add($"<li><strong>Style</strong> &mdash; {typPhrase}</li>");
 
-        var details = new List<string> { $"<li><strong>Material:</strong> brass base with premium {fin} plating</li>" };
-        if (pearl) details.Add("<li><strong>Stones:</strong> elegant faux pearls</li>");
-        else if (stone) details.Add("<li><strong>Stones:</strong> AAA cubic zirconia</li>");
-        if (!string.IsNullOrEmpty(closeLabel)) details.Add($"<li><strong>{closeLabel}:</strong> {closeVal}</li>");
-        details.Add($"<li><strong>Style:</strong> {typPhrase}</li>");
+        var material = plated
+            ? $"Built on 316L surgical-grade stainless steel and finished with a bonded {fin} PVD coating, so the colour won&rsquo;t flake, fade or turn your skin green. It resists rust and tarnish, stands up to water and daily wear, and stays gentle on sensitive skin."
+            : "Made from 316L surgical-grade stainless steel &mdash; the same metal used for medical tools. It won&rsquo;t rust, tarnish or irritate sensitive skin, and holds its bright, polished shine through everyday wear and water.";
 
-        return $"<h3>{safeName}</h3><p>{intro}</p>"
-             + "<h3>Why you will love it</h3><ul>" + string.Concat(bullets.ConvertAll(b => $"<li>{b}</li>")) + "</ul>"
-             + "<h3>Product details</h3><ul>" + string.Concat(details) + "</ul>"
-             + JewelleryCare;
+        var care = new List<string>
+        {
+            "Rinse with warm water and a drop of mild soap, then dry with a soft cloth &mdash; no special cleaner needed.",
+            "Happy around water and sweat; a quick wipe after wear keeps it gleaming.",
+        };
+        if (plated) care.Add("To protect the plated colour, keep it away from chlorine, bleach and abrasive polishes, and spray perfume before putting it on.");
+        care.Add("Store in a pouch or box so it doesn&rsquo;t scratch against other pieces.");
+        care.Add("No need to save it for &lsquo;best&rsquo; &mdash; it&rsquo;s built to be worn.");
+
+        return $"<p>{lead}</p>"
+             + "<h3>At a glance</h3><ul>" + string.Concat(facts) + "</ul>"
+             + "<h3>Styling notes</h3><p>" + StylingNote(noun) + "</p>"
+             + "<h3>Why stainless steel</h3><p>" + material + "</p>"
+             + "<h3>Looking after it</h3><ul>" + string.Concat(care.ConvertAll(x => $"<li>{x}</li>")) + "</ul>";
     }
+
+    private static string StylingNote(string noun) => noun switch
+    {
+        "earrings"      => "Wear them on their own for a polished daytime look, or pair with smaller studs for an easy, collected ear.",
+        "necklace"      => "Layer it over shorter chains for depth, or let it sit alone against a plain neckline.",
+        "ring"          => "Wear it solo as a quiet statement, or stack it with slimmer bands for a modern, mismatched finish.",
+        "bangle" or "bracelet" => "Stack it with a watch or a couple of finer bracelets for an effortless, put-together wrist.",
+        "anklet"        => "Made for bare skin in warmer months &mdash; wear one or layer a few for a laid-back finish.",
+        "brooch"        => "Pin it to a lapel, a coat or a bag strap to lift an otherwise simple outfit.",
+        "jewellery set" => "Designed to be worn together for a coordinated look &mdash; or split the pieces across different outfits.",
+        _               => "Dress it up for occasions or keep it low-key for everyday &mdash; it works both ways.",
+    };
 
     private static readonly string[] JewelleryShorts =
     {
-        "Handmade {0} {1}{2} from Zephiel — nickel & lead free, perfect for gifting.",
-        "Elegant {0} {1}{2}, handcrafted by Zephiel. Lightweight and nickel & lead free.",
-        "{0} {1}{2} — a handmade Zephiel statement piece, gentle on sensitive skin.",
+        "Everyday {0} {1}{2} in hypoallergenic 316L stainless steel — tarnish-proof and water-friendly.",
+        "Polished {0} {1}{2} — stainless steel that won't fade, rust or irritate sensitive skin.",
+        "Handcrafted {0} {1}{2} in surgical-grade stainless steel, made to keep its shine wear after wear.",
     };
 
     private string BuildJewelleryShort(int seed, string name, string category)
@@ -154,9 +161,9 @@ public class SeoDescriptionGenerator
         var (noun, style, _, _) = Categorize(n, c);
         var fin = Finish(n);
         var typ = string.IsNullOrEmpty(style) ? noun : $"{style} {noun}";
-        var adorn = n.Contains("pearl") ? " with elegant faux pearls"
+        var adorn = n.Contains("pearl") ? " with faux pearls"
             : ContainsAny(n, "stone", "crystal", "sparkle", "shiny", "gloss", "zirconia", "laser",
-                "shimmer", "bloom", "royal", "glow", "diamond", "ice", "star") ? " with sparkling cubic zirconia"
+                "shimmer", "bloom", "royal", "glow", "diamond", "ice", "star") ? " with cubic zirconia"
             : "";
         return string.Format(JewelleryShorts[Math.Abs(seed) % JewelleryShorts.Length], fin, typ, adorn);
     }
@@ -166,10 +173,10 @@ public class SeoDescriptionGenerator
     // ══════════════════════════════════════════════════════════════════════════
     private static readonly string[] AccessoryIntros =
     {
-        "Complete your look with the <strong>{0}</strong> from Zephiel &mdash; {1} designed to add instant polish to any outfit.",
-        "Meet the <strong>{0}</strong> by Zephiel: {1} that blends everyday practicality with standout style.",
-        "Make a statement with the <strong>{0}</strong> &mdash; {1} crafted to elevate your everyday and occasion looks.",
-        "The <strong>{0}</strong> from Zephiel is {1}, combining quality craftsmanship with a refined, modern finish.",
+        "The <strong>{0}</strong> is {1} &mdash; an easy finishing touch that pulls a look together without trying too hard.",
+        "Meet the <strong>{0}</strong>: {1} that blends everyday practicality with a genuinely stylish finish.",
+        "Understated and useful in equal measure, the <strong>{0}</strong> is {1} made to earn its place in your rotation.",
+        "The <strong>{0}</strong> is {1} &mdash; quality made, quietly stylish and ready for daily use.",
     };
 
     private sealed class AccSpec
@@ -190,17 +197,17 @@ public class SeoDescriptionGenerator
         var safeName = System.Net.WebUtility.HtmlEncode(name ?? "");
         var spec = SpecFor(kind, n);
 
-        var intro = string.Format(AccessoryIntros[Math.Abs(seed) % AccessoryIntros.Length], safeName, spec.Descriptor);
-        if (!string.IsNullOrEmpty(spec.IntroTail)) intro += " " + spec.IntroTail;
+        var lead = string.Format(AccessoryIntros[Math.Abs(seed) % AccessoryIntros.Length], safeName, spec.Descriptor);
+        if (!string.IsNullOrEmpty(spec.IntroTail)) lead += " " + spec.IntroTail;
 
-        var details = new List<string>();
-        foreach (var (label, val) in spec.Details) details.Add($"<li><strong>{label}:</strong> {val}</li>");
-        details.Add($"<li><strong>Type:</strong> {spec.Noun}</li>");
+        var facts = new List<string>();
+        foreach (var (label, val) in spec.Details) facts.Add($"<li><strong>{label}</strong> &mdash; {val}</li>");
+        facts.Add($"<li><strong>Type</strong> &mdash; {spec.Noun}</li>");
 
-        return $"<h3>{safeName}</h3><p>{intro}</p>"
-             + "<h3>Why you will love it</h3><ul>" + string.Concat(spec.Bullets.ConvertAll(b => $"<li>{b}</li>")) + "</ul>"
-             + "<h3>Product details</h3><ul>" + string.Concat(details) + "</ul>"
-             + $"<h3>{spec.CareTitle}</h3><ul>" + string.Concat(spec.Care.ConvertAll(x => $"<li>{x}</li>")) + "</ul>";
+        return $"<p>{lead}</p>"
+             + "<h3>At a glance</h3><ul>" + string.Concat(facts) + "</ul>"
+             + "<h3>Highlights</h3><ul>" + string.Concat(spec.Bullets.ConvertAll(b => $"<li>{b}</li>")) + "</ul>"
+             + "<h3>Looking after it</h3><ul>" + string.Concat(spec.Care.ConvertAll(x => $"<li>{x}</li>")) + "</ul>";
     }
 
     private string BuildAccessoryShort(int seed, string name, ProductKind kind)
