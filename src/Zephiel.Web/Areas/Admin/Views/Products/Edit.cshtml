@@ -484,12 +484,12 @@
 
             @if (Model.Images.Any())
             {
-                <p class="text-xs text-neutral-400 mb-3">The <span class="text-neutral-600 font-medium">primary</span> image shows on cards &amp; the product page. The <span class="text-emerald-600 font-medium">hover</span> image is revealed when a shopper hovers a card (Tiffany-style swap).</p>
-                <div class="flex flex-wrap gap-3 mb-5">
+                <p class="text-xs text-neutral-400 mb-3"><span class="text-neutral-600 font-medium">Drag to reorder.</span> The <span class="text-neutral-600 font-medium">first</span> image is the <span class="text-neutral-600 font-medium">primary</span> — shown on cards &amp; the product page. The <span class="text-emerald-600 font-medium">hover</span> image is revealed when a shopper hovers a card (Tiffany-style swap).</p>
+                <div id="img-sortable" data-product-id="@Model.Id" data-reorder-url="@Url.Action("ReorderImages", "Products", new { area = "Admin" })" class="flex flex-wrap gap-3 mb-5">
                     @foreach (var img in Model.Images)
                     {
-                        <div class="relative group w-24">
-                            <img src="@Img.Cld(img.Url, 200, 200)" alt="@img.AltText" loading="lazy"
+                        <div class="img-card relative group w-24 cursor-move" draggable="true" data-image-id="@img.Id" title="Drag to reorder">
+                            <img src="@Img.Cld(img.Url, 200, 200)" alt="@img.AltText" loading="lazy" draggable="false"
                                  class="w-24 h-24 object-cover rounded border @(img.IsPrimary ? "border-neutral-900 ring-1 ring-neutral-900" : img.IsHover ? "border-emerald-500 ring-1 ring-emerald-500" : "border-neutral-200")" />
                             @if (img.IsPrimary)
                             {
@@ -523,6 +523,41 @@
                         </div>
                     }
                 </div>
+                @Html.AntiForgeryToken()
+                <script>
+                (function () {
+                    var box = document.getElementById('img-sortable');
+                    if (!box) return;
+                    var dragEl = null, saving = false;
+                    function cards() { return [].slice.call(box.querySelectorAll('.img-card')); }
+                    cards().forEach(function (card) {
+                        card.addEventListener('dragstart', function (e) {
+                            dragEl = card; e.dataTransfer.effectAllowed = 'move';
+                            setTimeout(function () { card.classList.add('opacity-40'); }, 0);
+                        });
+                        card.addEventListener('dragend', function () { card.classList.remove('opacity-40'); save(); });
+                        card.addEventListener('dragover', function (e) {
+                            e.preventDefault();
+                            if (!dragEl || dragEl === card) return;
+                            var r = card.getBoundingClientRect();
+                            var before = e.clientX < r.left + r.width / 2;
+                            box.insertBefore(dragEl, before ? card : card.nextElementSibling);
+                        });
+                    });
+                    function save() {
+                        if (saving) return; saving = true;
+                        var ids = cards().map(function (c) { return c.getAttribute('data-image-id'); });
+                        var tokenEl = box.parentNode.querySelector('input[name="__RequestVerificationToken"]') || document.querySelector('input[name="__RequestVerificationToken"]');
+                        var body = new URLSearchParams();
+                        body.append('productId', box.getAttribute('data-product-id'));
+                        ids.forEach(function (id) { body.append('order', id); });
+                        if (tokenEl) body.append('__RequestVerificationToken', tokenEl.value);
+                        fetch(box.getAttribute('data-reorder-url'), { method: 'POST', body: body })
+                            .then(function () { location.reload(); })
+                            .catch(function () { saving = false; });
+                    }
+                })();
+                </script>
             }
 
             <form asp-area="Admin" asp-controller="Products" asp-action="AddImage"

@@ -785,25 +785,23 @@ namespace Zephiel.Web.Areas.Admin.Controllers
                 return RedirectToAction(nameof(Edit), new { id });
             }
 
-            if (isPrimary)
-            {
-                var existing = await _db.ProductImages
-                    .Where(i => i.ProductId == id && i.IsPrimary)
-                    .ToListAsync();
-                existing.ForEach(i => i.IsPrimary = false);
-            }
+            // The first image is always the primary, so a new primary (and the very first image
+            // uploaded) goes to the front of the gallery; others are appended at the end.
+            var siblings = await _db.ProductImages.Where(i => i.ProductId == id).ToListAsync();
+            var makePrimary = isPrimary || siblings.Count == 0;
+            if (makePrimary) siblings.ForEach(i => i.IsPrimary = false);
 
-            var maxSort = await _db.ProductImages
-                .Where(i => i.ProductId == id)
-                .MaxAsync(i => (int?)i.SortOrder) ?? 0;
+            var sort = siblings.Count == 0
+                ? 0
+                : (makePrimary ? siblings.Min(i => i.SortOrder) - 1 : siblings.Max(i => i.SortOrder) + 1);
 
             _db.ProductImages.Add(new ProductImage
             {
                 ProductId = id,
                 Url = resolvedUrl,
                 AltText = altText?.Trim(),
-                IsPrimary = isPrimary,
-                SortOrder = maxSort + 1
+                IsPrimary = makePrimary,
+                SortOrder = sort
             });
 
             await _db.SaveChangesAsync();
@@ -817,10 +815,15 @@ namespace Zephiel.Web.Areas.Admin.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> SetPrimaryImage(int productId, int imageId)
         {
-            var images = await _db.ProductImages.Where(i => i.ProductId == productId).ToListAsync();
+            var images = await _db.ProductImages.Where(i => i.ProductId == productId)
+                .OrderBy(i => i.SortOrder).ToListAsync();
             var target = images.FirstOrDefault(i => i.Id == imageId);
             if (target != null)
             {
+                // The primary image is always the first one — move it to the front and renumber.
+                images.Remove(target);
+                images.Insert(0, target);
+                for (var k = 0; k < images.Count; k++) images[k].SortOrder = k;
                 foreach (var i in images) i.IsPrimary = false;
                 target.IsPrimary = true;
                 target.IsHover = false; // an image can't be both the primary and the hover swap
@@ -829,6 +832,35 @@ namespace Zephiel.Web.Areas.Admin.Controllers
                 TempData["Success"] = "Primary image updated.";
             }
             return RedirectToAction(nameof(Edit), new { id = productId });
+        }
+
+        // Persist a drag-reordered gallery (posted as an ordered list of image ids). The first
+        // image is always kept as the primary.
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ReorderImages(int productId, [FromForm] int[] order)
+        {
+            var images = await _db.ProductImages.Where(i => i.ProductId == productId).ToListAsync();
+            if (images.Count == 0 || order == null || order.Length == 0)
+                return Json(new { success = false });
+
+            var pos = 0;
+            foreach (var id in order)
+            {
+                var img = images.FirstOrDefault(i => i.Id == id);
+                if (img != null) img.SortOrder = pos++;
+            }
+            // Any image missing from the posted order (safety) keeps its relative order at the end.
+            foreach (var img in images.Where(i => !order.Contains(i.Id)).OrderBy(i => i.SortOrder).ToList())
+                img.SortOrder = pos++;
+
+            var first = images.OrderBy(i => i.SortOrder).First();
+            foreach (var i in images) i.IsPrimary = (i.Id == first.Id);
+            if (first.IsHover) first.IsHover = false;
+
+            await _db.SaveChangesAsync();
+            await LogAsync("Update", "Product", productId.ToString(), "Reordered product images");
+            return Json(new { success = true });
         }
 
         // Pick the image revealed on card hover (Tiffany-style). Clicking the current hover image
