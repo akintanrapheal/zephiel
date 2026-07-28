@@ -485,7 +485,7 @@
             </div>
 
                 <div class="relative group/carousel">
-                    @if (featuredProducts.Count > 4)
+                    @if (featuredProducts.Count > 6)
                     {
                         <button type="button" id="feat-prev" aria-label="Previous"
                                 class="hidden md:flex absolute -left-5 top-[30%] -translate-y-1/2 z-10 w-11 h-11 rounded-full bg-white shadow-md border border-neutral-200 text-neutral-700 hover:bg-brand-500 hover:text-white hover:border-brand-500 items-center justify-center transition-colors">&lsaquo;</button>
@@ -495,7 +495,7 @@
                     <div id="feat-track" class="flex gap-6 overflow-x-auto snap-x snap-mandatory scroll-smooth pb-2 [&::-webkit-scrollbar]:hidden" style="scrollbar-width:none;">
                         @foreach (var p in featuredProducts)
                         {
-                            <div class="snap-start shrink-0 w-[calc(50%-12px)] md:w-[calc(25%-18px)]">
+                            <div class="snap-start shrink-0 w-[calc(50%-12px)] sm:w-[calc(33.333%-16px)] lg:w-[calc(16.666%-20px)]">
                                 <partial name="_ProductCard" model="p" />
                             </div>
                         }

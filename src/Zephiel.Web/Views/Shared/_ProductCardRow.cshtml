@@ -17,7 +17,7 @@
                 }
                 <h2 class="font-bodoni text-4xl font-light text-neutral-900">@title</h2>
             </div>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
                 @foreach (var p in Model)
                 {
                     <partial name="_ProductCard" model="p" />
