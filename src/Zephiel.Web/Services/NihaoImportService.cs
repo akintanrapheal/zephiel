@@ -107,12 +107,15 @@ public class NihaoImportService
             var product = existing ?? new Product { ExternalCode = code, IsActive = false, TrackStock = true, ProductType = "simple" };
 
             product.Name = name;
-            if (existing == null) product.Slug = await UniqueSlugAsync(Slugify(name));
+            if (existing == null)
+            {
+                product.Slug = await UniqueSlugAsync(Slugify(name));
+                product.Sku = await NextSkuAsync(category);   // clean category SKU (not the Nihao code)
+            }
             product.CategoryId = category.Id;
             product.Currency = "NGN";
             product.CostPrice = costNgn;
             product.Price = retailNgn;
-            product.Sku ??= code;
             product.Material = data.Attributes.GetValueOrDefault("Material");
             product.GemstoneType = data.Attributes.GetValueOrDefault("Inlay Material");
             product.Weight = data.Attributes.GetValueOrDefault("Weight");
@@ -170,19 +173,22 @@ public class NihaoImportService
             var variantRows = chosen != null ? data.Variants.Where(x => chosen.Contains(x.Sku)).ToList() : data.Variants;
             if (product.Variants.Count == 0 && variantRows.Count > 0)
             {
+                var vi = 0;
                 foreach (var vr in variantRows)
                 {
                     var values = new List<ProductAttributeValue>();
                     if (vr.Color.Length > 0) values.Add(await AttrValueAsync("color", vr.Color));
                     if (vr.Size.Length > 0) values.Add(await AttrValueAsync("size", vr.Size));
                     if (values.Count == 0) continue;
+                    vi++;
                     // Adjustment is the wholesale price difference from the cheapest variant, so it's
                     // independent of any manual override of the base retail price.
                     var adj = Math.Round((vr.PriceUsd - data.MinPriceUsd) * fx * markup, 0);
                     product.Variants.Add(new ProductVariant
                     {
                         Name = string.Join(" / ", values.Select(x => x.Value)),
-                        Sku = string.IsNullOrWhiteSpace(vr.Sku) ? null : vr.Sku,
+                        Sku = $"{product.Sku}-{vi:D2}",
+                        Barcode = string.IsNullOrWhiteSpace(vr.Sku) ? null : vr.Sku, // supplier's SKU kept for re-ordering
                         PriceAdjustment = adj > 0 ? adj : null,
                         StockQuantity = 0,
                         IsActive = true,
@@ -486,6 +492,23 @@ public class NihaoImportService
 
     private static string Capitalize(string s) =>
         string.IsNullOrEmpty(s) ? s : char.ToUpperInvariant(s[0]) + s[1..];
+
+    // Clean, category-based product SKU: first four letters of the category name + a running number
+    // (e.g. Sets → SETS-0001, Rings → RING-0002), continuing after the highest existing one.
+    private async Task<string> NextSkuAsync(Category category)
+    {
+        var prefix = new string((category.Name ?? "").Where(char.IsLetter).Take(4).ToArray()).ToUpperInvariant();
+        if (prefix.Length == 0) prefix = "PRD";
+        var like = prefix + "-";
+        var existing = await _db.Products.Where(p => p.Sku != null && p.Sku.StartsWith(like)).Select(p => p.Sku!).ToListAsync();
+        var max = 0;
+        foreach (var s in existing)
+        {
+            var m = Regex.Match(s, "^" + Regex.Escape(prefix) + @"-(\d+)");
+            if (m.Success && int.TryParse(m.Groups[1].Value, out var num) && num > max) max = num;
+        }
+        return $"{prefix}-{max + 1:D4}";
+    }
 
     private async Task<string> UniqueSlugAsync(string baseSlug)
     {
