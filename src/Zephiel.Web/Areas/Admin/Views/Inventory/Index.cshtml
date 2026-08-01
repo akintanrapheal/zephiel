@@ -264,42 +264,53 @@ else
                         <!-- Stock per store — editable inputs -->
                         @foreach (var store in Model.Stores)
                         {
-                            var qty = row.StockByStore.TryGetValue(store.Id, out var q2) ? q2 : -1;
-                            var cellBg = qty == -1 ? "bg-neutral-50" : qty == 0 ? "bg-red-50" : qty < row.LowStockThreshold ? "bg-amber-50" : "";
-                            <td class="px-3 py-2 text-center @cellBg">
-                                @if (canEdit && qty == -1)
-                                {
-                                    <!-- No record exists — show dash, still let admin enter a value -->
-                                    <input form="inv-@row.ProductId"
-                                           type="number" name="store_@store.Id"
-                                           placeholder="—" min="0"
-                                           data-pid="@row.ProductId" data-sid="@store.Id" data-orig=""
-                                           class="stock-cell w-16 text-center text-xs border border-neutral-200 rounded-sm px-2 py-1 focus:outline-none focus:border-neutral-400 bg-white" />
-                                }
-                                else if (canEdit)
-                                {
-                                    <input form="inv-@row.ProductId"
-                                           type="number" name="store_@store.Id"
-                                           value="@qty" min="0"
-                                           data-pid="@row.ProductId" data-sid="@store.Id" data-orig="@qty"
-                                           class="stock-cell w-16 text-center text-xs border border-neutral-200 rounded-sm px-2 py-1 focus:outline-none focus:border-neutral-400 bg-white
-                                                  @(qty == 0 ? "text-red-600 border-red-200" : qty < row.LowStockThreshold ? "text-amber-600 border-amber-200" : "")" />
-                                }
-                                else
-                                {
-                                    <span class="text-xs @(qty == -1 ? "text-neutral-300" : qty == 0 ? "text-red-600" : qty < row.LowStockThreshold ? "text-amber-600" : "text-neutral-700")">@(qty == -1 ? "—" : qty.ToString())</span>
-                                }
-                            </td>
+                            if (row.HasVariants)
+                            {
+                                var vsum = row.Variants.Sum(vr => vr.StockByStore.TryGetValue(store.Id, out var vx) && vx >= 0 ? vx : 0);
+                                <td class="px-3 py-2 text-center"><span class="text-xs text-neutral-500">@vsum</span></td>
+                            }
+                            else
+                            {
+                                var qty = row.StockByStore.TryGetValue(store.Id, out var q2) ? q2 : -1;
+                                var cellBg = qty == -1 ? "bg-neutral-50" : qty == 0 ? "bg-red-50" : qty < row.LowStockThreshold ? "bg-amber-50" : "";
+                                <td class="px-3 py-2 text-center @cellBg">
+                                    @if (canEdit && qty == -1)
+                                    {
+                                        <input form="inv-@row.ProductId"
+                                               type="number" name="store_@store.Id"
+                                               placeholder="—" min="0"
+                                               data-pid="@row.ProductId" data-sid="@store.Id" data-orig=""
+                                               class="stock-cell w-16 text-center text-xs border border-neutral-200 rounded-sm px-2 py-1 focus:outline-none focus:border-neutral-400 bg-white" />
+                                    }
+                                    else if (canEdit)
+                                    {
+                                        <input form="inv-@row.ProductId"
+                                               type="number" name="store_@store.Id"
+                                               value="@qty" min="0"
+                                               data-pid="@row.ProductId" data-sid="@store.Id" data-orig="@qty"
+                                               class="stock-cell w-16 text-center text-xs border border-neutral-200 rounded-sm px-2 py-1 focus:outline-none focus:border-neutral-400 bg-white
+                                                      @(qty == 0 ? "text-red-600 border-red-200" : qty < row.LowStockThreshold ? "text-amber-600 border-amber-200" : "")" />
+                                    }
+                                    else
+                                    {
+                                        <span class="text-xs @(qty == -1 ? "text-neutral-300" : qty == 0 ? "text-red-600" : qty < row.LowStockThreshold ? "text-amber-600" : "text-neutral-700")">@(qty == -1 ? "—" : qty.ToString())</span>
+                                    }
+                                </td>
+                            }
                         }
 
                         <!-- Save button (full admin only) -->
                         <td class="px-4 py-2 text-center">
-                            @if (canEdit)
+                            @if (canEdit && !row.HasVariants)
                             {
                                 <button form="inv-@row.ProductId" type="submit" data-no-loading="1"
                                         class="px-4 py-1.5 bg-neutral-900 text-white text-xs rounded-sm hover:bg-neutral-700 transition-colors">
                                     Save
                                 </button>
+                            }
+                            else if (row.HasVariants)
+                            {
+                                <span class="text-[10px] text-neutral-400">per variant &darr;</span>
                             }
                             else
                             {
@@ -307,6 +318,44 @@ else
                             }
                         </td>
                     </tr>
+
+                    @if (row.HasVariants)
+                    {
+                        foreach (var vrow in row.Variants)
+                        {
+                            var vtotal = vrow.StockByStore.Values.Where(x => x >= 0).Sum();
+                            <tr class="bg-neutral-50/60 border-b border-neutral-100">
+                                <td class="px-3 py-1.5"></td>
+                                <td class="px-4 py-1.5 pl-8">
+                                    <p class="text-[11px] text-neutral-600 leading-snug">&#8618; @vrow.Name</p>
+                                    @if (!string.IsNullOrEmpty(vrow.Sku))
+                                    {
+                                        <p class="text-[10px] text-neutral-400 font-mono">@vrow.Sku</p>
+                                    }
+                                </td>
+                                <td class="px-4 py-1.5"></td>
+                                <td class="px-4 py-1.5 text-center"><span class="text-xs @(vtotal == 0 ? "text-red-500" : "text-neutral-600")">@vtotal</span></td>
+                                @foreach (var store in Model.Stores)
+                                {
+                                    var vq = vrow.StockByStore.TryGetValue(store.Id, out var q3) ? q3 : -1;
+                                    <td class="px-3 py-1.5 text-center @(vq == 0 ? "bg-red-50" : vq > 0 && vq < row.LowStockThreshold ? "bg-amber-50" : "")">
+                                        @if (canEdit)
+                                        {
+                                            <input type="number" min="0" placeholder="—"
+                                                   value="@(vq == -1 ? "" : vq.ToString())"
+                                                   data-pid="@row.ProductId" data-sid="@store.Id" data-vid="@vrow.VariantId" data-orig="@(vq == -1 ? "" : vq.ToString())"
+                                                   class="stock-cell w-16 text-center text-xs border border-neutral-200 rounded-sm px-2 py-1 focus:outline-none focus:border-neutral-400 bg-white" />
+                                        }
+                                        else
+                                        {
+                                            <span class="text-xs @(vq == -1 ? "text-neutral-300" : "text-neutral-700")">@(vq == -1 ? "—" : vq.ToString())</span>
+                                        }
+                                    </td>
+                                }
+                                <td class="px-4 py-1.5"></td>
+                            </tr>
+                        }
+                    }
                 }
             </tbody>
         </table>
@@ -370,7 +419,7 @@ else
         document.addEventListener('input', e => { if (e.target.classList && e.target.classList.contains('stock-cell')) refresh(); });
         refresh();
         btn.addEventListener('click', async () => {
-            const edits = changed().map(i => ({ productId: +i.dataset.pid, storeId: +i.dataset.sid, quantity: +i.value }));
+            const edits = changed().map(i => ({ productId: +i.dataset.pid, storeId: +i.dataset.sid, variantId: i.dataset.vid ? +i.dataset.vid : null, quantity: +i.value }));
             if (!edits.length) { alert('No changes to save.'); return; }
             btn.disabled = true; const label = btn.querySelector('span') ? null : null; btn.textContent = 'Saving…';
             try {

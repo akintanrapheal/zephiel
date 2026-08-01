@@ -66,6 +66,7 @@ namespace Zephiel.Web.Areas.Admin.Controllers
             var productQuery = _db.Products
                 .Include(p => p.Category)
                 .Include(p => p.Images)
+                .Include(p => p.Variants)
                 .Where(p => p.IsActive)
                 .AsQueryable();
 
@@ -86,10 +87,24 @@ namespace Zephiel.Web.Areas.Admin.Controllers
             // Build rows (needed before stock filter so we can check stock values)
             var allRows = allMatchingProducts.Select(p =>
             {
+                // Product-level pool is the non-variant record (ProductVariantId == null).
                 var stockByStore = stores.ToDictionary(
                     s => s.Id,
-                    s => allInventory.FirstOrDefault(si => si.ProductId == p.Id && si.StoreId == s.Id)
+                    s => allInventory.FirstOrDefault(si => si.ProductId == p.Id && si.StoreId == s.Id && si.ProductVariantId == null)
                                     ?.QuantityOnHand ?? -1);
+
+                // For variable products, each variant tracks its own stock per store.
+                var variantRows = p.Variants.Where(v => v.IsActive).OrderBy(v => v.Name).Select(v => new VariantInventoryRow
+                {
+                    VariantId    = v.Id,
+                    Name         = v.Name,
+                    Sku          = v.Sku,
+                    StockByStore = stores.ToDictionary(
+                        s => s.Id,
+                        s => allInventory.FirstOrDefault(si => si.ProductId == p.Id && si.ProductVariantId == v.Id && si.StoreId == s.Id)
+                                        ?.QuantityOnHand ?? -1),
+                }).ToList();
+
                 return new ProductInventoryRow
                 {
                     ProductId         = p.Id,
@@ -99,6 +114,7 @@ namespace Zephiel.Web.Areas.Admin.Controllers
                     ImageUrl          = p.Images.OrderBy(i => i.SortOrder).FirstOrDefault()?.Url,
                     LowStockThreshold = p.LowStockThreshold,
                     StockByStore      = stockByStore,
+                    Variants          = variantRows,
                 };
             }).ToList();
 
@@ -225,6 +241,7 @@ namespace Zephiel.Web.Areas.Admin.Controllers
         {
             public int ProductId { get; set; }
             public int StoreId { get; set; }
+            public int? VariantId { get; set; }
             public int Quantity { get; set; }
         }
 
@@ -241,18 +258,27 @@ namespace Zephiel.Web.Areas.Admin.Controllers
                 .Where(p => edits.Select(e => e.ProductId).Distinct().Contains(p.Id))
                 .Select(p => p.Id).ToListAsync()).ToHashSet();
 
+            // Valid variant → product map, so a posted VariantId must genuinely belong to its product.
+            var editVariantIds = edits.Where(e => e.VariantId.HasValue).Select(e => e.VariantId!.Value).Distinct().ToList();
+            var variantOwner = editVariantIds.Any()
+                ? (await _db.ProductVariants.Where(v => editVariantIds.Contains(v.Id))
+                    .Select(v => new { v.Id, v.ProductId }).ToListAsync()).ToDictionary(v => v.Id, v => v.ProductId)
+                : new Dictionary<int, int>();
+
             var applied = 0;
             foreach (var e in edits)
             {
                 if (e.Quantity < 0 || !validStoreIds.Contains(e.StoreId) || !validProductIds.Contains(e.ProductId))
                     continue;
+                if (e.VariantId.HasValue && (!variantOwner.TryGetValue(e.VariantId.Value, out var vpid) || vpid != e.ProductId))
+                    continue; // variant doesn't belong to this product
 
                 // Route every change through the ledger so each restock stays traceable.
-                var current = await _stock.GetStockAsync(e.ProductId, null, e.StoreId);
+                var current = await _stock.GetStockAsync(e.ProductId, e.VariantId, e.StoreId);
                 var delta = e.Quantity - current;
                 if (delta != 0)
                 {
-                    await _stock.ApplyAsync(e.ProductId, null, e.StoreId, delta,
+                    await _stock.ApplyAsync(e.ProductId, e.VariantId, e.StoreId, delta,
                         StockMovementType.Adjustment, "Bulk stock update", userId: userId);
                     applied++;
                 }
