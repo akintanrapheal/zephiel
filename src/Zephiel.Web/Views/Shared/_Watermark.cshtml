@@ -1,0 +1,18 @@
+@model object?
+@*
+    Brand watermark shown in the corner of storefront product photos.
+    Display-only overlay — the underlying image file is never modified, so it's
+    fully reversible (remove the <partial> calls) and works on every image source.
+    Drop this inside any position:relative image container.
+
+    Model = optional Tailwind width class(es); defaults to a small card-sized mark.
+    Typed as object? (not string) because a <partial> with no explicit model inherits
+    the caller's ambient model (e.g. ProductCardViewModel) — we just ignore anything
+    that isn't the size string.
+*@
+@{
+    var size = Model as string;
+    if (string.IsNullOrWhiteSpace(size)) { size = "w-9 sm:w-10"; }
+}
+<img src="~/images/zephiel-logo.png" alt="" aria-hidden="true"
+     class="pointer-events-none select-none absolute bottom-2 right-2 z-10 h-auto @size opacity-[0.55] drop-shadow-[0_0_3px_rgba(255,255,255,0.9)]" />

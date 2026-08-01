@@ -166,6 +166,7 @@
                 <img id="main-image" src="@Img.Cld(galleryImages[0], 1400)" alt="@Model.Name" width="1000" height="1000"
                      class="w-full h-full object-cover object-center transition-transform duration-300 will-change-transform" />
                 <partial name="_DiscountBadge" model="Model.DiscountPercent" />
+                <partial name="_Watermark" model="@("w-14 sm:w-16")" />
             </div>
 
             @* Description sits under the first image; the remaining photos follow below it (Tiffany layout). *@
@@ -188,9 +189,10 @@
                 <div class="space-y-2 lg:space-y-3">
                     @for (var gi = 1; gi < galleryImages.Count; gi++)
                     {
-                        <div class="aspect-square bg-neutral-50 overflow-hidden">
+                        <div class="aspect-square bg-neutral-50 overflow-hidden relative">
                             <img src="@Img.Cld(galleryImages[gi], 1400)" alt="@Model.Name view @(gi + 1)" loading="lazy" decoding="async"
                                  width="1000" height="1000" class="w-full h-full object-cover object-center" />
+                            <partial name="_Watermark" model="@("w-14 sm:w-16")" />
                         </div>
                     }
                 </div>
@@ -669,10 +671,11 @@
                 @foreach (var p in Model.FrequentlyBoughtTogether)
                 {
                     <a asp-controller="Products" asp-action="Detail" asp-route-slug="@p.Slug" class="group">
-                        <div class="aspect-square bg-neutral-50 mb-3 overflow-hidden">
+                        <div class="aspect-square bg-neutral-50 mb-3 overflow-hidden relative">
                             <img src="@Img.Cld(p.PrimaryImageUrl, 400, 400)" alt="@p.Name"
                                  loading="lazy" decoding="async" width="400" height="400"
                                  class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                            <partial name="_Watermark" model="@("w-8 sm:w-9")" />
                         </div>
                         <h3 class="text-sm font-light text-neutral-700 group-hover:text-neutral-900 transition-colors">@p.Name</h3>
                         @if (p.IsOnSale)
@@ -698,10 +701,11 @@
                 @foreach (var p in Model.RelatedProducts)
                 {
                     <a asp-controller="Products" asp-action="Detail" asp-route-slug="@p.Slug" class="group text-center">
-                        <div class="aspect-square bg-neutral-50 mb-4 overflow-hidden">
+                        <div class="aspect-square bg-neutral-50 mb-4 overflow-hidden relative">
                             <img src="@Img.Cld(p.PrimaryImageUrl, 500, 500)" alt="@p.Name"
                                  loading="lazy" decoding="async" width="500" height="500"
                                  class="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-700" />
+                            <partial name="_Watermark" model="@("w-8 sm:w-9")" />
                         </div>
                         <h3 class="font-bodoni text-lg font-normal text-neutral-900 group-hover:text-brand-600 transition-colors px-2">@p.Name</h3>
                         @if (p.IsOnSale)
