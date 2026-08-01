@@ -39,6 +39,7 @@ public class NihaoImportService
     private readonly ISettingsService _settings;
     private readonly SeoDescriptionGenerator _seo;
     private readonly ILogger<NihaoImportService> _logger;
+    private readonly Dictionary<string, ProductAttribute> _attrCache = new();
 
     private const string ImgBase = "https://img.nihaojewelry.com/";
     private const string Ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36";
@@ -143,6 +144,30 @@ public class NihaoImportService
                 }
             }
 
+            // Variants (colours / sizes / designs) — build only for a fresh product so re-imports never
+            // touch a variant that might already be referenced by an order.
+            if (product.Variants.Count == 0 && data.Variants.Count > 0)
+            {
+                foreach (var vr in data.Variants)
+                {
+                    var values = new List<ProductAttributeValue>();
+                    if (vr.Color.Length > 0) values.Add(await AttrValueAsync("color", vr.Color));
+                    if (vr.Size.Length > 0) values.Add(await AttrValueAsync("size", vr.Size));
+                    if (values.Count == 0) continue;
+                    var variantRetail = Math.Round(vr.PriceUsd * fx * markup, 0);
+                    product.Variants.Add(new ProductVariant
+                    {
+                        Name = string.Join(" / ", values.Select(x => x.Value)),
+                        Sku = string.IsNullOrWhiteSpace(vr.Sku) ? null : vr.Sku,
+                        PriceAdjustment = variantRetail > retailNgn ? variantRetail - retailNgn : null,
+                        StockQuantity = 0,
+                        IsActive = true,
+                        AttributeValues = values
+                    });
+                }
+                if (product.Variants.Count > 0) product.ProductType = "variable";
+            }
+
             if (existing == null) _db.Products.Add(product);
             await _db.SaveChangesAsync();
 
@@ -211,6 +236,15 @@ public class NihaoImportService
         public List<string> Images = new();
         public Dictionary<string, string> Attributes = new();
         public List<string> Crumbs = new();
+        public List<VariantRow> Variants = new();
+    }
+
+    private sealed class VariantRow
+    {
+        public string Color = "";
+        public string Size = "";
+        public string Sku = "";
+        public decimal PriceUsd;
     }
 
     private static Extracted? ExtractProduct(string html, string url)
@@ -255,6 +289,23 @@ public class NihaoImportService
                     if (p.Value.ValueKind == JsonValueKind.String) e.Attributes[p.Name] = p.Value.GetString() ?? "";
             }
             catch { /* attributes are best-effort */ }
+        }
+
+        // Variants / SKUs — Nihao lists each option in itemList (color = design/colour, size = size).
+        if (info.TryGetProperty("itemList", out var items) && items.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var it in items.EnumerateArray())
+            {
+                var vr = new VariantRow
+                {
+                    Color = (Str(it, "color") ?? "").Trim(),
+                    Size = (Str(it, "size") ?? "").Trim(),
+                    Sku = (Str(it, "sku") ?? "").Trim(),
+                };
+                if (it.TryGetProperty("discountPrice", out var dp) && dp.ValueKind == JsonValueKind.Number) vr.PriceUsd = dp.GetDecimal();
+                else if (it.TryGetProperty("price", out var pr) && pr.ValueKind == JsonValueKind.Number) vr.PriceUsd = pr.GetDecimal();
+                if (vr.Color.Length > 0 || vr.Size.Length > 0) e.Variants.Add(vr);
+            }
         }
         return e;
     }
@@ -320,6 +371,37 @@ public class NihaoImportService
         var sp = cut.LastIndexOf(' ');
         return (sp > 40 ? cut[..sp] : cut).TrimEnd(',', ' ');
     }
+
+    // Find or create a ProductAttribute (e.g. "color", "size") and one of its values, reusing existing
+    // ones so imports share the same Colour/Size options as the rest of the catalogue.
+    private async Task<ProductAttributeValue> AttrValueAsync(string attrSlug, string rawValue)
+    {
+        if (!_attrCache.TryGetValue(attrSlug, out var attr))
+        {
+            attr = await _db.ProductAttributes.Include(a => a.Values).FirstOrDefaultAsync(a => a.Slug == attrSlug);
+            if (attr == null)
+            {
+                attr = new ProductAttribute { Name = Capitalize(attrSlug), Slug = attrSlug, IsActive = true };
+                _db.ProductAttributes.Add(attr);
+                await _db.SaveChangesAsync();
+            }
+            _attrCache[attrSlug] = attr;
+        }
+
+        var display = rawValue.Trim();
+        var existing = attr.Values.FirstOrDefault(v => string.Equals(v.Value, display, StringComparison.OrdinalIgnoreCase))
+                    ?? await _db.ProductAttributeValues.FirstOrDefaultAsync(v => v.AttributeId == attr.Id && v.Value.ToLower() == display.ToLower());
+        if (existing != null) return existing;
+
+        var val = new ProductAttributeValue { AttributeId = attr.Id, Value = display, SortOrder = attr.Values.Count + 1 };
+        _db.ProductAttributeValues.Add(val);
+        attr.Values.Add(val);
+        await _db.SaveChangesAsync();
+        return val;
+    }
+
+    private static string Capitalize(string s) =>
+        string.IsNullOrEmpty(s) ? s : char.ToUpperInvariant(s[0]) + s[1..];
 
     private async Task<string> UniqueSlugAsync(string baseSlug)
     {
