@@ -91,7 +91,7 @@ namespace Zephiel.Web.Areas.Admin.Controllers
         }
 
         [HttpPost, ValidateAntiForgeryToken]
-        public async Task<IActionResult> ImportNihaoConfirm(string url, string? name, decimal? price, int? categoryId, string[]? skus)
+        public async Task<IActionResult> ImportNihaoConfirm(string url, string? name, decimal? price, int? categoryId, string[]? skus, string[]? images)
         {
             var result = await _nihao.ImportAsync(url, new NihaoImportOptions
             {
@@ -99,6 +99,7 @@ namespace Zephiel.Web.Areas.Admin.Controllers
                 RetailPrice = price,
                 CategoryId = categoryId,
                 SelectedSkus = new HashSet<string>(skus ?? System.Array.Empty<string>()),
+                SelectedImages = new HashSet<string>(images ?? System.Array.Empty<string>()),
             });
 
             if (result.Success)

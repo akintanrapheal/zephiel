@@ -29,7 +29,8 @@ public class NihaoImportOptions
     public string? Name { get; set; }
     public decimal? RetailPrice { get; set; }
     public int? CategoryId { get; set; }
-    public HashSet<string>? SelectedSkus { get; set; }   // null = import all variants
+    public HashSet<string>? SelectedSkus { get; set; }     // null = import all variants
+    public HashSet<string>? SelectedImages { get; set; }   // null = import all gallery images
 }
 
 public class NihaoPreviewVariant
@@ -147,11 +148,14 @@ public class NihaoImportService
                 catch (Exception ex) { _logger.LogWarning(ex, "Nihao image download failed: {Url}", srcUrl); return null; }
             }
 
-            // Gallery images — skip if the product already has images on re-import.
-            if (product.Images.Count == 0 && data.Images.Count > 0)
+            // Gallery images — optionally filtered to the ones chosen in the preview.
+            var galleryImages = opts?.SelectedImages != null
+                ? data.Images.Where(x => opts.SelectedImages.Contains(x)).ToList()
+                : data.Images;
+            if (product.Images.Count == 0 && galleryImages.Count > 0)
             {
                 var sort = 0;
-                foreach (var imgUrl in data.Images)
+                foreach (var imgUrl in galleryImages)
                 {
                     var local = await RehostAsync(imgUrl);
                     if (local == null) continue;

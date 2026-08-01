@@ -19,13 +19,20 @@
         @if (Model.Images.Any())
         {
             <div class="bg-white rounded-sm border border-neutral-100 p-4 mb-5">
-                <div class="flex gap-3 overflow-x-auto">
+                <div class="flex gap-3 overflow-x-auto pb-1">
                     @foreach (var img in Model.Images)
                     {
-                        <img src="@img" alt="" loading="lazy" class="w-24 h-24 object-cover rounded-sm border border-neutral-100 bg-neutral-50 flex-shrink-0" />
+                        <label class="relative flex-shrink-0 cursor-pointer">
+                            <input type="checkbox" name="images" value="@img" checked class="peer sr-only" />
+                            <img src="@img" alt="" loading="lazy"
+                                 class="w-24 h-24 object-cover rounded-sm border-2 border-transparent opacity-40 transition
+                                        peer-checked:opacity-100 peer-checked:border-neutral-900 bg-neutral-50" />
+                            <span class="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-white border border-neutral-300 flex items-center justify-center text-[10px] leading-none text-transparent
+                                         peer-checked:bg-neutral-900 peer-checked:border-neutral-900 peer-checked:text-white">&#10003;</span>
+                        </label>
                     }
                 </div>
-                <p class="text-[11px] text-neutral-400 mt-2">@Model.Images.Count image(s) will be downloaded &amp; re-hosted on your site.</p>
+                <p class="text-[11px] text-neutral-400 mt-2">Tick the images to import (all selected by default) — chosen ones are downloaded &amp; re-hosted on your site.</p>
             </div>
         }
 
