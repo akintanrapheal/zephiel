@@ -1,0 +1,77 @@
+@model List<Zephiel.Web.Services.NihaoImportResult>
+@{
+    ViewData["Title"] = "Import from Nihaojewelry";
+}
+
+<div class="max-w-3xl">
+    <div class="flex items-center justify-between mb-4">
+        <h1 class="text-xl font-medium text-neutral-900">Import from Nihaojewelry</h1>
+        <a asp-action="Index" class="text-xs text-neutral-500 hover:text-neutral-900">&larr; Back to Products</a>
+    </div>
+
+    <div class="bg-white rounded-sm border border-neutral-100 p-5 mb-5">
+        <p class="text-sm text-neutral-600 mb-4">
+            Paste one or more Nihaojewelry product links (one per line). Each product is created as a
+            <strong>draft</strong> (hidden, stock&nbsp;0), its images are downloaded to your site, the supplier
+            category is mapped to one of yours, and a suggested retail price is set. Review, set stock and
+            confirm the price, then publish.
+        </p>
+        <form asp-action="ImportNihao" method="post"
+              onsubmit="var b=this.querySelector('button[type=submit]');b.disabled=true;b.textContent='Importing… this can take a moment';">
+            @Html.AntiForgeryToken()
+            <textarea name="urls" rows="5" placeholder="https://www.nihaojewelry.com/....html"
+                      class="w-full border border-neutral-200 rounded-sm px-3 py-2 text-sm font-mono focus:outline-none focus:border-neutral-900"></textarea>
+            <div class="flex justify-between items-center mt-3">
+                <span class="text-xs text-neutral-400">Up to 25 links at a time. Set the FX rate &amp; markup in <a asp-area="Admin" asp-controller="Settings" asp-action="Index" class="underline hover:text-neutral-700">Settings &rarr; Import</a>.</span>
+                <button type="submit" class="px-5 py-2 bg-neutral-900 text-white text-xs rounded-sm hover:bg-neutral-700 transition-colors">Import</button>
+            </div>
+        </form>
+    </div>
+
+    @if (Model.Any())
+    {
+        <div class="bg-white rounded-sm border border-neutral-100 overflow-hidden">
+            <table class="w-full text-sm">
+                <thead class="bg-neutral-50 text-neutral-500 text-[11px] uppercase tracking-wide">
+                    <tr>
+                        <th class="text-left px-4 py-2">Product</th>
+                        <th class="px-4 py-2">Category</th>
+                        <th class="px-4 py-2">Cost</th>
+                        <th class="px-4 py-2">Retail</th>
+                        <th class="px-4 py-2">Images</th>
+                        <th class="px-4 py-2"></th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-neutral-100">
+                    @foreach (var r in Model)
+                    {
+                        <tr class="@(r.Success ? "" : "bg-red-50")">
+                            <td class="px-4 py-3">
+                                @if (r.Success)
+                                {
+                                    <span class="text-neutral-800">@r.Name</span>
+                                    <span class="ml-2 text-[10px] px-1.5 py-0.5 rounded @(r.Created ? "bg-emerald-100 text-emerald-700" : "bg-blue-100 text-blue-700")">@(r.Created ? "new" : "updated")</span>
+                                }
+                                else
+                                {
+                                    <span class="text-red-600 text-xs">@r.Error</span>
+                                    <div class="text-[10px] text-neutral-400 break-all">@r.SourceUrl</div>
+                                }
+                            </td>
+                            <td class="px-4 py-3 text-center text-neutral-500">@r.CategorySlug</td>
+                            <td class="px-4 py-3 text-center text-neutral-500">@(r.Success ? "₦" + r.Cost.ToString("N0") : "—")</td>
+                            <td class="px-4 py-3 text-center font-medium">@(r.Success ? "₦" + r.Retail.ToString("N0") : "—")</td>
+                            <td class="px-4 py-3 text-center text-neutral-500">@(r.Success ? r.ImageCount.ToString() : "—")</td>
+                            <td class="px-4 py-3 text-right">
+                                @if (r.Success)
+                                {
+                                    <a asp-action="Edit" asp-route-id="@r.ProductId" class="text-xs text-brand-600 hover:underline">Edit &rarr;</a>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>

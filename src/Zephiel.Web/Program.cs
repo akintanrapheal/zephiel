@@ -219,6 +219,8 @@ builder.Services.AddZephielServices(builder.Configuration);
 builder.Services.Configure<Zephiel.Web.Services.EmailOptions>(builder.Configuration.GetSection("Email"));
 builder.Services.AddScoped<Zephiel.Web.Services.IEmailService, Zephiel.Web.Services.SmtpEmailService>();
 builder.Services.AddScoped<Zephiel.Web.Services.BarcodeImportService>();
+builder.Services.AddHttpClient();
+builder.Services.AddScoped<Zephiel.Web.Services.NihaoImportService>();
 
 // ─── Rate limiting ────────────────────────────────────────────────────────────
 // Per-IP throttle on auth & email-sending endpoints (brute-force / abuse protection).

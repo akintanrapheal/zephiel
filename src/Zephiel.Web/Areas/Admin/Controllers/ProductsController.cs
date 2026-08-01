@@ -24,6 +24,7 @@ namespace Zephiel.Web.Areas.Admin.Controllers
         private readonly IConfiguration _config;
         private readonly IStorefrontCache _storefrontCache;
         private readonly SeoDescriptionGenerator _seo;
+        private readonly NihaoImportService _nihao;
         private const int PageSize = 30;
 
         public ProductsController(
@@ -32,7 +33,8 @@ namespace Zephiel.Web.Areas.Admin.Controllers
             IWebHostEnvironment env,
             IConfiguration config,
             IStorefrontCache storefrontCache,
-            SeoDescriptionGenerator seo)
+            SeoDescriptionGenerator seo,
+            NihaoImportService nihao)
         {
             _db = db;
             _wooImporter = wooImporter;
@@ -40,6 +42,36 @@ namespace Zephiel.Web.Areas.Admin.Controllers
             _config = config;
             _storefrontCache = storefrontCache;
             _seo = seo;
+            _nihao = nihao;
+        }
+
+        // ─── Import from Nihaojewelry (authorised supplier) ──────────────────────
+        [HttpGet]
+        public IActionResult ImportNihao() => View(new List<NihaoImportResult>());
+
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> ImportNihao(string urls)
+        {
+            var links = (urls ?? "")
+                .Split(new[] { '\n', '\r', ' ', ',' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(u => u.Trim())
+                .Where(u => u.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+                .Distinct()
+                .Take(25)
+                .ToList();
+
+            var results = new List<NihaoImportResult>();
+            foreach (var link in links)
+                results.Add(await _nihao.ImportAsync(link));
+
+            if (results.Any(r => r.Success)) await _storefrontCache.EvictAsync();
+
+            var ok = results.Count(r => r.Success);
+            if (links.Count == 0)
+                TempData["Error"] = "Paste at least one Nihaojewelry product link.";
+            else
+                TempData["Success"] = $"Imported {ok} of {links.Count} — review the drafts below, set stock, then publish.";
+            return View(results);
         }
 
         public async Task<IActionResult> Index(
