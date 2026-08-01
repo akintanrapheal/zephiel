@@ -121,33 +121,42 @@ public class NihaoImportService
             product.Description = ProductHtml.Sanitize(_seo.Build(seed, name, category.Name) + SpecsHtml(data.Attributes));
             product.ShortDescription = _seo.BuildShort(seed, name, category.Name);
 
-            // Images — download & re-host once (skip if the product already has images on re-import).
+            // Shared image re-hosting — download each Nihao image once (deduped by source URL) so a
+            // variant photo that also appears in the gallery isn't fetched or stored twice.
+            using var http = NewClient();
+            var dir = Path.Combine(_env.WebRootPath, "uploads", "products");
+            var downloaded = new Dictionary<string, string>();
+
+            async Task<string?> RehostAsync(string srcUrl)
+            {
+                if (string.IsNullOrEmpty(srcUrl)) return null;
+                if (downloaded.TryGetValue(srcUrl, out var cached)) return cached;
+                try
+                {
+                    var bytes = await FetchAsync(srcUrl, http);
+                    if (bytes == null || bytes.Length < 512) return null; // skip error/placeholder responses
+                    Directory.CreateDirectory(dir);
+                    var ext = srcUrl.EndsWith(".png", StringComparison.OrdinalIgnoreCase) ? ".png"
+                            : srcUrl.EndsWith(".webp", StringComparison.OrdinalIgnoreCase) ? ".webp" : ".jpg";
+                    var fname = Guid.NewGuid().ToString("N") + ext;
+                    await File.WriteAllBytesAsync(Path.Combine(dir, fname), bytes);
+                    var local = "/uploads/products/" + fname;
+                    downloaded[srcUrl] = local;
+                    return local;
+                }
+                catch (Exception ex) { _logger.LogWarning(ex, "Nihao image download failed: {Url}", srcUrl); return null; }
+            }
+
+            // Gallery images — skip if the product already has images on re-import.
             if (product.Images.Count == 0 && data.Images.Count > 0)
             {
-                using var http = NewClient();
-                var dir = Path.Combine(_env.WebRootPath, "uploads", "products");
-                Directory.CreateDirectory(dir);
                 var sort = 0;
                 foreach (var imgUrl in data.Images)
                 {
-                    try
-                    {
-                        var bytes = await FetchAsync(imgUrl, http);
-                        if (bytes == null || bytes.Length < 512) continue; // skip error/placeholder responses
-                        var ext = imgUrl.EndsWith(".png", StringComparison.OrdinalIgnoreCase) ? ".png"
-                                : imgUrl.EndsWith(".webp", StringComparison.OrdinalIgnoreCase) ? ".webp" : ".jpg";
-                        var fname = Guid.NewGuid().ToString("N") + ext;
-                        await File.WriteAllBytesAsync(Path.Combine(dir, fname), bytes);
-                        sort++;
-                        product.Images.Add(new ProductImage
-                        {
-                            Url = "/uploads/products/" + fname,
-                            IsPrimary = sort == 1,
-                            SortOrder = sort,
-                            AltText = name
-                        });
-                    }
-                    catch (Exception ex) { _logger.LogWarning(ex, "Nihao image download failed: {Url}", imgUrl); }
+                    var local = await RehostAsync(imgUrl);
+                    if (local == null) continue;
+                    sort++;
+                    product.Images.Add(new ProductImage { Url = local, IsPrimary = sort == 1, SortOrder = sort, AltText = name });
                 }
             }
 
@@ -173,6 +182,7 @@ public class NihaoImportService
                         PriceAdjustment = adj > 0 ? adj : null,
                         StockQuantity = 0,
                         IsActive = true,
+                        ImageUrl = await RehostAsync(vr.Img),   // the variant's own photo, re-hosted (deduped vs gallery)
                         AttributeValues = values
                     });
                 }
