@@ -226,7 +226,7 @@ else
                 @foreach (var row in Model.Products)
                 {
                     var total = row.TotalStock;
-                    <tr class="hover:bg-neutral-50 transition-colors @(row.HasOutOfStock ? "bg-red-50/30" : row.HasLowStock ? "bg-amber-50/30" : "")">
+                    <tr data-vtoggle="@(row.HasVariants ? row.ProductId.ToString() : null)" class="hover:bg-neutral-50 transition-colors @(row.HasVariants ? "cursor-pointer" : "") @(row.HasOutOfStock ? "bg-red-50/30" : row.HasLowStock ? "bg-amber-50/30" : "")">
 
                         <!-- Thumbnail -->
                         <td class="px-3 py-2">
@@ -310,7 +310,7 @@ else
                             }
                             else if (row.HasVariants)
                             {
-                                <span class="text-[10px] text-neutral-400">per variant &darr;</span>
+                                <span class="text-[10px] text-neutral-400 inline-flex items-center gap-1">@row.Variants.Count variants <span data-vchev class="inline-block transition-transform">&darr;</span></span>
                             }
                             else
                             {
@@ -324,7 +324,7 @@ else
                         foreach (var vrow in row.Variants)
                         {
                             var vtotal = vrow.StockByStore.Values.Where(x => x >= 0).Sum();
-                            <tr class="bg-neutral-50/60 border-b border-neutral-100">
+                            <tr data-vparent="@row.ProductId" class="hidden bg-neutral-50/60 border-b border-neutral-100">
                                 <td class="px-3 py-1.5"></td>
                                 <td class="px-4 py-1.5 pl-8">
                                     <p class="text-[11px] text-neutral-600 leading-snug">&#8618; @vrow.Name</p>
@@ -406,6 +406,18 @@ else
             }
         </div>
     }
+
+    <script>
+    // Variant rows start collapsed; clicking a product row expands/collapses them.
+    document.addEventListener('click', function (e) {
+        var tr = e.target.closest('[data-vtoggle]');
+        if (!tr || e.target.closest('input, button, a, select')) return;
+        var pid = tr.getAttribute('data-vtoggle');
+        document.querySelectorAll('tr[data-vparent="' + pid + '"]').forEach(function (r) { r.classList.toggle('hidden'); });
+        var chev = tr.querySelector('[data-vchev]');
+        if (chev) chev.classList.toggle('rotate-180');
+    });
+    </script>
 
     <script>
     (function () {
