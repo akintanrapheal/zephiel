@@ -1,0 +1,106 @@
+@model Zephiel.Web.Services.NihaoPreview
+@{
+    ViewData["Title"] = "Preview import";
+    var categories = ViewBag.Categories as List<Zephiel.Web.Models.Domain.Category> ?? new();
+}
+
+<div class="max-w-3xl">
+    <div class="flex items-center justify-between mb-4">
+        <h1 class="text-xl font-medium text-neutral-900">Preview &amp; choose</h1>
+        <a asp-action="ImportNihao" class="text-xs text-neutral-500 hover:text-neutral-900">&larr; Cancel</a>
+    </div>
+
+    <form asp-action="ImportNihaoConfirm" method="post"
+          onsubmit="var b=this.querySelector('button[type=submit]');b.disabled=true;b.textContent='Importing…';">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="url" value="@Model.SourceUrl" />
+
+        <!-- Images -->
+        @if (Model.Images.Any())
+        {
+            <div class="bg-white rounded-sm border border-neutral-100 p-4 mb-5">
+                <div class="flex gap-3 overflow-x-auto">
+                    @foreach (var img in Model.Images)
+                    {
+                        <img src="@img" alt="" loading="lazy" class="w-24 h-24 object-cover rounded-sm border border-neutral-100 bg-neutral-50 flex-shrink-0" />
+                    }
+                </div>
+                <p class="text-[11px] text-neutral-400 mt-2">@Model.Images.Count image(s) will be downloaded &amp; re-hosted on your site.</p>
+            </div>
+        }
+
+        <!-- Editable fields -->
+        <div class="bg-white rounded-sm border border-neutral-100 p-5 mb-5 space-y-4">
+            <div>
+                <label class="block text-xs tracking-wide uppercase text-neutral-500 mb-1">Product name</label>
+                <input type="text" name="name" value="@Model.Title" required
+                       class="w-full border border-neutral-200 rounded-sm px-3 py-2 text-sm focus:outline-none focus:border-neutral-900" />
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs tracking-wide uppercase text-neutral-500 mb-1">Retail price (₦)</label>
+                    <input type="number" name="price" value="@Model.Retail.ToString("0")" min="0" step="1"
+                           class="w-full border border-neutral-200 rounded-sm px-3 py-2 text-sm focus:outline-none focus:border-neutral-900" />
+                    <p class="text-[11px] text-neutral-400 mt-1">Wholesale cost ≈ ₦@Model.Cost.ToString("N0"). Suggested = cost × markup.</p>
+                </div>
+                <div>
+                    <label class="block text-xs tracking-wide uppercase text-neutral-500 mb-1">Category</label>
+                    <select name="categoryId" class="w-full border border-neutral-200 rounded-sm px-3 py-2 text-sm bg-white focus:outline-none focus:border-neutral-900">
+                        @foreach (var c in categories)
+                        {
+                            <option value="@c.Id" selected="@(c.Slug == Model.CategorySlug)">@c.Name</option>
+                        }
+                    </select>
+                    <p class="text-[11px] text-neutral-400 mt-1">Auto-mapped from Nihao — change if needed.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Variants -->
+        @if (Model.Variants.Any())
+        {
+            <div class="bg-white rounded-sm border border-neutral-100 p-5 mb-5">
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="text-sm font-medium text-neutral-900">Variants (@Model.Variants.Count)</h2>
+                    <label class="text-xs text-neutral-500 flex items-center gap-1.5 cursor-pointer">
+                        <input type="checkbox" id="toggle-all" checked /> Select all
+                    </label>
+                </div>
+                <p class="text-xs text-neutral-500 mb-4">Untick any variant you don't want to sell. Prices shown are your retail (with markup); each becomes a variant with its own stock.</p>
+                <div class="space-y-2">
+                    @foreach (var v in Model.Variants)
+                    {
+                        <label class="flex items-center gap-3 border border-neutral-100 rounded-sm px-3 py-2 cursor-pointer hover:border-neutral-300 transition-colors">
+                            <input type="checkbox" name="skus" value="@v.Sku" checked class="variant-cb" />
+                            @if (!string.IsNullOrEmpty(v.ImageUrl))
+                            {
+                                <img src="@v.ImageUrl" alt="" loading="lazy" class="w-10 h-10 object-cover rounded-sm bg-neutral-50 flex-shrink-0" />
+                            }
+                            <span class="flex-1 text-sm text-neutral-800">@v.Label</span>
+                            <span class="text-sm text-neutral-500">₦@v.Retail.ToString("N0")</span>
+                        </label>
+                    }
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="bg-white rounded-sm border border-neutral-100 p-4 mb-5 text-sm text-neutral-500">
+                This product has no selectable variants — it'll be imported as a single item.
+            </div>
+        }
+
+        <div class="flex justify-end gap-2">
+            <a asp-action="ImportNihao" class="px-4 py-2 border border-neutral-200 text-neutral-600 text-xs rounded-sm hover:bg-neutral-50 transition-colors">Cancel</a>
+            <button type="submit" class="px-6 py-2 bg-neutral-900 text-white text-xs rounded-sm hover:bg-neutral-700 transition-colors">Import product</button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+<script nonce="@Context.Items["csp-nonce"]">
+    document.getElementById('toggle-all')?.addEventListener('change', function () {
+        document.querySelectorAll('.variant-cb').forEach(function (cb) { cb.checked = this.checked; }.bind(this));
+    });
+</script>
+}

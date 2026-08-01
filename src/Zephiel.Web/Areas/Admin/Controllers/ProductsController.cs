@@ -74,6 +74,45 @@ namespace Zephiel.Web.Areas.Admin.Controllers
             return View(results);
         }
 
+        // Preview a single product (fetch without saving) so the name, price, category and variants
+        // can be reviewed and edited before importing.
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> PreviewNihao(string url)
+        {
+            var preview = await _nihao.PreviewAsync(url ?? "");
+            if (!preview.Success)
+            {
+                TempData["Error"] = preview.Error ?? "Could not preview that product.";
+                return RedirectToAction(nameof(ImportNihao));
+            }
+            ViewBag.Categories = await _db.Categories.Where(c => c.IsActive)
+                .OrderBy(c => c.SortOrder).ThenBy(c => c.Name).ToListAsync();
+            return View(preview);
+        }
+
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> ImportNihaoConfirm(string url, string? name, decimal? price, int? categoryId, string[]? skus)
+        {
+            var result = await _nihao.ImportAsync(url, new NihaoImportOptions
+            {
+                Name = name,
+                RetailPrice = price,
+                CategoryId = categoryId,
+                SelectedSkus = new HashSet<string>(skus ?? System.Array.Empty<string>()),
+            });
+
+            if (result.Success)
+            {
+                await _storefrontCache.EvictAsync();
+                TempData["Success"] = $"Imported “{result.Name}” — review the draft, set stock, then publish.";
+            }
+            else
+            {
+                TempData["Error"] = result.Error ?? "Import failed.";
+            }
+            return View("ImportNihao", new List<NihaoImportResult> { result });
+        }
+
         public async Task<IActionResult> Index(
             string q = "", string category = "", string status = "", string type = "",
             decimal? minPrice = null, decimal? maxPrice = null, string sort = "name_asc", int page = 1)

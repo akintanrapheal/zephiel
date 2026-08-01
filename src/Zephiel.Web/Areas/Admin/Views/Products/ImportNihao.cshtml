@@ -9,12 +9,29 @@
         <a asp-action="Index" class="text-xs text-neutral-500 hover:text-neutral-900">&larr; Back to Products</a>
     </div>
 
+    <!-- Preview & choose (single product) -->
     <div class="bg-white rounded-sm border border-neutral-100 p-5 mb-5">
+        <h2 class="text-sm font-medium text-neutral-900 mb-1">Preview &amp; choose</h2>
         <p class="text-sm text-neutral-600 mb-4">
-            Paste one or more Nihaojewelry product links (one per line). Each product is created as a
-            <strong>draft</strong> (hidden, stock&nbsp;0), its images are downloaded to your site, the supplier
-            category is mapped to one of yours, and a suggested retail price is set. Review, set stock and
-            confirm the price, then publish.
+            Paste <strong>one</strong> link to review the product first — edit its name, price and category, and
+            pick exactly which variants to import — before anything is created. Best for careful curation.
+        </p>
+        <form asp-action="PreviewNihao" method="post" class="flex gap-2"
+              onsubmit="var b=this.querySelector('button[type=submit]');b.disabled=true;b.textContent='Fetching…';">
+            @Html.AntiForgeryToken()
+            <input type="url" name="url" required placeholder="https://www.nihaojewelry.com/....html"
+                   class="flex-1 border border-neutral-200 rounded-sm px-3 py-2 text-sm font-mono focus:outline-none focus:border-neutral-900" />
+            <button type="submit" class="px-5 py-2 bg-neutral-900 text-white text-xs rounded-sm hover:bg-neutral-700 transition-colors whitespace-nowrap">Preview &rarr;</button>
+        </form>
+    </div>
+
+    <!-- Quick import (bulk) -->
+    <div class="bg-white rounded-sm border border-neutral-100 p-5 mb-5">
+        <h2 class="text-sm font-medium text-neutral-900 mb-1">Quick import</h2>
+        <p class="text-sm text-neutral-600 mb-4">
+            Paste one or more links (one per line) to import them all at once as
+            <strong>drafts</strong> (hidden, stock&nbsp;0), images downloaded, category mapped and price suggested.
+            Review, set stock and confirm prices, then publish.
         </p>
         <form asp-action="ImportNihao" method="post"
               onsubmit="var b=this.querySelector('button[type=submit]');b.disabled=true;b.textContent='Importing… this can take a moment';">

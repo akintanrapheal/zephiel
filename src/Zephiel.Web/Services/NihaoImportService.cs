@@ -23,6 +23,36 @@ public class NihaoImportResult
     public decimal Retail { get; set; }
 }
 
+// Overrides supplied from the "Preview & choose" step.
+public class NihaoImportOptions
+{
+    public string? Name { get; set; }
+    public decimal? RetailPrice { get; set; }
+    public int? CategoryId { get; set; }
+    public HashSet<string>? SelectedSkus { get; set; }   // null = import all variants
+}
+
+public class NihaoPreviewVariant
+{
+    public string Sku { get; set; } = "";
+    public string Label { get; set; } = "";
+    public decimal Retail { get; set; }
+    public string? ImageUrl { get; set; }
+}
+
+public class NihaoPreview
+{
+    public string SourceUrl { get; set; } = "";
+    public bool Success { get; set; }
+    public string? Error { get; set; }
+    public string Title { get; set; } = "";
+    public string CategorySlug { get; set; } = "";
+    public decimal Cost { get; set; }
+    public decimal Retail { get; set; }
+    public List<string> Images { get; set; } = new();
+    public List<NihaoPreviewVariant> Variants { get; set; } = new();
+}
+
 /// <summary>
 /// Imports a product from a Nihaojewelry product URL (the merchant's authorised supplier).
 /// Reads the product data embedded in the page (window.__INITIAL__ state), downloads and
@@ -50,56 +80,33 @@ public class NihaoImportService
         _db = db; _httpFactory = httpFactory; _env = env; _settings = settings; _seo = seo; _logger = logger;
     }
 
-    public async Task<NihaoImportResult> ImportAsync(string url)
+    public async Task<NihaoImportResult> ImportAsync(string url, NihaoImportOptions? opts = null)
     {
         var res = new NihaoImportResult { SourceUrl = url };
         try
         {
-            url = (url ?? "").Trim();
-            if (!url.StartsWith("http", StringComparison.OrdinalIgnoreCase) || !url.Contains("nihaojewelry"))
-            {
-                res.Error = "Not a Nihaojewelry URL.";
-                return res;
-            }
+            var (data, err) = await FetchExtractAsync(url);
+            if (data == null) { res.Error = err; return res; }
 
-            var http = _httpFactory.CreateClient();
-            http.Timeout = TimeSpan.FromSeconds(40);
-            http.DefaultRequestHeaders.UserAgent.ParseAdd(Ua);
-            http.DefaultRequestHeaders.Accept.ParseAdd("text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8");
-            http.DefaultRequestHeaders.AcceptLanguage.ParseAdd("en-US,en;q=0.9");
-
-            var pageBytes = await FetchAsync(url, http);
-            if (pageBytes == null || pageBytes.Length == 0)
-            {
-                res.Error = "Could not fetch the product page (network or anti-bot block).";
-                return res;
-            }
-            var html = Encoding.UTF8.GetString(pageBytes);
-            var data = ExtractProduct(html, url);
-            if (data == null || string.IsNullOrWhiteSpace(data.Title))
-            {
-                res.Error = "Could not read product data from the page (layout may have changed).";
-                return res;
-            }
-
-            // Category mapping
-            var catSlug = MapCategory(data);
-            var category = await _db.Categories.FirstOrDefaultAsync(c => c.Slug == catSlug)
-                        ?? await _db.Categories.OrderBy(c => c.SortOrder).FirstOrDefaultAsync();
+            // Category — explicit override from the preview, else auto-map to the closest store category.
+            Category? category = null;
+            if (opts?.CategoryId is int cid) category = await _db.Categories.FindAsync(cid);
+            category ??= await _db.Categories.FirstOrDefaultAsync(c => c.Slug == MapCategory(data));
+            category ??= await _db.Categories.OrderBy(c => c.SortOrder).FirstOrDefaultAsync();
             if (category == null) { res.Error = "No categories exist to import into."; return res; }
 
-            // Pricing: wholesale USD → cost (₦) → suggested retail
-            var fx = await _settings.GetDecimalAsync("import.nihao_fx_ngn_per_usd", 1600m);
-            var markup = await _settings.GetDecimalAsync("import.nihao_markup", 3.0m);
+            // Pricing: wholesale USD → cost (₦); retail is the edited value if given, else cost × markup.
+            var (fx, markup) = await RatesAsync();
             var costNgn = Math.Round(data.MinPriceUsd * fx, 0);
-            var retailNgn = Math.Round(costNgn * markup, 0);
+            var retailNgn = (opts?.RetailPrice is decimal rp && rp > 0) ? Math.Round(rp, 0) : Math.Round(costNgn * markup, 0);
+            var name = !string.IsNullOrWhiteSpace(opts?.Name) ? opts!.Name!.Trim() : data.Title;
 
             var code = data.ExternalCode;
             var existing = await _db.Products.Include(p => p.Images).FirstOrDefaultAsync(p => p.ExternalCode == code);
             var product = existing ?? new Product { ExternalCode = code, IsActive = false, TrackStock = true, ProductType = "simple" };
 
-            product.Name = data.Title;
-            if (existing == null) product.Slug = await UniqueSlugAsync(Slugify(data.Title));
+            product.Name = name;
+            if (existing == null) product.Slug = await UniqueSlugAsync(Slugify(name));
             product.CategoryId = category.Id;
             product.Currency = "NGN";
             product.CostPrice = costNgn;
@@ -111,13 +118,13 @@ public class NihaoImportService
             product.IsActive = false; // stays a draft until reviewed
 
             var seed = int.TryParse(Regex.Match(code, @"\d+").Value, out var v) ? v : Math.Abs(code.GetHashCode());
-            var marketing = _seo.Build(seed, data.Title, category.Name);
-            product.Description = ProductHtml.Sanitize(marketing + SpecsHtml(data.Attributes));
-            product.ShortDescription = _seo.BuildShort(seed, data.Title, category.Name);
+            product.Description = ProductHtml.Sanitize(_seo.Build(seed, name, category.Name) + SpecsHtml(data.Attributes));
+            product.ShortDescription = _seo.BuildShort(seed, name, category.Name);
 
             // Images — download & re-host once (skip if the product already has images on re-import).
             if (product.Images.Count == 0 && data.Images.Count > 0)
             {
+                using var http = NewClient();
                 var dir = Path.Combine(_env.WebRootPath, "uploads", "products");
                 Directory.CreateDirectory(dir);
                 var sort = 0;
@@ -137,29 +144,33 @@ public class NihaoImportService
                             Url = "/uploads/products/" + fname,
                             IsPrimary = sort == 1,
                             SortOrder = sort,
-                            AltText = data.Title
+                            AltText = name
                         });
                     }
                     catch (Exception ex) { _logger.LogWarning(ex, "Nihao image download failed: {Url}", imgUrl); }
                 }
             }
 
-            // Variants (colours / sizes / designs) — build only for a fresh product so re-imports never
-            // touch a variant that might already be referenced by an order.
-            if (product.Variants.Count == 0 && data.Variants.Count > 0)
+            // Variants — optionally filtered to the SKUs chosen in the preview. Built only for a fresh
+            // product so re-imports never touch a variant that might already be referenced by an order.
+            var chosen = opts?.SelectedSkus;
+            var variantRows = chosen != null ? data.Variants.Where(x => chosen.Contains(x.Sku)).ToList() : data.Variants;
+            if (product.Variants.Count == 0 && variantRows.Count > 0)
             {
-                foreach (var vr in data.Variants)
+                foreach (var vr in variantRows)
                 {
                     var values = new List<ProductAttributeValue>();
                     if (vr.Color.Length > 0) values.Add(await AttrValueAsync("color", vr.Color));
                     if (vr.Size.Length > 0) values.Add(await AttrValueAsync("size", vr.Size));
                     if (values.Count == 0) continue;
-                    var variantRetail = Math.Round(vr.PriceUsd * fx * markup, 0);
+                    // Adjustment is the wholesale price difference from the cheapest variant, so it's
+                    // independent of any manual override of the base retail price.
+                    var adj = Math.Round((vr.PriceUsd - data.MinPriceUsd) * fx * markup, 0);
                     product.Variants.Add(new ProductVariant
                     {
                         Name = string.Join(" / ", values.Select(x => x.Value)),
                         Sku = string.IsNullOrWhiteSpace(vr.Sku) ? null : vr.Sku,
-                        PriceAdjustment = variantRetail > retailNgn ? variantRetail - retailNgn : null,
+                        PriceAdjustment = adj > 0 ? adj : null,
                         StockQuantity = 0,
                         IsActive = true,
                         AttributeValues = values
@@ -188,6 +199,63 @@ public class NihaoImportService
             res.Error = ex.Message;
             return res;
         }
+    }
+
+    // Fetch + extract without saving — powers the "Preview & choose" step.
+    public async Task<NihaoPreview> PreviewAsync(string url)
+    {
+        var pv = new NihaoPreview { SourceUrl = (url ?? "").Trim() };
+        var (data, err) = await FetchExtractAsync(url);
+        if (data == null) { pv.Error = err; return pv; }
+
+        var (fx, markup) = await RatesAsync();
+        pv.Success = true;
+        pv.Title = data.Title;
+        pv.CategorySlug = MapCategory(data);
+        pv.Cost = Math.Round(data.MinPriceUsd * fx, 0);
+        pv.Retail = Math.Round(pv.Cost * markup, 0);
+        pv.Images = data.Images;
+        foreach (var vr in data.Variants)
+        {
+            var label = string.Join(" / ", new[] { vr.Color, vr.Size }.Where(s => !string.IsNullOrWhiteSpace(s)));
+            pv.Variants.Add(new NihaoPreviewVariant
+            {
+                Sku = vr.Sku,
+                Label = string.IsNullOrWhiteSpace(label) ? vr.Sku : label,
+                Retail = Math.Round(vr.PriceUsd * fx * markup, 0),
+                ImageUrl = string.IsNullOrEmpty(vr.Img) ? null : vr.Img,
+            });
+        }
+        return pv;
+    }
+
+    private HttpClient NewClient()
+    {
+        var http = _httpFactory.CreateClient();
+        http.Timeout = TimeSpan.FromSeconds(40);
+        http.DefaultRequestHeaders.UserAgent.ParseAdd(Ua);
+        http.DefaultRequestHeaders.Accept.ParseAdd("text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8");
+        http.DefaultRequestHeaders.AcceptLanguage.ParseAdd("en-US,en;q=0.9");
+        return http;
+    }
+
+    private async Task<(decimal fx, decimal markup)> RatesAsync() =>
+        (await _settings.GetDecimalAsync("import.nihao_fx_ngn_per_usd", 1600m),
+         await _settings.GetDecimalAsync("import.nihao_markup", 3.0m));
+
+    private async Task<(Extracted? data, string? error)> FetchExtractAsync(string url)
+    {
+        url = (url ?? "").Trim();
+        if (!url.StartsWith("http", StringComparison.OrdinalIgnoreCase) || !url.Contains("nihaojewelry"))
+            return (null, "Not a Nihaojewelry product URL.");
+        using var http = NewClient();
+        var bytes = await FetchAsync(url, http);
+        if (bytes == null || bytes.Length == 0)
+            return (null, "Could not fetch the product page (network or anti-bot block).");
+        var data = ExtractProduct(Encoding.UTF8.GetString(bytes), url);
+        if (data == null || string.IsNullOrWhiteSpace(data.Title))
+            return (null, "Could not read product data from the page (layout may have changed).");
+        return (data, null);
     }
 
     // Fetch bytes for a URL. Nihao's anti-bot blocks .NET's TLS fingerprint, so try curl first
@@ -245,6 +313,7 @@ public class NihaoImportService
         public string Size = "";
         public string Sku = "";
         public decimal PriceUsd;
+        public string Img = "";   // Nihao CDN url — used for the preview thumbnail only (not re-hosted)
     }
 
     private static Extracted? ExtractProduct(string html, string url)
@@ -304,6 +373,7 @@ public class NihaoImportService
                 };
                 if (it.TryGetProperty("discountPrice", out var dp) && dp.ValueKind == JsonValueKind.Number) vr.PriceUsd = dp.GetDecimal();
                 else if (it.TryGetProperty("price", out var pr) && pr.ValueKind == JsonValueKind.Number) vr.PriceUsd = pr.GetDecimal();
+                if (Str(it, "img") is string vimg && vimg.Length > 0) vr.Img = ImgBase + vimg.TrimStart('/');
                 if (vr.Color.Length > 0 || vr.Size.Length > 0) e.Variants.Add(vr);
             }
         }
